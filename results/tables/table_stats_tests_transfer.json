@@ -1,0 +1,45 @@
+{
+  "ks_uniform": {
+    "statistic_D": 0.13732760861686183,
+    "p_value": 1.4729512415843642e-28,
+    "n": 1708
+  },
+  "ks_discrete_uniform_step_null": {
+    "observed_D_vs_null": 0.11389834256767062,
+    "null_D_vs_null_q95": 0.029769180299853343,
+    "p_value": 0.000999000999000999,
+    "observed_mean_rho": 0.5228820314067405,
+    "null_mean_rho": 0.5542655866392232,
+    "p_value_mean": 0.000999000999000999,
+    "direction": "earlier than null",
+    "observed_D_uniform": 0.13732760863908405,
+    "null_D_uniform_mean": 0.10867935206869632,
+    "null_D_uniform_q95": 0.12060889929742391,
+    "n_simulations": 1000
+  },
+  "mann_whitney_length_process_error": {
+    "U": 462254.0,
+    "p_value": 8.981019594865224e-06,
+    "rank_biserial_r": 0.13238709298109796,
+    "median_len_erroneous": 10.0,
+    "median_len_correct": 10.0,
+    "n_erroneous": 1708,
+    "n_correct": 478
+  },
+  "mann_whitney_length_answer_incorrect": {
+    "U": 475776.5,
+    "p_value": 0.03409950399577993,
+    "rank_biserial_r": -0.056829895885370796,
+    "median_len_erroneous": 9.0,
+    "median_len_correct": 11.0,
+    "n_erroneous": 1524,
+    "n_correct": 662
+  },
+  "kruskal_tiers": {
+    "H": 343.2978057810577,
+    "p_value": 4.908993678425271e-73,
+    "eta_squared": 0.19923535277807264,
+    "k_groups": 5,
+    "n": 1708
+  }
+}

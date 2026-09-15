@@ -1,0 +1,58 @@
+[
+  {
+    "dataset": "ProcessBench",
+    "host": "huggingface",
+    "identifier": "Qwen/ProcessBench",
+    "role": "primary: E1-E6, E8",
+    "status": "RESOLVES",
+    "checked_utc": "2026-09-15T14:48:33Z"
+  },
+  {
+    "dataset": "GSM8K",
+    "host": "huggingface",
+    "identifier": "openai/gsm8k",
+    "role": "questions for GPU generation (E4)",
+    "status": "RESOLVES",
+    "checked_utc": "2026-09-15T14:48:33Z"
+  },
+  {
+    "dataset": "MATH-500",
+    "host": "huggingface",
+    "identifier": "HuggingFaceH4/MATH-500",
+    "role": "loader only; not used by an experiment",
+    "status": "RESOLVES",
+    "checked_utc": "2026-09-15T14:48:34Z"
+  },
+  {
+    "dataset": "MATH (full)",
+    "host": "huggingface",
+    "identifier": "hendrycks/competition_math",
+    "role": "loader fallback only",
+    "status": "DISABLED_ON_HUB",
+    "checked_utc": "2026-09-15T14:48:34Z"
+  },
+  {
+    "dataset": "StrategyQA",
+    "host": "huggingface",
+    "identifier": "wics/strategy-qa",
+    "role": "loader only; E7 needs generated traces",
+    "status": "RESOLVES",
+    "checked_utc": "2026-09-15T14:48:34Z"
+  },
+  {
+    "dataset": "PRM800K",
+    "host": "github",
+    "identifier": "openai/prm800k",
+    "role": "loader only; not used by an experiment",
+    "status": "RESOLVES",
+    "checked_utc": "2026-09-15T14:48:35Z"
+  },
+  {
+    "dataset": "BIG-Bench Mistake",
+    "host": "github",
+    "identifier": "WHGTyen/BIG-Bench-Mistake",
+    "role": "E7 cross-domain transfer",
+    "status": "RESOLVES",
+    "checked_utc": "2026-09-15T14:48:35Z"
+  }
+]

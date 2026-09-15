@@ -1,0 +1,4 @@
+representation,status,auroc_full_prefix,note
+majority-class,OK,0.5,constant score = train prevalence 0.504
+uncertainty (token entropy / logit margin),NOT_RUN,,ProcessBench stores step text only; no token log-probabilities exist for its generators. Requires re-generating traces with an open model (GPU).
+hidden-state (linear probe),NOT_RUN,,Requires stage 06 activations (GPU); see table3_probe_heatmap.csv.

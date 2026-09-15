@@ -1,0 +1,20 @@
+\begin{tabular}{llrrrrrrr}
+\toprule
+representation & evaluation_domain & auroc & ci_lo & ci_hi & n_eval & positive_rate & in_domain_auroc & auroc_drop \\
+\midrule
+lexical & ProcessBench (in-domain test) & 0.626 & 0.587 & 0.663 & 866 & 0.488 & 0.626 & 0.000 \\
+lexical & BBM: dyck_languages & 0.172 & 0.146 & 0.197 & 986 & 0.511 & 0.626 & 0.454 \\
+lexical & BBM: logical_deduction & 0.495 & 0.397 & 0.603 & 300 & 0.850 & 0.626 & 0.131 \\
+lexical & BBM: multistep_arithmetic & 0.502 & 0.413 & 0.593 & 300 & 0.850 & 0.626 & 0.124 \\
+lexical & BBM: tracking_shuffled_objects & 0.480 & 0.406 & 0.548 & 300 & 0.850 & 0.626 & 0.146 \\
+lexical & BBM: word_sorting & 0.372 & 0.288 & 0.466 & 300 & 0.850 & 0.626 & 0.254 \\
+lexical & BBM: all tasks & 0.552 & 0.528 & 0.576 & 2186 & 0.697 & 0.626 & 0.074 \\
+surface & ProcessBench (in-domain test) & 0.618 & 0.577 & 0.653 & 866 & 0.488 & 0.618 & 0.000 \\
+surface & BBM: dyck_languages & 0.206 & 0.176 & 0.237 & 986 & 0.511 & 0.618 & 0.412 \\
+surface & BBM: logical_deduction & 0.676 & 0.583 & 0.761 & 300 & 0.850 & 0.618 & -0.058 \\
+surface & BBM: multistep_arithmetic & 0.785 & 0.728 & 0.834 & 300 & 0.850 & 0.618 & -0.167 \\
+surface & BBM: tracking_shuffled_objects & 0.576 & 0.493 & 0.656 & 300 & 0.850 & 0.618 & 0.042 \\
+surface & BBM: word_sorting & 0.832 & 0.758 & 0.892 & 300 & 0.850 & 0.618 & -0.215 \\
+surface & BBM: all tasks & 0.646 & 0.623 & 0.670 & 2186 & 0.697 & 0.618 & -0.029 \\
+\bottomrule
+\end{tabular}

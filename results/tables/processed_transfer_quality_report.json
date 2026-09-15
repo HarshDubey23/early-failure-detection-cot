@@ -1,0 +1,10 @@
+{
+  "n_raw": 2186,
+  "n_clean": 2186,
+  "dropped_by_p5": 0,
+  "n_questions": 2186,
+  "duplicate_trace_ids": 0,
+  "frac_has_error": 0.7813357731015553,
+  "frac_answer_incorrect": 0.6971637694419031,
+  "unexpected_missing": {}
+}

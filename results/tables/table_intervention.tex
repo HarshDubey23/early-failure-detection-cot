@@ -1,0 +1,19 @@
+\begin{tabular}{lrrrrrrr}
+\toprule
+policy & recovery_rate & corruption_rate & net_benefit & net_accuracy_change & intervention_rate & extra_tokens_per_question & n_traces \\
+\midrule
+no intervention & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 866 \\
+selective tau=0.3 & 0.381 & 0.014 & 0.367 & 0.179 & 1.000 & 32.000 & 866 \\
+selective tau=0.4 & 0.383 & 0.009 & 0.374 & 0.182 & 0.976 & 31.224 & 866 \\
+selective tau=0.5 & 0.364 & 0.009 & 0.355 & 0.173 & 0.838 & 26.827 & 866 \\
+selective tau=0.6 & 0.220 & 0.011 & 0.209 & 0.102 & 0.465 & 14.891 & 866 \\
+selective tau=0.7 & 0.038 & 0.000 & 0.038 & 0.018 & 0.069 & 2.217 & 866 \\
+selective tau=0.8 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 866 \\
+selective tau=0.9 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 0.000 & 866 \\
+always intervene (tau=0) & 0.381 & 0.014 & 0.367 & 0.179 & 1.000 & 32.000 & 866 \\
+oracle (knows e) & 1.000 & 0.000 & 1.000 & 0.488 & 0.488 & 161.057 & 866 \\
+self-consistency N=2 (iid model) & 0.512 & 0.488 & 0.023 & 0.000 & 1.000 & 449.291 & 866 \\
+self-consistency N=4 (iid model) & 0.517 & 0.483 & 0.035 & 0.006 & 1.000 & 1347.874 & 866 \\
+self-consistency N=8 (iid model) & 0.525 & 0.475 & 0.050 & 0.014 & 1.000 & 3145.039 & 866 \\
+\bottomrule
+\end{tabular}

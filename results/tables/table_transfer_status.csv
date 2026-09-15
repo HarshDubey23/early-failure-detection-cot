@@ -1,0 +1,2 @@
+domain,status,reason
+StrategyQA,NOT_RUN,"StrategyQA provides question decompositions, not model reasoning traces with graded answers; a detector needs generated traces (GPU generation, stage 06-style) to be evaluated on it."

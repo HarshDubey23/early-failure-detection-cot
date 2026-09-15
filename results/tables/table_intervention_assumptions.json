@@ -1,0 +1,9 @@
+{
+  "p_verify_repair": 0.4,
+  "p_verify_corrupt": 0.05,
+  "p_regen_repair": 0.6,
+  "p_regen_corrupt": 0.1,
+  "p_revert_catches_corruption": 0.5,
+  "verify_tokens": 32,
+  "chars_per_token": 4.0
+}

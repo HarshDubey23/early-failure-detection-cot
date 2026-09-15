@@ -1,0 +1,452 @@
+{
+  "target": "answer_incorrect",
+  "placeholders": {
+    "N_traces": {
+      "value": "3400",
+      "raw": 3400,
+      "source": "results/tables/table1_descriptive.csv, row ALL, n_traces",
+      "main_tex": "Abstract; Contributions item 2; Sec. V-A Datasets"
+    },
+    "pct_erroneous": {
+      "value": "65.3",
+      "raw": 65.3235294117647,
+      "source": "results/tables/table1_descriptive.csv, row ALL, pct_erroneous",
+      "main_tex": "Sec. V-D Metrics (process-error rate)"
+    },
+    "pct_answer_incorrect": {
+      "value": "50.0",
+      "raw": 50.0,
+      "source": "results/tables/table1_descriptive.csv, row ALL, pct_answer_incorrect",
+      "main_tex": "Sec. V-D Metrics (detector target rate)"
+    },
+    "mean_rho": {
+      "value": "0.500",
+      "raw": 0.5004226171394868,
+      "source": "results/tables/table1_descriptive.csv, row ALL, mean_relative_onset",
+      "main_tex": "Abstract; Sec. VI-A"
+    },
+    "mean_rho_ci": {
+      "value": "[0.490, 0.510]",
+      "raw": null,
+      "source": "results/tables/table1_descriptive.csv, row ALL, relative_onset_ci_lo/hi",
+      "main_tex": "Sec. VI-A"
+    },
+    "expected_rho_uniform_step": {
+      "value": "0.578",
+      "raw": null,
+      "source": "results/tables/table1_descriptive.csv, row ALL, expected_mean_rho_uniform_step",
+      "main_tex": "Sec. VI-A (reference value)"
+    },
+    "median_rho": {
+      "value": "0.500",
+      "raw": null,
+      "source": "results/tables/table1_descriptive.csv, row ALL, median_relative_onset",
+      "main_tex": "Sec. VI-A"
+    },
+    "pct_first_half": {
+      "value": "58.6",
+      "raw": 58.62224223322827,
+      "source": "results/tables/table1_descriptive.csv, row ALL, pct_errors_first_half",
+      "main_tex": "Sec. VI-A"
+    },
+    "mean_steps_remaining": {
+      "value": "4.12",
+      "raw": 4.119315623592976,
+      "source": "results/tables/table1_descriptive.csv, row ALL, mean_steps_remaining",
+      "main_tex": "Abstract; Sec. VI-A; Sec. VII-A"
+    },
+    "pct_final_step": {
+      "value": "4.1",
+      "raw": 4.097253489419181,
+      "source": "results/tables/table1_descriptive.csv, row ALL, pct_errors_final_step",
+      "main_tex": "Sec. VI-A"
+    },
+    "expected_pct_final_step": {
+      "value": "15.5",
+      "raw": 15.546033397969374,
+      "source": "results/tables/table1_descriptive.csv, row ALL, expected_pct_final_step_uniform",
+      "main_tex": "Sec. VI-A"
+    },
+    "mean_err_idx": {
+      "value": "3.79",
+      "raw": null,
+      "source": "results/tables/table1_descriptive.csv, row ALL, mean_err_idx",
+      "main_tex": "Sec. VI-A"
+    },
+    "median_steps": {
+      "value": "7",
+      "raw": null,
+      "source": "results/tables/table1_descriptive.csv, row ALL, median_steps",
+      "main_tex": "Table I"
+    },
+    "motivation_onset_pct": {
+      "value": "50",
+      "raw": 50,
+      "source": "round(100 x mean_rho) from results/tables/table1_descriptive.csv, row ALL",
+      "main_tex": "Sec. I-A Motivation (first percentage)"
+    },
+    "motivation_remaining_pct": {
+      "value": "50",
+      "raw": 50,
+      "source": "100 - motivation_onset_pct",
+      "main_tex": "Sec. I-A Motivation (second percentage)"
+    },
+    "table1_gsm8k": {
+      "value": "400 & 51.7 & 5 & 0.546",
+      "raw": null,
+      "source": "results/tables/table1_descriptive.csv, row gsm8k",
+      "main_tex": "Table I"
+    },
+    "table1_math": {
+      "value": "1000 & 59.4 & 6 & 0.502",
+      "raw": null,
+      "source": "results/tables/table1_descriptive.csv, row math",
+      "main_tex": "Table I"
+    },
+    "table1_olympiadbench": {
+      "value": "1000 & 66.1 & 8 & 0.511",
+      "raw": null,
+      "source": "results/tables/table1_descriptive.csv, row olympiadbench",
+      "main_tex": "Table I"
+    },
+    "table1_omnimath": {
+      "value": "1000 & 75.9 & 7 & 0.478",
+      "raw": null,
+      "source": "results/tables/table1_descriptive.csv, row omnimath",
+      "main_tex": "Table I"
+    },
+    "table1_ALL": {
+      "value": "3400 & 65.3 & 7 & 0.500",
+      "raw": null,
+      "source": "results/tables/table1_descriptive.csv, row ALL",
+      "main_tex": "Table I"
+    },
+    "KS_D": {
+      "value": "0.119",
+      "raw": 0.1185051778478163,
+      "source": "results/tables/table_stats_tests.json, ks_uniform.statistic_D",
+      "main_tex": "Abstract; Sec. VI-A"
+    },
+    "KS_p": {
+      "value": "1.2\\times10^{-27}",
+      "raw": 1.2369015144396901e-27,
+      "source": "results/tables/table_stats_tests.json, ks_uniform.p_value",
+      "main_tex": "Abstract; Sec. VI-A"
+    },
+    "KS_rejects_uniform": {
+      "value": "yes",
+      "raw": null,
+      "source": "rule: p < 0.05",
+      "main_tex": "Abstract wording 'not uniformly distributed'"
+    },
+    "KS_discrete_null_p": {
+      "value": "\\le 0.001",
+      "raw": 0.000999000999000999,
+      "source": "results/tables/table_stats_tests.json, ks_discrete_uniform_step_null.p_value",
+      "main_tex": "Sec. VI-A (robustness sentence)"
+    },
+    "KS_discrete_null_D": {
+      "value": "0.149",
+      "raw": null,
+      "source": "results/tables/table_stats_tests.json, ks_discrete_uniform_step_null.observed_D_vs_null",
+      "main_tex": "Sec. VI-A"
+    },
+    "KS_discrete_null_uniformD_q95": {
+      "value": "0.167",
+      "raw": null,
+      "source": "results/tables/table_stats_tests.json, ks_discrete_uniform_step_null.null_D_uniform_q95",
+      "main_tex": "Sec. VI-A (KS-to-uniform expected under the discrete null)"
+    },
+    "KS_discrete_null_mean_rho": {
+      "value": "0.578",
+      "raw": null,
+      "source": "results/tables/table_stats_tests.json, ks_discrete_uniform_step_null.null_mean_rho",
+      "main_tex": "Sec. VI-A"
+    },
+    "KS_discrete_null_mean_p": {
+      "value": "\\le 0.001",
+      "raw": null,
+      "source": "results/tables/table_stats_tests.json, ks_discrete_uniform_step_null.p_value_mean",
+      "main_tex": "Sec. VI-A"
+    },
+    "KS_discrete_null_direction": {
+      "value": "earlier than null",
+      "raw": null,
+      "source": "sign of observed - null mean rho",
+      "main_tex": "Sec. VI-A"
+    },
+    "KW_H": {
+      "value": "14.50",
+      "raw": 14.503609527380707,
+      "source": "results/tables/table_stats_tests.json, kruskal_tiers.H",
+      "main_tex": "Sec. VI-C"
+    },
+    "KW_p": {
+      "value": "0.002",
+      "raw": 0.0022939587911009396,
+      "source": "results/tables/table_stats_tests.json, kruskal_tiers.p_value",
+      "main_tex": "Sec. VI-C"
+    },
+    "KW_eta2": {
+      "value": "0.005",
+      "raw": 0.005188818009643981,
+      "source": "results/tables/table_stats_tests.json, kruskal_tiers.eta_squared",
+      "main_tex": "Sec. VI-C"
+    },
+    "KW_does_shift": {
+      "value": "does",
+      "raw": null,
+      "source": "rule: p < 0.05",
+      "main_tex": "Sec. VI-C"
+    },
+    "AUROC_lexical_25": {
+      "value": "0.588",
+      "raw": 0.5875104728666036,
+      "source": "results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=lexical, fraction=0.25",
+      "main_tex": "Abstract; Sec. VI-B"
+    },
+    "AUROC_lexical_25_ci": {
+      "value": "[0.547, 0.627]",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
+      "main_tex": "Sec. VI-B"
+    },
+    "AUROC_lexical_100": {
+      "value": "0.626",
+      "raw": 0.6261146598786482,
+      "source": "results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=lexical, fraction=1.0",
+      "main_tex": "Abstract; Sec. VI-B"
+    },
+    "AUROC_lexical_100_ci": {
+      "value": "[0.587, 0.663]",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
+      "main_tex": "Sec. VI-B"
+    },
+    "AUROC_surface_100": {
+      "value": "0.618",
+      "raw": 0.6177897315210604,
+      "source": "results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=surface, fraction=1.0",
+      "main_tex": "Sec. VI-B"
+    },
+    "AUROC_surface_100_ci": {
+      "value": "[0.577, 0.653]",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
+      "main_tex": "Sec. VI-B"
+    },
+    "AUROC_surface_25": {
+      "value": "0.548",
+      "raw": 0.5481751863770019,
+      "source": "results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=surface, fraction=0.25",
+      "main_tex": "Sec. VI-B"
+    },
+    "AUROC_surface_25_ci": {
+      "value": "[0.509, 0.584]",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
+      "main_tex": "Sec. VI-B"
+    },
+    "AUROC_length_25": {
+      "value": "0.515",
+      "raw": 0.5146460037675639,
+      "source": "results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=length-only, fraction=0.25",
+      "main_tex": "Sec. VI-B"
+    },
+    "AUROC_length_25_ci": {
+      "value": "[0.476, 0.552]",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
+      "main_tex": "Sec. VI-B"
+    },
+    "AUROC_length_100": {
+      "value": "0.539",
+      "raw": 0.5386708931687558,
+      "source": "results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=length-only, fraction=1.0",
+      "main_tex": "Sec. VI-B"
+    },
+    "AUROC_length_100_ci": {
+      "value": "[0.502, 0.578]",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
+      "main_tex": "Sec. VI-B"
+    },
+    "prefix_grid": {
+      "value": "10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100",
+      "raw": null,
+      "source": "configs/default.yaml prefix_grid",
+      "main_tex": "Contributions item 3"
+    },
+    "n_prefix_fractions": {
+      "value": "12",
+      "raw": null,
+      "source": "configs/default.yaml prefix_grid (count)",
+      "main_tex": "Contributions item 3"
+    },
+    "n_questions": {
+      "value": "2842",
+      "raw": 2842,
+      "source": "processed_traces_quality_report.json, n_questions",
+      "main_tex": "Sec. V-A Datasets"
+    },
+    "dropped_by_p5": {
+      "value": "0",
+      "raw": 0,
+      "source": "processed_traces_quality_report.json, dropped_by_p5",
+      "main_tex": "Sec. V-A Datasets"
+    },
+    "n_generators": {
+      "value": "12",
+      "raw": 12,
+      "source": "processed_traces.jsonl, distinct generator",
+      "main_tex": "Sec. V-A; Sec. VIII"
+    },
+    "n_erroneous": {
+      "value": "2221",
+      "raw": 2221,
+      "source": "table1_descriptive.csv, row ALL, n_erroneous",
+      "main_tex": "Fig. 2 caption"
+    },
+    "bbm_n_traces": {
+      "value": "2186",
+      "raw": null,
+      "source": "table1b_descriptive_transfer.csv, row ALL, n_traces",
+      "main_tex": "Sec. V-A Datasets"
+    },
+    "bbm_n_tasks": {
+      "value": "5",
+      "raw": null,
+      "source": "table1b_descriptive_transfer.csv (rows)",
+      "main_tex": "Sec. V-A Datasets"
+    },
+    "bbm_max_pct_incorrect": {
+      "value": "85.0",
+      "raw": null,
+      "source": "table1b_descriptive_transfer.csv, max pct_answer_incorrect over tasks",
+      "main_tex": "Sec. V-D Metrics"
+    },
+    "bbm_n_tasks_at_max_pct": {
+      "value": "4",
+      "raw": null,
+      "source": "table1b_descriptive_transfer.csv (count of tasks at that rate)",
+      "main_tex": "Sec. V-D Metrics"
+    },
+    "KS_discrete_null_uniformD_mean": {
+      "value": "0.155",
+      "raw": null,
+      "source": "table_stats_tests.json, ks_discrete_uniform_step_null.null_D_uniform_mean",
+      "main_tex": "Sec. VI-A"
+    },
+    "KS_discrete_null_D95": {
+      "value": "0.026",
+      "raw": null,
+      "source": "table_stats_tests.json, ks_discrete_uniform_step_null.null_D_vs_null_q95",
+      "main_tex": "Sec. VI-A"
+    },
+    "n_simulations": {
+      "value": "1000",
+      "raw": null,
+      "source": "table_stats_tests.json, n_simulations",
+      "main_tex": "Sec. VI-A"
+    },
+    "n_test": {
+      "value": "866",
+      "raw": 866,
+      "source": "table2_prefix_auroc.csv, n_test",
+      "main_tex": "Sec. V-C"
+    },
+    "lexical_length_ci_overlap": {
+      "value": "10, 20, 25, 30, 70, 75",
+      "raw": null,
+      "source": "table2_prefix_auroc.csv, fractions where lexical ci_lo <= length-only ci_hi",
+      "main_tex": "Sec. VI-B"
+    },
+    "AUROC_lexical_100_process_error": {
+      "value": "0.735",
+      "raw": null,
+      "source": "table2_prefix_auroc.csv, target=has_error, lexical, fraction=1.0",
+      "main_tex": "Sec. VI-B"
+    },
+    "lead_alarm_rate_050": {
+      "value": "90.8",
+      "raw": null,
+      "source": "table_lead_summary.csv, threshold=0.5, alarm_rate",
+      "main_tex": "Sec. VI-D"
+    },
+    "lead_warned_050": {
+      "value": "63.4",
+      "raw": null,
+      "source": "table_lead_summary.csv, threshold=0.5, frac_warned_before_error",
+      "main_tex": "Sec. VI-D"
+    },
+    "lead_median_delta_050": {
+      "value": "1",
+      "raw": null,
+      "source": "table_lead_summary.csv, threshold=0.5, median_delta",
+      "main_tex": "Sec. VI-D"
+    },
+    "lead_false_alarm_050": {
+      "value": "72.3",
+      "raw": null,
+      "source": "table_lead_summary.csv, threshold=0.5, false_alarm_rate_error_free",
+      "main_tex": "Sec. VI-D; Sec. VII-C"
+    },
+    "lead_n_error_free": {
+      "value": "325",
+      "raw": null,
+      "source": "table_lead_summary.csv, threshold=0.5, n_error_free",
+      "main_tex": "Sec. VI-D"
+    },
+    "lead_n_erroneous": {
+      "value": "541",
+      "raw": null,
+      "source": "table_lead_summary.csv, threshold=0.5, n_traces",
+      "main_tex": "Sec. VI-D"
+    },
+    "ECE_lexical": {
+      "value": "0.025",
+      "raw": null,
+      "source": "table_calibration_ece.csv, detector=lexical",
+      "main_tex": "Sec. VI-D"
+    },
+    "ECE_surface": {
+      "value": "0.021",
+      "raw": null,
+      "source": "table_calibration_ece.csv, detector=surface",
+      "main_tex": "Sec. VI-D"
+    },
+    "ECE_surface-MLP": {
+      "value": "0.046",
+      "raw": null,
+      "source": "table_calibration_ece.csv, detector=surface-MLP",
+      "main_tex": "Sec. VI-D"
+    },
+    "ECE_surface-GRU": {
+      "value": "0.164",
+      "raw": null,
+      "source": "table_calibration_ece.csv, detector=surface-GRU",
+      "main_tex": "Sec. VI-D"
+    },
+    "transfer_lexical_min": {
+      "value": "0.172",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, min over BBM tasks",
+      "main_tex": "Sec. VI-D"
+    },
+    "transfer_lexical_max": {
+      "value": "0.502",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, max over BBM tasks",
+      "main_tex": "Sec. VI-D"
+    },
+    "transfer_lexical_min_task": {
+      "value": "dyck_languages",
+      "raw": null,
+      "source": "table_transfer.csv, task with the minimum",
+      "main_tex": "Sec. VI-D"
+    }
+  },
+  "notes": [
+    "Model/temperature/samples/layer placeholders are CONFIG values (configs/default.yaml probes.*), not results; the experiment that uses them (E4) did not run in this build."
+  ]
+}

@@ -17,15 +17,16 @@ import numpy as np
 
 
 def fit_sequence_probe(sequences: list, labels: np.ndarray, seed: int = 42,
-                       epochs: int = 10, hidden_size: int = 32):
+                       epochs: int = 200, hidden_size: int = 32, lr: float = 0.01):
     """Fit a GRU over per-step feature sequences.
 
     Args:
         sequences: List of (n_steps_i, n_features) arrays.
         labels: Trajectory-level failure labels.
         seed: Config seed.
-        epochs: Training epochs (small; this is a probe, not a product).
+        epochs: Full-batch training epochs (from config `probes.gru_epochs`).
         hidden_size: GRU hidden dimension.
+        lr: Adam learning rate (from config `probes.gru_lr`).
 
     Returns:
         Trained torch module (with `.predict_proba_list` helper).
@@ -62,7 +63,7 @@ def fit_sequence_probe(sequences: list, labels: np.ndarray, seed: int = 42,
     for i, seq in enumerate(sequences):
         padded[i, : seq.shape[0]] = torch.tensor(seq, dtype=torch.float32)
     targets = torch.tensor(np.asarray(labels), dtype=torch.float32)
-    optimiser = torch.optim.Adam(model.parameters(), lr=1e-3)
+    optimiser = torch.optim.Adam(model.parameters(), lr=lr)
     loss_fn = nn.BCEWithLogitsLoss()
     model.train()
     for _ in range(epochs):

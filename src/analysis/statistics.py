@@ -25,24 +25,108 @@ def ks_uniform(values: np.ndarray) -> dict:
     values = np.asarray(values, dtype=float)
     values = values[~np.isnan(values)]
     result = stats.kstest(values, "uniform")
-    return {"statistic_D": float(result.statistic), "p_value": float(result.pvalue)}
+    return {"statistic_D": float(result.statistic), "p_value": float(result.pvalue),
+            "n": int(len(values))}
 
 
 def mann_whitney_length(lengths_err: np.ndarray, lengths_ok: np.ndarray) -> dict:
     """Mann-Whitney U on trace length, erroneous vs correct.
 
     Measures whether failing traces differ in length (the length confound).
-    Effect size is rank-biserial r = 1 - 2U/(n1*n2).
+    Effect size is the rank-biserial correlation r = 2*U1/(n1*n2) - 1, where
+    U1 is the statistic for the ERRONEOUS group: r > 0 means erroneous traces
+    tend to be longer, r < 0 shorter, r = 0 no tendency.
+
+    Example:
+        >>> round(mann_whitney_length(np.array([5, 6, 7]), np.array([1, 2, 3]))["rank_biserial_r"], 2)
+        1.0
     """
     from scipy import stats
 
+    lengths_err = np.asarray(lengths_err, dtype=float)
+    lengths_ok = np.asarray(lengths_ok, dtype=float)
     result = stats.mannwhitneyu(lengths_err, lengths_ok, alternative="two-sided")
     n1, n2 = len(lengths_err), len(lengths_ok)
-    rank_biserial = 1.0 - 2.0 * float(result.statistic) / max(1, n1 * n2)
+    rank_biserial = 2.0 * float(result.statistic) / max(1, n1 * n2) - 1.0
     return {
         "U": float(result.statistic),
         "p_value": float(result.pvalue),
         "rank_biserial_r": float(rank_biserial),
+        "median_len_erroneous": float(np.median(lengths_err)) if n1 else float("nan"),
+        "median_len_correct": float(np.median(lengths_ok)) if n2 else float("nan"),
+        "n_erroneous": int(n1),
+        "n_correct": int(n2),
+    }
+
+
+def _null_cdf_uniform_steps(grid: np.ndarray, n_steps: np.ndarray) -> np.ndarray:
+    """CDF of rho under e ~ Uniform{1..n_i} per trace, averaged over traces.
+
+    For one trace, P(e/n <= x) = floor(x * n) / n (clipped to [0, 1]); the
+    pooled null CDF is the mean of those step functions.
+    """
+    counts = np.floor(np.outer(grid, n_steps) + 1e-9)
+    return np.mean(np.clip(counts, 0, n_steps) / n_steps, axis=1)
+
+
+def _ecdf(values: np.ndarray, grid: np.ndarray) -> np.ndarray:
+    ordered = np.sort(values)
+    return np.searchsorted(ordered, grid + 1e-9, side="right") / len(ordered)
+
+
+def ks_discrete_uniform_null(first_error_idx: np.ndarray, n_steps: np.ndarray,
+                             n_simulations: int = 1000, seed: int = 42) -> dict:
+    """Monte Carlo goodness-of-fit test of rho against "error step uniform over the trace's own steps".
+
+    Why this exists: rho = e/n lives on a lattice ({1/n, ..., 1}) and can never
+    be below 1/n, so errors spread perfectly evenly over steps do NOT give a
+    continuous Uniform(0,1) rho - short traces alone make a KS test against
+    Uniform(0,1) reject. The appropriate null keeps every trace's observed n
+    and draws e ~ Uniform{1..n}.
+
+    Two statistics are compared with their Monte Carlo null distributions:
+      - D_vs_null: max distance between the observed ECDF of rho and the null
+        CDF (a KS-type distance to the correct discrete null), and
+      - the mean of rho (two-sided), whose sign says whether errors sit
+        earlier or later than the uniform-step null.
+    For reference it also reports how large the KS distance to Uniform(0,1)
+    typically is under the null (null_D_uniform_q95).
+
+    Returns:
+        Dict of observed statistics, null summaries and Monte Carlo p-values.
+    """
+    from scipy import stats
+
+    first_error_idx = np.asarray(first_error_idx, dtype=float)
+    n_steps = np.asarray(n_steps, dtype=float)
+    observed_rho = first_error_idx / n_steps
+    grid = np.unique(np.concatenate([np.arange(1, n + 1) / n for n in np.unique(n_steps)]))
+    null_cdf = _null_cdf_uniform_steps(grid, n_steps)
+    null_mean = float(np.mean((n_steps + 1.0) / (2.0 * n_steps)))
+
+    observed_d_null = float(np.max(np.abs(_ecdf(observed_rho, grid) - null_cdf)))
+    observed_mean = float(observed_rho.mean())
+    rng = np.random.default_rng(seed)
+    d_null, means, d_uniform = [], [], []
+    for _ in range(n_simulations):
+        simulated_rho = (np.floor(rng.random(len(n_steps)) * n_steps) + 1.0) / n_steps
+        d_null.append(float(np.max(np.abs(_ecdf(simulated_rho, grid) - null_cdf))))
+        means.append(float(simulated_rho.mean()))
+        d_uniform.append(float(stats.kstest(simulated_rho, "uniform").statistic))
+    d_null, means, d_uniform = np.asarray(d_null), np.asarray(means), np.asarray(d_uniform)
+    return {
+        "observed_D_vs_null": observed_d_null,
+        "null_D_vs_null_q95": float(np.quantile(d_null, 0.95)),
+        "p_value": float((1 + np.sum(d_null >= observed_d_null)) / (1 + n_simulations)),
+        "observed_mean_rho": observed_mean,
+        "null_mean_rho": null_mean,
+        "p_value_mean": float((1 + np.sum(np.abs(means - null_mean) >= abs(observed_mean - null_mean)))
+                              / (1 + n_simulations)),
+        "direction": "earlier than null" if observed_mean < null_mean else "later than null",
+        "observed_D_uniform": float(stats.kstest(observed_rho, "uniform").statistic),
+        "null_D_uniform_mean": float(d_uniform.mean()),
+        "null_D_uniform_q95": float(np.quantile(d_uniform, 0.95)),
+        "n_simulations": int(n_simulations),
     }
 
 
@@ -64,6 +148,8 @@ def kruskal_across_tiers(groups: list) -> dict:
         "H": float(result.statistic),
         "p_value": float(result.pvalue),
         "eta_squared": float(max(0.0, eta_sq)),
+        "k_groups": int(k_groups),
+        "n": int(n_total),
     }
 
 

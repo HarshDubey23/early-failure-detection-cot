@@ -39,7 +39,7 @@ def extract_step_states(
     """Extract hidden states at each step boundary for the requested layers.
 
     Args:
-        model: Causal LM with `output_hidden_states=True`.
+        model: Causal LM (hidden states are requested per call).
         tokenizer: Its tokeniser.
         prompt_text: Text preceding the generation.
         generated_text: Full generated continuation.
@@ -56,8 +56,10 @@ def extract_step_states(
     full = tokenizer(prompt_text + generated_text, return_tensors="pt")
     full = {k: v.to(model.device) for k, v in full.items()}
     with torch.no_grad():
-        outputs = model(**full)
-    hidden_states = outputs.hidden_states  # tuple over layers
+        outputs = model(**full, output_hidden_states=True)
+    # hidden_states[0] is the embedding output; hidden_states[L] is the output of
+    # transformer layer L, so valid layer indices are 1..num_hidden_layers.
+    hidden_states = outputs.hidden_states
     n_tokens = hidden_states[0].shape[1]
     positions = step_boundary_token_positions(
         prompt_text, steps, lambda s: tokenizer(s).input_ids, n_tokens

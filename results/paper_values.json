@@ -201,24 +201,24 @@
     },
     "AUROC_lexical_25": {
       "value": "0.588",
-      "raw": 0.5875104728666036,
+      "raw": 0.5875104728666037,
       "source": "results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=lexical, fraction=0.25",
       "main_tex": "Abstract; Sec. VI-B"
     },
     "AUROC_lexical_25_ci": {
-      "value": "[0.547, 0.627]",
+      "value": "[0.552, 0.626]",
       "raw": null,
       "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
       "main_tex": "Sec. VI-B"
     },
     "AUROC_lexical_100": {
       "value": "0.626",
-      "raw": 0.6261146598786482,
+      "raw": 0.6261146598786481,
       "source": "results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=lexical, fraction=1.0",
       "main_tex": "Abstract; Sec. VI-B"
     },
     "AUROC_lexical_100_ci": {
-      "value": "[0.587, 0.663]",
+      "value": "[0.590, 0.661]",
       "raw": null,
       "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
       "main_tex": "Sec. VI-B"
@@ -230,43 +230,43 @@
       "main_tex": "Sec. VI-B"
     },
     "AUROC_surface_100_ci": {
-      "value": "[0.577, 0.653]",
+      "value": "[0.583, 0.654]",
       "raw": null,
       "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
       "main_tex": "Sec. VI-B"
     },
     "AUROC_surface_25": {
       "value": "0.548",
-      "raw": 0.5481751863770019,
+      "raw": 0.5481751863770018,
       "source": "results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=surface, fraction=0.25",
       "main_tex": "Sec. VI-B"
     },
     "AUROC_surface_25_ci": {
-      "value": "[0.509, 0.584]",
+      "value": "[0.512, 0.588]",
       "raw": null,
       "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
       "main_tex": "Sec. VI-B"
     },
     "AUROC_length_25": {
       "value": "0.515",
-      "raw": 0.5146460037675639,
+      "raw": 0.5146460037675638,
       "source": "results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=length-only, fraction=0.25",
       "main_tex": "Sec. VI-B"
     },
     "AUROC_length_25_ci": {
-      "value": "[0.476, 0.552]",
+      "value": "[0.478, 0.554]",
       "raw": null,
       "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
       "main_tex": "Sec. VI-B"
     },
     "AUROC_length_100": {
       "value": "0.539",
-      "raw": 0.5386708931687558,
+      "raw": 0.5386708931687559,
       "source": "results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=length-only, fraction=1.0",
       "main_tex": "Sec. VI-B"
     },
     "AUROC_length_100_ci": {
-      "value": "[0.502, 0.578]",
+      "value": "[0.500, 0.579]",
       "raw": null,
       "source": "results/tables/table2_prefix_auroc.csv ci_lo/ci_hi",
       "main_tex": "Sec. VI-B"
@@ -355,17 +355,1793 @@
       "source": "table2_prefix_auroc.csv, n_test",
       "main_tex": "Sec. V-C"
     },
-    "lexical_length_ci_overlap": {
-      "value": "10, 20, 25, 30, 70, 75",
+    "n_train": {
+      "value": "2534",
       "raw": null,
-      "source": "table2_prefix_auroc.csv, fractions where lexical ci_lo <= length-only ci_hi",
-      "main_tex": "Sec. VI-B"
+      "source": "table1_descriptive.csv n_traces (ALL) - table2_prefix_auroc.csv n_test",
+      "main_tex": "Study guide"
     },
     "AUROC_lexical_100_process_error": {
       "value": "0.735",
       "raw": null,
       "source": "table2_prefix_auroc.csv, target=has_error, lexical, fraction=1.0",
       "main_tex": "Sec. VI-B"
+    },
+    "E3_lex_10": {
+      "value": "0.563",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.1",
+      "main_tex": "Table III"
+    },
+    "E3_lex_10_ci": {
+      "value": "0.526--0.602",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.1, ci",
+      "main_tex": "Table III"
+    },
+    "E3_lex_20": {
+      "value": "0.559",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.2",
+      "main_tex": "Table III"
+    },
+    "E3_lex_20_ci": {
+      "value": "0.519--0.598",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.2, ci",
+      "main_tex": "Table III"
+    },
+    "E3_lex_25": {
+      "value": "0.588",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.25",
+      "main_tex": "Table III"
+    },
+    "E3_lex_25_ci": {
+      "value": "0.552--0.626",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.25, ci",
+      "main_tex": "Table III"
+    },
+    "E3_lex_30": {
+      "value": "0.598",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.3",
+      "main_tex": "Table III"
+    },
+    "E3_lex_30_ci": {
+      "value": "0.562--0.634",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.3, ci",
+      "main_tex": "Table III"
+    },
+    "E3_lex_40": {
+      "value": "0.605",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.4",
+      "main_tex": "Table III"
+    },
+    "E3_lex_40_ci": {
+      "value": "0.571--0.641",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.4, ci",
+      "main_tex": "Table III"
+    },
+    "E3_lex_50": {
+      "value": "0.617",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.5",
+      "main_tex": "Table III"
+    },
+    "E3_lex_50_ci": {
+      "value": "0.584--0.654",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.5, ci",
+      "main_tex": "Table III"
+    },
+    "E3_lex_60": {
+      "value": "0.609",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.6",
+      "main_tex": "Table III"
+    },
+    "E3_lex_60_ci": {
+      "value": "0.575--0.647",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.6, ci",
+      "main_tex": "Table III"
+    },
+    "E3_lex_70": {
+      "value": "0.610",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.7",
+      "main_tex": "Table III"
+    },
+    "E3_lex_70_ci": {
+      "value": "0.574--0.646",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.7, ci",
+      "main_tex": "Table III"
+    },
+    "E3_lex_75": {
+      "value": "0.611",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.75",
+      "main_tex": "Table III"
+    },
+    "E3_lex_75_ci": {
+      "value": "0.573--0.648",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.75, ci",
+      "main_tex": "Table III"
+    },
+    "E3_lex_80": {
+      "value": "0.614",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.8",
+      "main_tex": "Table III"
+    },
+    "E3_lex_80_ci": {
+      "value": "0.578--0.652",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.8, ci",
+      "main_tex": "Table III"
+    },
+    "E3_lex_90": {
+      "value": "0.624",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.9",
+      "main_tex": "Table III"
+    },
+    "E3_lex_90_ci": {
+      "value": "0.588--0.660",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=0.9, ci",
+      "main_tex": "Table III"
+    },
+    "E3_lex_100": {
+      "value": "0.626",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=1.0",
+      "main_tex": "Table III"
+    },
+    "E3_lex_100_ci": {
+      "value": "0.590--0.661",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, lexical, fraction=1.0, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_10": {
+      "value": "0.538",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.1",
+      "main_tex": "Table III"
+    },
+    "E3_surf_10_ci": {
+      "value": "0.504--0.579",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.1, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_20": {
+      "value": "0.530",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.2",
+      "main_tex": "Table III"
+    },
+    "E3_surf_20_ci": {
+      "value": "0.494--0.570",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.2, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_25": {
+      "value": "0.548",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.25",
+      "main_tex": "Table III"
+    },
+    "E3_surf_25_ci": {
+      "value": "0.512--0.588",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.25, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_30": {
+      "value": "0.574",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.3",
+      "main_tex": "Table III"
+    },
+    "E3_surf_30_ci": {
+      "value": "0.538--0.614",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.3, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_40": {
+      "value": "0.572",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.4",
+      "main_tex": "Table III"
+    },
+    "E3_surf_40_ci": {
+      "value": "0.537--0.610",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.4, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_50": {
+      "value": "0.592",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.5",
+      "main_tex": "Table III"
+    },
+    "E3_surf_50_ci": {
+      "value": "0.558--0.629",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.5, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_60": {
+      "value": "0.594",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.6",
+      "main_tex": "Table III"
+    },
+    "E3_surf_60_ci": {
+      "value": "0.560--0.633",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.6, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_70": {
+      "value": "0.598",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.7",
+      "main_tex": "Table III"
+    },
+    "E3_surf_70_ci": {
+      "value": "0.564--0.638",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.7, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_75": {
+      "value": "0.604",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.75",
+      "main_tex": "Table III"
+    },
+    "E3_surf_75_ci": {
+      "value": "0.571--0.643",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.75, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_80": {
+      "value": "0.610",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.8",
+      "main_tex": "Table III"
+    },
+    "E3_surf_80_ci": {
+      "value": "0.577--0.649",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.8, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_90": {
+      "value": "0.615",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.9",
+      "main_tex": "Table III"
+    },
+    "E3_surf_90_ci": {
+      "value": "0.580--0.652",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=0.9, ci",
+      "main_tex": "Table III"
+    },
+    "E3_surf_100": {
+      "value": "0.618",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=1.0",
+      "main_tex": "Table III"
+    },
+    "E3_surf_100_ci": {
+      "value": "0.583--0.654",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface, fraction=1.0, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_10": {
+      "value": "0.548",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.1",
+      "main_tex": "Table III"
+    },
+    "E3_len_10_ci": {
+      "value": "0.510--0.588",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.1, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_20": {
+      "value": "0.519",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.2",
+      "main_tex": "Table III"
+    },
+    "E3_len_20_ci": {
+      "value": "0.483--0.558",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.2, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_25": {
+      "value": "0.515",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.25",
+      "main_tex": "Table III"
+    },
+    "E3_len_25_ci": {
+      "value": "0.478--0.554",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.25, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_30": {
+      "value": "0.529",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.3",
+      "main_tex": "Table III"
+    },
+    "E3_len_30_ci": {
+      "value": "0.491--0.568",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.3, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_40": {
+      "value": "0.518",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.4",
+      "main_tex": "Table III"
+    },
+    "E3_len_40_ci": {
+      "value": "0.479--0.557",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.4, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_50": {
+      "value": "0.536",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.5",
+      "main_tex": "Table III"
+    },
+    "E3_len_50_ci": {
+      "value": "0.497--0.575",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.5, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_60": {
+      "value": "0.526",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.6",
+      "main_tex": "Table III"
+    },
+    "E3_len_60_ci": {
+      "value": "0.488--0.565",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.6, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_70": {
+      "value": "0.534",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.7",
+      "main_tex": "Table III"
+    },
+    "E3_len_70_ci": {
+      "value": "0.496--0.574",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.7, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_75": {
+      "value": "0.543",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.75",
+      "main_tex": "Table III"
+    },
+    "E3_len_75_ci": {
+      "value": "0.505--0.584",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.75, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_80": {
+      "value": "0.526",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.8",
+      "main_tex": "Table III"
+    },
+    "E3_len_80_ci": {
+      "value": "0.488--0.565",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.8, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_90": {
+      "value": "0.540",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.9",
+      "main_tex": "Table III"
+    },
+    "E3_len_90_ci": {
+      "value": "0.503--0.579",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=0.9, ci",
+      "main_tex": "Table III"
+    },
+    "E3_len_100": {
+      "value": "0.539",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=1.0",
+      "main_tex": "Table III"
+    },
+    "E3_len_100_ci": {
+      "value": "0.500--0.579",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, length-only, fraction=1.0, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_10": {
+      "value": "0.546",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.1",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_10_ci": {
+      "value": "0.510--0.586",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.1, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_20": {
+      "value": "0.534",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.2",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_20_ci": {
+      "value": "0.497--0.574",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.2, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_25": {
+      "value": "0.554",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.25",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_25_ci": {
+      "value": "0.518--0.593",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.25, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_30": {
+      "value": "0.578",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.3",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_30_ci": {
+      "value": "0.540--0.615",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.3, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_40": {
+      "value": "0.577",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.4",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_40_ci": {
+      "value": "0.541--0.612",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.4, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_50": {
+      "value": "0.591",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.5",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_50_ci": {
+      "value": "0.554--0.626",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.5, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_60": {
+      "value": "0.605",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.6",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_60_ci": {
+      "value": "0.571--0.643",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.6, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_70": {
+      "value": "0.599",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.7",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_70_ci": {
+      "value": "0.562--0.637",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.7, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_75": {
+      "value": "0.604",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.75",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_75_ci": {
+      "value": "0.570--0.641",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.75, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_80": {
+      "value": "0.618",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.8",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_80_ci": {
+      "value": "0.583--0.654",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.8, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_90": {
+      "value": "0.622",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.9",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_90_ci": {
+      "value": "0.588--0.657",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.9, ci",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_100": {
+      "value": "0.626",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=1.0",
+      "main_tex": "Table III"
+    },
+    "E3_mlp_100_ci": {
+      "value": "0.591--0.661",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=1.0, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_10": {
+      "value": "0.535",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.1",
+      "main_tex": "Table III"
+    },
+    "E3_gru_10_ci": {
+      "value": "0.498--0.572",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.1, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_20": {
+      "value": "0.516",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.2",
+      "main_tex": "Table III"
+    },
+    "E3_gru_20_ci": {
+      "value": "0.477--0.556",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.2, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_25": {
+      "value": "0.543",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.25",
+      "main_tex": "Table III"
+    },
+    "E3_gru_25_ci": {
+      "value": "0.504--0.583",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.25, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_30": {
+      "value": "0.571",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.3",
+      "main_tex": "Table III"
+    },
+    "E3_gru_30_ci": {
+      "value": "0.535--0.609",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.3, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_40": {
+      "value": "0.568",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.4",
+      "main_tex": "Table III"
+    },
+    "E3_gru_40_ci": {
+      "value": "0.532--0.608",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.4, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_50": {
+      "value": "0.563",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.5",
+      "main_tex": "Table III"
+    },
+    "E3_gru_50_ci": {
+      "value": "0.525--0.602",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.5, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_60": {
+      "value": "0.576",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.6",
+      "main_tex": "Table III"
+    },
+    "E3_gru_60_ci": {
+      "value": "0.539--0.614",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.6, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_70": {
+      "value": "0.552",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.7",
+      "main_tex": "Table III"
+    },
+    "E3_gru_70_ci": {
+      "value": "0.515--0.589",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.7, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_75": {
+      "value": "0.560",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.75",
+      "main_tex": "Table III"
+    },
+    "E3_gru_75_ci": {
+      "value": "0.522--0.597",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.75, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_80": {
+      "value": "0.553",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.8",
+      "main_tex": "Table III"
+    },
+    "E3_gru_80_ci": {
+      "value": "0.514--0.591",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.8, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_90": {
+      "value": "0.552",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.9",
+      "main_tex": "Table III"
+    },
+    "E3_gru_90_ci": {
+      "value": "0.515--0.590",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.9, ci",
+      "main_tex": "Table III"
+    },
+    "E3_gru_100": {
+      "value": "0.558",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=1.0",
+      "main_tex": "Table III"
+    },
+    "E3_gru_100_ci": {
+      "value": "0.520--0.595",
+      "raw": null,
+      "source": "results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=1.0, ci",
+      "main_tex": "Table III"
+    },
+    "diff_lex_len_10": {
+      "value": "+0.015",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.1",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_10_ci": {
+      "value": "-0.035, +0.066",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.1, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_10_p": {
+      "value": "0.582",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.1, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_20": {
+      "value": "+0.039",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.2",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_20_ci": {
+      "value": "-0.010, +0.087",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.2, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_20_p": {
+      "value": "0.140",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.2, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_25": {
+      "value": "+0.073",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.25",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_25_ci": {
+      "value": "+0.022, +0.123",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.25, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_25_p": {
+      "value": "0.004",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.25, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_30": {
+      "value": "+0.069",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.3",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_30_ci": {
+      "value": "+0.017, +0.123",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.3, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_30_p": {
+      "value": "0.006",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.3, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_40": {
+      "value": "+0.087",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.4",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_40_ci": {
+      "value": "+0.036, +0.137",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.4, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_40_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.4, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_50": {
+      "value": "+0.081",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.5",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_50_ci": {
+      "value": "+0.031, +0.131",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.5, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_50_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.5, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_60": {
+      "value": "+0.083",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.6",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_60_ci": {
+      "value": "+0.032, +0.135",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.6, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_60_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.6, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_70": {
+      "value": "+0.076",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.7",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_70_ci": {
+      "value": "+0.024, +0.125",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.7, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_70_p": {
+      "value": "0.004",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.7, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_75": {
+      "value": "+0.068",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.75",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_75_ci": {
+      "value": "+0.017, +0.119",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.75, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_75_p": {
+      "value": "0.008",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.75, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_80": {
+      "value": "+0.088",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.8",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_80_ci": {
+      "value": "+0.036, +0.139",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.8, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_80_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.8, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_90": {
+      "value": "+0.084",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.9",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_90_ci": {
+      "value": "+0.032, +0.132",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.9, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_90_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.9, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_100": {
+      "value": "+0.087",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=1.0",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_len_100_ci": {
+      "value": "+0.036, +0.136",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=1.0, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_len_100_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - length-only, fraction=1.0, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_10": {
+      "value": "+0.025",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.1",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_10_ci": {
+      "value": "-0.027, +0.075",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.1, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_10_p": {
+      "value": "0.314",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.1, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_20": {
+      "value": "+0.029",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.2",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_20_ci": {
+      "value": "-0.017, +0.073",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.2, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_20_p": {
+      "value": "0.212",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.2, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_25": {
+      "value": "+0.039",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.25",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_25_ci": {
+      "value": "-0.007, +0.087",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.25, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_25_p": {
+      "value": "0.068",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.25, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_30": {
+      "value": "+0.024",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.3",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_30_ci": {
+      "value": "-0.022, +0.070",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.3, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_30_p": {
+      "value": "0.270",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.3, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_40": {
+      "value": "+0.034",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.4",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_40_ci": {
+      "value": "-0.010, +0.077",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.4, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_40_p": {
+      "value": "0.124",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.4, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_50": {
+      "value": "+0.025",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.5",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_50_ci": {
+      "value": "-0.016, +0.067",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.5, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_50_p": {
+      "value": "0.218",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.5, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_60": {
+      "value": "+0.015",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.6",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_60_ci": {
+      "value": "-0.026, +0.058",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.6, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_60_p": {
+      "value": "0.468",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.6, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_70": {
+      "value": "+0.012",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.7",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_70_ci": {
+      "value": "-0.029, +0.052",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.7, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_70_p": {
+      "value": "0.548",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.7, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_75": {
+      "value": "+0.007",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.75",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_75_ci": {
+      "value": "-0.032, +0.047",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.75, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_75_p": {
+      "value": "0.722",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.75, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_80": {
+      "value": "+0.004",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.8",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_80_ci": {
+      "value": "-0.037, +0.044",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.8, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_80_p": {
+      "value": "0.846",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.8, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_90": {
+      "value": "+0.009",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.9",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_90_ci": {
+      "value": "-0.030, +0.050",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.9, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_90_p": {
+      "value": "0.630",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.9, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_100": {
+      "value": "+0.008",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=1.0",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_lex_surf_100_ci": {
+      "value": "-0.033, +0.047",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=1.0, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_lex_surf_100_p": {
+      "value": "0.676",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, lexical - surface, fraction=1.0, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_10": {
+      "value": "-0.010",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.1",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_10_ci": {
+      "value": "-0.046, +0.028",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.1, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_10_p": {
+      "value": "0.598",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.1, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_20": {
+      "value": "+0.011",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.2",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_20_ci": {
+      "value": "-0.014, +0.038",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.2, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_20_p": {
+      "value": "0.406",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.2, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_25": {
+      "value": "+0.034",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.25",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_25_ci": {
+      "value": "+0.004, +0.062",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.25, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_25_p": {
+      "value": "0.028",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.25, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_30": {
+      "value": "+0.045",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.3",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_30_ci": {
+      "value": "+0.014, +0.078",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.3, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_30_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.3, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_40": {
+      "value": "+0.054",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.4",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_40_ci": {
+      "value": "+0.024, +0.085",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.4, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_40_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.4, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_50": {
+      "value": "+0.056",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.5",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_50_ci": {
+      "value": "+0.026, +0.091",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.5, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_50_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.5, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_60": {
+      "value": "+0.068",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.6",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_60_ci": {
+      "value": "+0.033, +0.104",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.6, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_60_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.6, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_70": {
+      "value": "+0.064",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.7",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_70_ci": {
+      "value": "+0.028, +0.098",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.7, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_70_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.7, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_75": {
+      "value": "+0.061",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.75",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_75_ci": {
+      "value": "+0.028, +0.094",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.75, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_75_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.75, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_80": {
+      "value": "+0.084",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.8",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_80_ci": {
+      "value": "+0.050, +0.120",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.8, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_80_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.8, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_90": {
+      "value": "+0.075",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.9",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_90_ci": {
+      "value": "+0.042, +0.108",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.9, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_90_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.9, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_100": {
+      "value": "+0.079",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=1.0",
+      "main_tex": "Sec. VI-B; Table III"
+    },
+    "diff_surf_len_100_ci": {
+      "value": "+0.045, +0.113",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=1.0, ci",
+      "main_tex": "Sec. VI-B"
+    },
+    "diff_surf_len_100_p": {
+      "value": "0.001",
+      "raw": null,
+      "source": "table2b_paired_auroc_differences.csv, surface - length-only, fraction=1.0, p_value",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_25_mean": {
+      "value": "0.544",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=0.25, mean",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_25_sd": {
+      "value": "0.021",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=0.25, sd",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_25_min": {
+      "value": "0.515",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=0.25, min",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_25_max": {
+      "value": "0.573",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=0.25, max",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_50_mean": {
+      "value": "0.552",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=0.5, mean",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_50_sd": {
+      "value": "0.016",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=0.5, sd",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_50_min": {
+      "value": "0.536",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=0.5, min",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_50_max": {
+      "value": "0.575",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=0.5, max",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_100_mean": {
+      "value": "0.551",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=1.0, mean",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_100_sd": {
+      "value": "0.014",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=1.0, sd",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_100_min": {
+      "value": "0.537",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=1.0, min",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_len_100_max": {
+      "value": "0.569",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, length-only, fraction=1.0, max",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_25_mean": {
+      "value": "0.577",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=0.25, mean",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_25_sd": {
+      "value": "0.015",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=0.25, sd",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_25_min": {
+      "value": "0.554",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=0.25, min",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_25_max": {
+      "value": "0.590",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=0.25, max",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_50_mean": {
+      "value": "0.599",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=0.5, mean",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_50_sd": {
+      "value": "0.017",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=0.5, sd",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_50_min": {
+      "value": "0.574",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=0.5, min",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_50_max": {
+      "value": "0.617",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=0.5, max",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_100_mean": {
+      "value": "0.611",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=1.0, mean",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_100_sd": {
+      "value": "0.016",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=1.0, sd",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_100_min": {
+      "value": "0.586",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=1.0, min",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_lex_100_max": {
+      "value": "0.626",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, lexical, fraction=1.0, max",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_25_mean": {
+      "value": "0.568",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=0.25, mean",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_25_sd": {
+      "value": "0.017",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=0.25, sd",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_25_min": {
+      "value": "0.548",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=0.25, min",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_25_max": {
+      "value": "0.590",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=0.25, max",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_50_mean": {
+      "value": "0.602",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=0.5, mean",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_50_sd": {
+      "value": "0.009",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=0.5, sd",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_50_min": {
+      "value": "0.592",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=0.5, min",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_50_max": {
+      "value": "0.612",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=0.5, max",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_100_mean": {
+      "value": "0.621",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=1.0, mean",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_100_sd": {
+      "value": "0.008",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=1.0, sd",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_100_min": {
+      "value": "0.613",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=1.0, min",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_surf_100_max": {
+      "value": "0.630",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv, surface, fraction=1.0, max",
+      "main_tex": "Sec. VI-B"
+    },
+    "robust_n_splits": {
+      "value": "5",
+      "raw": null,
+      "source": "table2c_split_robustness_summary.csv",
+      "main_tex": "Sec. VI-B"
+    },
+    "online_1": {
+      "value": "0.566",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=1",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_1_ci": {
+      "value": "0.526--0.604",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=1, ci",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_1_n": {
+      "value": "866",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=1, n_traces",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_2": {
+      "value": "0.583",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=2",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_2_ci": {
+      "value": "0.549--0.619",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=2, ci",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_2_n": {
+      "value": "858",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=2, n_traces",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_3": {
+      "value": "0.588",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=3",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_3_ci": {
+      "value": "0.550--0.626",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=3, ci",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_3_n": {
+      "value": "826",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=3, n_traces",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_4": {
+      "value": "0.610",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=4",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_4_ci": {
+      "value": "0.570--0.650",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=4, ci",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_4_n": {
+      "value": "714",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=4, n_traces",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_5": {
+      "value": "0.603",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=5",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_5_ci": {
+      "value": "0.559--0.647",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=5, ci",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_5_n": {
+      "value": "576",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=5, n_traces",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_6": {
+      "value": "0.613",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=6",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_6_ci": {
+      "value": "0.567--0.665",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=6, ci",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_6_n": {
+      "value": "442",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=6, n_traces",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_7": {
+      "value": "0.589",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=7",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_7_ci": {
+      "value": "0.527--0.648",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=7, ci",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_7_n": {
+      "value": "352",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=7, n_traces",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_8": {
+      "value": "0.590",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=8",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_8_ci": {
+      "value": "0.521--0.654",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=8, ci",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_8_n": {
+      "value": "263",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=8, n_traces",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_9": {
+      "value": "0.585",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=9",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_9_ci": {
+      "value": "0.514--0.662",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=9, ci",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_9_n": {
+      "value": "205",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=9, n_traces",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_10": {
+      "value": "0.568",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=10",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_10_ci": {
+      "value": "0.476--0.649",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=10, ci",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_10_n": {
+      "value": "153",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv, steps_observed=10, n_traces",
+      "main_tex": "Sec. VI-C"
+    },
+    "online_max_k": {
+      "value": "10",
+      "raw": null,
+      "source": "table_online_auroc_by_step.csv",
+      "main_tex": "Sec. VI-C"
     },
     "lead_alarm_rate_050": {
       "value": "90.8",
@@ -438,6 +2214,342 @@
       "raw": null,
       "source": "table_transfer.csv, lexical, max over BBM tasks",
       "main_tex": "Sec. VI-D"
+    },
+    "transfer_lexical_ProcessBench": {
+      "value": "0.626",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, ProcessBench (in-domain test)",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_ProcessBench_ci": {
+      "value": "0.590--0.661",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, ProcessBench (in-domain test), ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_ProcessBench_n": {
+      "value": "866",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, ProcessBench (in-domain test), n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_ProcessBench_pos": {
+      "value": "48.8",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, ProcessBench (in-domain test), positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_dyck_languages": {
+      "value": "0.172",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: dyck_languages",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_dyck_languages_ci": {
+      "value": "0.146--0.199",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: dyck_languages, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_dyck_languages_n": {
+      "value": "986",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: dyck_languages, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_dyck_languages_pos": {
+      "value": "51.1",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: dyck_languages, positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_logical_deduction": {
+      "value": "0.495",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: logical_deduction",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_logical_deduction_ci": {
+      "value": "0.392--0.599",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: logical_deduction, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_logical_deduction_n": {
+      "value": "300",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: logical_deduction, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_logical_deduction_pos": {
+      "value": "85.0",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: logical_deduction, positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_multistep_arithmetic": {
+      "value": "0.502",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: multistep_arithmetic",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_multistep_arithmetic_ci": {
+      "value": "0.410--0.598",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: multistep_arithmetic, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_multistep_arithmetic_n": {
+      "value": "300",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: multistep_arithmetic, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_multistep_arithmetic_pos": {
+      "value": "85.0",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: multistep_arithmetic, positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_tracking_shuffled_objects": {
+      "value": "0.480",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: tracking_shuffled_objects",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_tracking_shuffled_objects_ci": {
+      "value": "0.410--0.557",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: tracking_shuffled_objects, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_tracking_shuffled_objects_n": {
+      "value": "300",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: tracking_shuffled_objects, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_tracking_shuffled_objects_pos": {
+      "value": "85.0",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: tracking_shuffled_objects, positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_word_sorting": {
+      "value": "0.372",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: word_sorting",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_word_sorting_ci": {
+      "value": "0.284--0.453",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: word_sorting, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_word_sorting_n": {
+      "value": "300",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: word_sorting, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_word_sorting_pos": {
+      "value": "85.0",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: word_sorting, positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_all_tasks": {
+      "value": "0.552",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: all tasks",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_all_tasks_ci": {
+      "value": "0.530--0.575",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: all tasks, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_all_tasks_n": {
+      "value": "2186",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: all tasks, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_lexical_all_tasks_pos": {
+      "value": "69.7",
+      "raw": null,
+      "source": "table_transfer.csv, lexical, BBM: all tasks, positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_ProcessBench": {
+      "value": "0.618",
+      "raw": null,
+      "source": "table_transfer.csv, surface, ProcessBench (in-domain test)",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_ProcessBench_ci": {
+      "value": "0.583--0.654",
+      "raw": null,
+      "source": "table_transfer.csv, surface, ProcessBench (in-domain test), ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_ProcessBench_n": {
+      "value": "866",
+      "raw": null,
+      "source": "table_transfer.csv, surface, ProcessBench (in-domain test), n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_ProcessBench_pos": {
+      "value": "48.8",
+      "raw": null,
+      "source": "table_transfer.csv, surface, ProcessBench (in-domain test), positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_dyck_languages": {
+      "value": "0.206",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: dyck_languages",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_dyck_languages_ci": {
+      "value": "0.180--0.235",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: dyck_languages, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_dyck_languages_n": {
+      "value": "986",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: dyck_languages, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_dyck_languages_pos": {
+      "value": "51.1",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: dyck_languages, positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_logical_deduction": {
+      "value": "0.676",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: logical_deduction",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_logical_deduction_ci": {
+      "value": "0.580--0.761",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: logical_deduction, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_logical_deduction_n": {
+      "value": "300",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: logical_deduction, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_logical_deduction_pos": {
+      "value": "85.0",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: logical_deduction, positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_multistep_arithmetic": {
+      "value": "0.785",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: multistep_arithmetic",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_multistep_arithmetic_ci": {
+      "value": "0.732--0.837",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: multistep_arithmetic, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_multistep_arithmetic_n": {
+      "value": "300",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: multistep_arithmetic, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_multistep_arithmetic_pos": {
+      "value": "85.0",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: multistep_arithmetic, positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_tracking_shuffled_objects": {
+      "value": "0.576",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: tracking_shuffled_objects",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_tracking_shuffled_objects_ci": {
+      "value": "0.495--0.656",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: tracking_shuffled_objects, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_tracking_shuffled_objects_n": {
+      "value": "300",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: tracking_shuffled_objects, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_tracking_shuffled_objects_pos": {
+      "value": "85.0",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: tracking_shuffled_objects, positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_word_sorting": {
+      "value": "0.832",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: word_sorting",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_word_sorting_ci": {
+      "value": "0.757--0.894",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: word_sorting, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_word_sorting_n": {
+      "value": "300",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: word_sorting, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_word_sorting_pos": {
+      "value": "85.0",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: word_sorting, positive_rate",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_all_tasks": {
+      "value": "0.646",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: all tasks",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_all_tasks_ci": {
+      "value": "0.624--0.670",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: all tasks, ci",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_all_tasks_n": {
+      "value": "2186",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: all tasks, n_eval",
+      "main_tex": "Table IV"
+    },
+    "transfer_surface_all_tasks_pos": {
+      "value": "69.7",
+      "raw": null,
+      "source": "table_transfer.csv, surface, BBM: all tasks, positive_rate",
+      "main_tex": "Table IV"
     },
     "transfer_lexical_min_task": {
       "value": "dyck_languages",

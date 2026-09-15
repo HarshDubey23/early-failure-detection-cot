@@ -31,6 +31,23 @@ Supplementary - BIG-Bench Mistake (`table1b_descriptive_transfer.csv`):
 | word_sorting              |        300 |          88.667 |                 85     |             11 |                 0.431 |                            0.546 |                  7.237 |
 | ALL                       |       2186 |          78.134 |                 69.716 |             10 |                 0.523 |                            0.554 |                  9.285 |
 
+Per generator (caveat: ProcessBench was sampled to balance correct and incorrect answers, so these rates describe the benchmark's sample, not each model's accuracy):
+
+| generator                 |   params_billion |   n_traces |   pct_erroneous |   pct_answer_incorrect |   mean_relative_onset |   mean_steps |
+|:--------------------------|-----------------:|-----------:|----------------:|-----------------------:|----------------------:|-------------:|
+| Qwen2-1.5B-Instruct       |              1.5 |         88 |          82.955 |                 76.136 |                 0.474 |        5.068 |
+| Qwen2.5-1.5B-Instruct     |              1.5 |        116 |          54.31  |                 43.966 |                 0.495 |        6.069 |
+| Qwen2-7B-Instruct         |              7   |        422 |          66.114 |                 46.919 |                 0.496 |        7.289 |
+| Qwen2.5-7B-Instruct       |              7   |        351 |          66.952 |                 49.003 |                 0.519 |        7.98  |
+| Qwen2.5-Math-7B-Instruct  |              7   |        397 |          64.736 |                 52.897 |                 0.482 |        8.343 |
+| Llama-3.1-8B-Instruct     |              8   |        526 |          70.532 |                 52.091 |                 0.437 |        7.74  |
+| Meta-Llama-3-8B-Instruct  |              8   |         94 |          71.277 |                 67.021 |                 0.479 |        5.277 |
+| Llama-3.1-70B-Instruct    |             70   |        274 |          71.168 |                 48.175 |                 0.475 |        7.839 |
+| Meta-Llama-3-70B-Instruct |             70   |        172 |          62.791 |                 53.488 |                 0.539 |        4.442 |
+| Qwen2-72B-Instruct        |             72   |        335 |          59.701 |                 43.582 |                 0.549 |        7.388 |
+| Qwen2.5-72B-Instruct      |             72   |        254 |          61.811 |                 49.606 |                 0.568 |        9.685 |
+| Qwen2.5-Math-72B-Instruct |             72   |        371 |          58.221 |                 45.553 |                 0.544 |        7.935 |
+
 ## E2 - Statistical tests (effect size beside every p-value)
 
 - KS, rho vs Uniform(0,1): D = 0.119, p = 1.2e-27 (n = 2221). Rule p < 0.05 -> uniformity rejected.
@@ -45,35 +62,35 @@ Target y = `answer_incorrect` (final answer incorrect). Test set: 866 traces fro
 
 | prefix   | length-only          | lexical              | surface              | surface-GRU          | surface-MLP          |
 |:---------|:---------------------|:---------------------|:---------------------|:---------------------|:---------------------|
-| 10%      | 0.548 [0.508, 0.589] | 0.563 [0.521, 0.600] | 0.538 [0.496, 0.577] | 0.535 [0.496, 0.573] | 0.546 [0.508, 0.586] |
-| 20%      | 0.519 [0.482, 0.558] | 0.559 [0.516, 0.599] | 0.530 [0.490, 0.568] | 0.516 [0.481, 0.555] | 0.534 [0.495, 0.571] |
-| 25%      | 0.515 [0.476, 0.552] | 0.588 [0.547, 0.627] | 0.548 [0.509, 0.584] | 0.543 [0.504, 0.583] | 0.554 [0.516, 0.591] |
-| 30%      | 0.529 [0.491, 0.570] | 0.598 [0.557, 0.638] | 0.574 [0.535, 0.610] | 0.571 [0.532, 0.608] | 0.578 [0.539, 0.614] |
-| 40%      | 0.518 [0.482, 0.557] | 0.605 [0.567, 0.644] | 0.572 [0.532, 0.607] | 0.568 [0.531, 0.604] | 0.577 [0.535, 0.613] |
-| 50%      | 0.536 [0.498, 0.574] | 0.617 [0.580, 0.655] | 0.592 [0.554, 0.627] | 0.563 [0.526, 0.602] | 0.591 [0.552, 0.627] |
-| 60%      | 0.526 [0.490, 0.566] | 0.609 [0.572, 0.648] | 0.594 [0.558, 0.629] | 0.576 [0.537, 0.617] | 0.605 [0.568, 0.640] |
-| 70%      | 0.534 [0.498, 0.572] | 0.610 [0.572, 0.646] | 0.598 [0.561, 0.634] | 0.552 [0.513, 0.590] | 0.599 [0.560, 0.635] |
-| 75%      | 0.543 [0.507, 0.583] | 0.611 [0.573, 0.647] | 0.604 [0.566, 0.640] | 0.560 [0.521, 0.597] | 0.604 [0.566, 0.640] |
-| 80%      | 0.526 [0.490, 0.565] | 0.614 [0.575, 0.651] | 0.610 [0.573, 0.646] | 0.553 [0.516, 0.591] | 0.618 [0.582, 0.654] |
-| 90%      | 0.540 [0.505, 0.579] | 0.624 [0.585, 0.661] | 0.615 [0.575, 0.650] | 0.552 [0.514, 0.594] | 0.622 [0.584, 0.657] |
-| 100%     | 0.539 [0.502, 0.578] | 0.626 [0.587, 0.663] | 0.618 [0.577, 0.653] | 0.558 [0.517, 0.601] | 0.626 [0.588, 0.661] |
+| 10%      | 0.548 [0.510, 0.588] | 0.563 [0.526, 0.602] | 0.538 [0.504, 0.579] | 0.535 [0.498, 0.572] | 0.546 [0.510, 0.586] |
+| 20%      | 0.519 [0.483, 0.558] | 0.559 [0.519, 0.598] | 0.530 [0.494, 0.570] | 0.516 [0.477, 0.556] | 0.534 [0.497, 0.574] |
+| 25%      | 0.515 [0.478, 0.554] | 0.588 [0.552, 0.626] | 0.548 [0.512, 0.588] | 0.543 [0.504, 0.583] | 0.554 [0.518, 0.593] |
+| 30%      | 0.529 [0.491, 0.568] | 0.598 [0.562, 0.634] | 0.574 [0.538, 0.614] | 0.571 [0.535, 0.609] | 0.578 [0.540, 0.615] |
+| 40%      | 0.518 [0.479, 0.557] | 0.605 [0.571, 0.641] | 0.572 [0.537, 0.610] | 0.568 [0.532, 0.608] | 0.577 [0.541, 0.612] |
+| 50%      | 0.536 [0.497, 0.575] | 0.617 [0.584, 0.654] | 0.592 [0.558, 0.629] | 0.563 [0.525, 0.602] | 0.591 [0.554, 0.626] |
+| 60%      | 0.526 [0.488, 0.565] | 0.609 [0.575, 0.647] | 0.594 [0.560, 0.633] | 0.576 [0.539, 0.614] | 0.605 [0.571, 0.643] |
+| 70%      | 0.534 [0.496, 0.574] | 0.610 [0.574, 0.646] | 0.598 [0.564, 0.638] | 0.552 [0.515, 0.589] | 0.599 [0.562, 0.637] |
+| 75%      | 0.543 [0.505, 0.584] | 0.611 [0.573, 0.648] | 0.604 [0.571, 0.643] | 0.560 [0.522, 0.597] | 0.604 [0.570, 0.641] |
+| 80%      | 0.526 [0.488, 0.565] | 0.614 [0.578, 0.652] | 0.610 [0.577, 0.649] | 0.553 [0.514, 0.591] | 0.618 [0.583, 0.654] |
+| 90%      | 0.540 [0.503, 0.579] | 0.624 [0.588, 0.660] | 0.615 [0.580, 0.652] | 0.552 [0.515, 0.590] | 0.622 [0.588, 0.657] |
+| 100%     | 0.539 [0.500, 0.579] | 0.626 [0.590, 0.661] | 0.618 [0.583, 0.654] | 0.558 [0.520, 0.595] | 0.626 [0.591, 0.661] |
 
 Secondary target `has_error` (a process error exists):
 
 | prefix   | length-only          | lexical              | surface              |
 |:---------|:---------------------|:---------------------|:---------------------|
-| 10%      | 0.573 [0.538, 0.612] | 0.666 [0.627, 0.703] | 0.588 [0.549, 0.627] |
-| 20%      | 0.550 [0.512, 0.590] | 0.682 [0.648, 0.718] | 0.612 [0.577, 0.651] |
-| 25%      | 0.546 [0.507, 0.588] | 0.696 [0.662, 0.734] | 0.630 [0.596, 0.669] |
-| 30%      | 0.565 [0.526, 0.607] | 0.710 [0.677, 0.746] | 0.656 [0.621, 0.692] |
-| 40%      | 0.561 [0.524, 0.602] | 0.713 [0.680, 0.748] | 0.674 [0.640, 0.712] |
-| 50%      | 0.576 [0.537, 0.619] | 0.717 [0.685, 0.753] | 0.688 [0.655, 0.723] |
-| 60%      | 0.568 [0.531, 0.610] | 0.719 [0.686, 0.754] | 0.700 [0.668, 0.735] |
-| 70%      | 0.576 [0.541, 0.617] | 0.728 [0.696, 0.763] | 0.708 [0.675, 0.743] |
-| 75%      | 0.583 [0.544, 0.626] | 0.726 [0.694, 0.761] | 0.712 [0.680, 0.746] |
-| 80%      | 0.570 [0.533, 0.610] | 0.730 [0.698, 0.764] | 0.716 [0.682, 0.751] |
-| 90%      | 0.579 [0.541, 0.623] | 0.735 [0.703, 0.769] | 0.725 [0.693, 0.759] |
-| 100%     | 0.580 [0.542, 0.624] | 0.735 [0.703, 0.768] | 0.729 [0.698, 0.763] |
+| 10%      | 0.573 [0.536, 0.610] | 0.666 [0.628, 0.702] | 0.588 [0.551, 0.630] |
+| 20%      | 0.550 [0.509, 0.587] | 0.682 [0.645, 0.718] | 0.612 [0.575, 0.651] |
+| 25%      | 0.546 [0.507, 0.584] | 0.696 [0.657, 0.732] | 0.630 [0.592, 0.669] |
+| 30%      | 0.565 [0.524, 0.606] | 0.710 [0.673, 0.743] | 0.656 [0.619, 0.694] |
+| 40%      | 0.561 [0.521, 0.601] | 0.713 [0.676, 0.747] | 0.674 [0.640, 0.712] |
+| 50%      | 0.576 [0.535, 0.615] | 0.717 [0.682, 0.751] | 0.688 [0.653, 0.725] |
+| 60%      | 0.568 [0.529, 0.608] | 0.719 [0.684, 0.752] | 0.700 [0.666, 0.736] |
+| 70%      | 0.576 [0.536, 0.616] | 0.728 [0.694, 0.762] | 0.708 [0.676, 0.744] |
+| 75%      | 0.583 [0.543, 0.622] | 0.726 [0.692, 0.760] | 0.712 [0.680, 0.747] |
+| 80%      | 0.570 [0.530, 0.612] | 0.730 [0.695, 0.764] | 0.716 [0.684, 0.750] |
+| 90%      | 0.579 [0.539, 0.620] | 0.735 [0.700, 0.768] | 0.725 [0.693, 0.758] |
+| 100%     | 0.580 [0.540, 0.619] | 0.735 [0.700, 0.767] | 0.729 [0.697, 0.763] |
 
 Representation status:
 
@@ -83,10 +100,68 @@ Representation status:
 | uncertainty (token entropy / logit margin) | NOT_RUN  |               nan   | ProcessBench stores step text only; no token log-probabilities exist for its generators. Requires re-generating traces with an open model (GPU). |
 | hidden-state (linear probe)                | NOT_RUN  |               nan   | Requires stage 06 activations (GPU); see table3_probe_heatmap.csv.                                                                               |
 
-Honest reading (rule-based):
+Paired bootstrap AUROC differences on the same test traces (question-level resampling; p is two-sided):
+
+| comparison            |   fraction_observed |   difference |   ci_lo |   ci_hi |   p_value |
+|:----------------------|--------------------:|-------------:|--------:|--------:|----------:|
+| lexical - length-only |                0.1  |        0.015 |  -0.035 |   0.066 |     0.582 |
+| lexical - length-only |                0.2  |        0.039 |  -0.01  |   0.087 |     0.14  |
+| lexical - length-only |                0.25 |        0.073 |   0.022 |   0.123 |     0.004 |
+| lexical - length-only |                0.3  |        0.069 |   0.017 |   0.123 |     0.006 |
+| lexical - length-only |                0.4  |        0.087 |   0.036 |   0.137 |     0.001 |
+| lexical - length-only |                0.5  |        0.081 |   0.031 |   0.131 |     0.001 |
+| lexical - length-only |                0.6  |        0.083 |   0.032 |   0.135 |     0.001 |
+| lexical - length-only |                0.7  |        0.076 |   0.024 |   0.125 |     0.004 |
+| lexical - length-only |                0.75 |        0.068 |   0.017 |   0.119 |     0.008 |
+| lexical - length-only |                0.8  |        0.088 |   0.036 |   0.139 |     0.001 |
+| lexical - length-only |                0.9  |        0.084 |   0.032 |   0.132 |     0.001 |
+| lexical - length-only |                1    |        0.087 |   0.036 |   0.136 |     0.001 |
+| lexical - surface     |                0.1  |        0.025 |  -0.027 |   0.075 |     0.314 |
+| lexical - surface     |                0.2  |        0.029 |  -0.017 |   0.073 |     0.212 |
+| lexical - surface     |                0.25 |        0.039 |  -0.007 |   0.087 |     0.068 |
+| lexical - surface     |                0.3  |        0.024 |  -0.022 |   0.07  |     0.27  |
+| lexical - surface     |                0.4  |        0.034 |  -0.01  |   0.077 |     0.124 |
+| lexical - surface     |                0.5  |        0.025 |  -0.016 |   0.067 |     0.218 |
+| lexical - surface     |                0.6  |        0.015 |  -0.026 |   0.058 |     0.468 |
+| lexical - surface     |                0.7  |        0.012 |  -0.029 |   0.052 |     0.548 |
+| lexical - surface     |                0.75 |        0.007 |  -0.032 |   0.047 |     0.722 |
+| lexical - surface     |                0.8  |        0.004 |  -0.037 |   0.044 |     0.846 |
+| lexical - surface     |                0.9  |        0.009 |  -0.03  |   0.05  |     0.63  |
+| lexical - surface     |                1    |        0.008 |  -0.033 |   0.047 |     0.676 |
+| surface - length-only |                0.1  |       -0.01  |  -0.046 |   0.028 |     0.598 |
+| surface - length-only |                0.2  |        0.011 |  -0.014 |   0.038 |     0.406 |
+| surface - length-only |                0.25 |        0.034 |   0.004 |   0.062 |     0.028 |
+| surface - length-only |                0.3  |        0.045 |   0.014 |   0.078 |     0.001 |
+| surface - length-only |                0.4  |        0.054 |   0.024 |   0.085 |     0.001 |
+| surface - length-only |                0.5  |        0.056 |   0.026 |   0.091 |     0.001 |
+| surface - length-only |                0.6  |        0.068 |   0.033 |   0.104 |     0.001 |
+| surface - length-only |                0.7  |        0.064 |   0.028 |   0.098 |     0.001 |
+| surface - length-only |                0.75 |        0.061 |   0.028 |   0.094 |     0.001 |
+| surface - length-only |                0.8  |        0.084 |   0.05  |   0.12  |     0.001 |
+| surface - length-only |                0.9  |        0.075 |   0.042 |   0.108 |     0.001 |
+| surface - length-only |                1    |        0.079 |   0.045 |   0.113 |     0.001 |
+
+Stability over independent grouped splits (point AUROC per split; split seeds in the config):
+
+| representation   |   fraction_observed |   mean |    sd |   min |   max |   n_splits |
+|:-----------------|--------------------:|-------:|------:|------:|------:|-----------:|
+| length-only      |                0.25 |  0.544 | 0.021 | 0.515 | 0.573 |          5 |
+| length-only      |                0.5  |  0.552 | 0.016 | 0.536 | 0.575 |          5 |
+| length-only      |                1    |  0.551 | 0.014 | 0.537 | 0.569 |          5 |
+| lexical          |                0.25 |  0.577 | 0.015 | 0.554 | 0.59  |          5 |
+| lexical          |                0.5  |  0.599 | 0.017 | 0.574 | 0.617 |          5 |
+| lexical          |                1    |  0.611 | 0.016 | 0.586 | 0.626 |          5 |
+| surface          |                0.25 |  0.568 | 0.017 | 0.548 | 0.59  |          5 |
+| surface          |                0.5  |  0.602 | 0.009 | 0.592 | 0.612 |          5 |
+| surface          |                1    |  0.621 | 0.008 | 0.613 | 0.63  |          5 |
+
+Honest reading (rule-based; significance = paired bootstrap p < 0.05):
 
 - Lexical minus length-only AUROC ranges from +0.015 to +0.088 across prefixes. Because k = ceil(f n), the prefix length reveals n at every f, so length-only is the confound floor the paper must clear.
-- Prefixes where the lexical CI overlaps the length-only CI: 10%, 20%, 25%, 30%, 70%, 75%.
+- lexical - length-only: significant at 25%, 30%, 40%, 50%, 60%, 70%, 75%, 80%, 90%, 100%.
+- lexical - surface: significant at no prefix.
+- surface - length-only: significant at 25%, 30%, 40%, 50%, 60%, 70%, 75%, 80%, 90%, 100%.
+- Lexical AUROC at 25% on the main split (0.588) vs mean over 5 splits 0.577 (range 0.554-0.590): quote both.
 - Uncertainty and hidden-state representations are NOT_RUN, so this build cannot say whether internal states add anything beyond text.
 
 ## E4 - Activation probing (layer x depth)
@@ -117,6 +192,21 @@ Rule-based reading (an alarm is only informative if it is rarer on error-free tr
 
 A positive Delta from an alarm that fires on most error-free traces too is not evidence of useful early warning: most first errors occur after step 1, so an indiscriminate early alarm produces Delta > 0 by construction.
 
+Length-blind predictability: AUROC of r_k after k observed steps, over test traces that still have steps to come (n > k). The evaluated set shrinks with k, so its size and positive rate are shown:
+
+|   steps_observed |   n_traces |   positive_rate |   auroc |   ci_lo |   ci_hi |
+|-----------------:|-----------:|----------------:|--------:|--------:|--------:|
+|                1 |        866 |           0.488 |   0.566 |   0.526 |   0.604 |
+|                2 |        858 |           0.49  |   0.583 |   0.549 |   0.619 |
+|                3 |        826 |           0.488 |   0.588 |   0.55  |   0.626 |
+|                4 |        714 |           0.493 |   0.61  |   0.57  |   0.65  |
+|                5 |        576 |           0.488 |   0.603 |   0.559 |   0.647 |
+|                6 |        442 |           0.525 |   0.613 |   0.567 |   0.665 |
+|                7 |        352 |           0.531 |   0.589 |   0.527 |   0.648 |
+|                8 |        263 |           0.555 |   0.59  |   0.521 |   0.654 |
+|                9 |        205 |           0.556 |   0.585 |   0.514 |   0.662 |
+|               10 |        153 |           0.549 |   0.568 |   0.476 |   0.649 |
+
 ## E6 - Calibration (full prefix, test split, 10 equal-width bins)
 
 | detector    |    ece |   n_test |
@@ -132,33 +222,33 @@ Length-only produces rank scores, not probabilities, so it has no ECE. A detecto
 
 | representation   | evaluation_domain              |   auroc |   ci_lo |   ci_hi |   n_eval |   positive_rate |   in_domain_auroc |   auroc_drop |
 |:-----------------|:-------------------------------|--------:|--------:|--------:|---------:|----------------:|------------------:|-------------:|
-| lexical          | ProcessBench (in-domain test)  |   0.626 |   0.587 |   0.663 |      866 |           0.488 |             0.626 |        0     |
-| lexical          | BBM: dyck_languages            |   0.172 |   0.146 |   0.197 |      986 |           0.511 |             0.626 |        0.454 |
-| lexical          | BBM: logical_deduction         |   0.495 |   0.397 |   0.603 |      300 |           0.85  |             0.626 |        0.131 |
-| lexical          | BBM: multistep_arithmetic      |   0.502 |   0.413 |   0.593 |      300 |           0.85  |             0.626 |        0.124 |
-| lexical          | BBM: tracking_shuffled_objects |   0.48  |   0.406 |   0.548 |      300 |           0.85  |             0.626 |        0.146 |
-| lexical          | BBM: word_sorting              |   0.372 |   0.288 |   0.466 |      300 |           0.85  |             0.626 |        0.254 |
-| lexical          | BBM: all tasks                 |   0.552 |   0.528 |   0.576 |     2186 |           0.697 |             0.626 |        0.074 |
-| surface          | ProcessBench (in-domain test)  |   0.618 |   0.577 |   0.653 |      866 |           0.488 |             0.618 |        0     |
-| surface          | BBM: dyck_languages            |   0.206 |   0.176 |   0.237 |      986 |           0.511 |             0.618 |        0.412 |
-| surface          | BBM: logical_deduction         |   0.676 |   0.583 |   0.761 |      300 |           0.85  |             0.618 |       -0.058 |
-| surface          | BBM: multistep_arithmetic      |   0.785 |   0.728 |   0.834 |      300 |           0.85  |             0.618 |       -0.167 |
-| surface          | BBM: tracking_shuffled_objects |   0.576 |   0.493 |   0.656 |      300 |           0.85  |             0.618 |        0.042 |
-| surface          | BBM: word_sorting              |   0.832 |   0.758 |   0.892 |      300 |           0.85  |             0.618 |       -0.215 |
-| surface          | BBM: all tasks                 |   0.646 |   0.623 |   0.67  |     2186 |           0.697 |             0.618 |       -0.029 |
+| lexical          | ProcessBench (in-domain test)  |   0.626 |   0.59  |   0.661 |      866 |           0.488 |             0.626 |        0     |
+| lexical          | BBM: dyck_languages            |   0.172 |   0.146 |   0.199 |      986 |           0.511 |             0.626 |        0.454 |
+| lexical          | BBM: logical_deduction         |   0.495 |   0.392 |   0.599 |      300 |           0.85  |             0.626 |        0.131 |
+| lexical          | BBM: multistep_arithmetic      |   0.502 |   0.41  |   0.598 |      300 |           0.85  |             0.626 |        0.124 |
+| lexical          | BBM: tracking_shuffled_objects |   0.48  |   0.41  |   0.557 |      300 |           0.85  |             0.626 |        0.146 |
+| lexical          | BBM: word_sorting              |   0.372 |   0.284 |   0.453 |      300 |           0.85  |             0.626 |        0.254 |
+| lexical          | BBM: all tasks                 |   0.552 |   0.53  |   0.575 |     2186 |           0.697 |             0.626 |        0.074 |
+| surface          | ProcessBench (in-domain test)  |   0.618 |   0.583 |   0.654 |      866 |           0.488 |             0.618 |        0     |
+| surface          | BBM: dyck_languages            |   0.206 |   0.18  |   0.235 |      986 |           0.511 |             0.618 |        0.412 |
+| surface          | BBM: logical_deduction         |   0.676 |   0.58  |   0.761 |      300 |           0.85  |             0.618 |       -0.058 |
+| surface          | BBM: multistep_arithmetic      |   0.785 |   0.732 |   0.837 |      300 |           0.85  |             0.618 |       -0.167 |
+| surface          | BBM: tracking_shuffled_objects |   0.576 |   0.495 |   0.656 |      300 |           0.85  |             0.618 |        0.042 |
+| surface          | BBM: word_sorting              |   0.832 |   0.757 |   0.894 |      300 |           0.85  |             0.618 |       -0.215 |
+| surface          | BBM: all tasks                 |   0.646 |   0.624 |   0.67  |     2186 |           0.697 |             0.618 |       -0.029 |
 
 Within-maths, leave one ProcessBench tier out:
 
 | representation   | held_out_tier   |   auroc |   ci_lo |   ci_hi |   n_eval |
 |:-----------------|:----------------|--------:|--------:|--------:|---------:|
-| lexical          | gsm8k           |   0.487 |   0.428 |   0.546 |      400 |
-| lexical          | math            |   0.59  |   0.554 |   0.626 |     1000 |
-| lexical          | olympiadbench   |   0.579 |   0.542 |   0.611 |     1000 |
-| lexical          | omnimath        |   0.591 |   0.556 |   0.625 |     1000 |
-| surface          | gsm8k           |   0.609 |   0.557 |   0.66  |      400 |
-| surface          | math            |   0.636 |   0.6   |   0.673 |     1000 |
-| surface          | olympiadbench   |   0.612 |   0.575 |   0.648 |     1000 |
-| surface          | omnimath        |   0.605 |   0.568 |   0.641 |     1000 |
+| lexical          | gsm8k           |   0.487 |   0.43  |   0.544 |      400 |
+| lexical          | math            |   0.59  |   0.557 |   0.62  |     1000 |
+| lexical          | olympiadbench   |   0.579 |   0.542 |   0.616 |     1000 |
+| lexical          | omnimath        |   0.591 |   0.555 |   0.625 |     1000 |
+| surface          | gsm8k           |   0.609 |   0.555 |   0.665 |      400 |
+| surface          | math            |   0.636 |   0.601 |   0.668 |     1000 |
+| surface          | olympiadbench   |   0.612 |   0.58  |   0.645 |     1000 |
+| surface          | omnimath        |   0.605 |   0.57  |   0.64  |     1000 |
 
 | domain     | status   | reason                                                                                                                                                                                 |
 |:-----------|:---------|:---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
@@ -196,13 +286,13 @@ Note: BIG-Bench Mistake positive rates differ sharply by task (the dataset over-
 
 | dataset           | host        | identifier                 | role                                   | status          | checked_utc          |
 |:------------------|:------------|:---------------------------|:---------------------------------------|:----------------|:---------------------|
-| ProcessBench      | huggingface | Qwen/ProcessBench          | primary: E1-E6, E8                     | RESOLVES        | 2026-09-15T14:48:33Z |
-| GSM8K             | huggingface | openai/gsm8k               | questions for GPU generation (E4)      | RESOLVES        | 2026-09-15T14:48:33Z |
-| MATH-500          | huggingface | HuggingFaceH4/MATH-500     | loader only; not used by an experiment | RESOLVES        | 2026-09-15T14:48:34Z |
-| MATH (full)       | huggingface | hendrycks/competition_math | loader fallback only                   | DISABLED_ON_HUB | 2026-09-15T14:48:34Z |
-| StrategyQA        | huggingface | wics/strategy-qa           | loader only; E7 needs generated traces | RESOLVES        | 2026-09-15T14:48:34Z |
-| PRM800K           | github      | openai/prm800k             | loader only; not used by an experiment | RESOLVES        | 2026-09-15T14:48:35Z |
-| BIG-Bench Mistake | github      | WHGTyen/BIG-Bench-Mistake  | E7 cross-domain transfer               | RESOLVES        | 2026-09-15T14:48:35Z |
+| ProcessBench      | huggingface | Qwen/ProcessBench          | primary: E1-E6, E8                     | RESOLVES        | 2026-09-15T15:36:04Z |
+| GSM8K             | huggingface | openai/gsm8k               | questions for GPU generation (E4)      | RESOLVES        | 2026-09-15T15:36:06Z |
+| MATH-500          | huggingface | HuggingFaceH4/MATH-500     | loader only; not used by an experiment | RESOLVES        | 2026-09-15T15:36:06Z |
+| MATH (full)       | huggingface | hendrycks/competition_math | loader fallback only                   | DISABLED_ON_HUB | 2026-09-15T15:36:07Z |
+| StrategyQA        | huggingface | wics/strategy-qa           | loader only; E7 needs generated traces | RESOLVES        | 2026-09-15T15:36:07Z |
+| PRM800K           | github      | openai/prm800k             | loader only; not used by an experiment | RESOLVES        | 2026-09-15T15:36:08Z |
+| BIG-Bench Mistake | github      | WHGTyen/BIG-Bench-Mistake  | E7 cross-domain transfer               | RESOLVES        | 2026-09-15T15:36:08Z |
 
 ## Figure inventory
 
@@ -211,18 +301,19 @@ Note: BIG-Bench Mistake positive rates differ sharply by task (the dataset over-
 | F1 | `fig1_class_balance` | yes / yes | Class balance by dataset and tier |
 | F2 | `fig2_chain_length` | yes / yes | Trace length, split by outcome |
 | F3 | `fig3_absolute_error_index` | yes / yes | Absolute first-error index |
-| F4 | `fig4_relative_error_position_HEADLINE` | yes / yes | Relative onset: histogram + CDF (paper Fig. 2) |
+| F4 | `fig4_relative_error_position_HEADLINE` | yes / yes | Relative onset: histogram + CDF (paper Fig. 4) |
 | F5 | `fig5_difficulty_breakdown` | yes / yes | Onset by difficulty tier |
 | F6 | `fig6_roc_all_representations` | yes / yes | ROC curves, all representations |
-| F7 | `fig7_auroc_vs_prefix_KEY` | yes / yes | AUROC vs observed prefix (paper Fig. 3) |
+| F7 | `fig7_auroc_vs_prefix_KEY` | yes / yes | AUROC vs observed prefix (paper Fig. 5) |
 | F7b | `fig7b_auroc_vs_prefix_process_error` | yes / yes | AUROC vs prefix, process-error target |
 | F8 | `fig8_layer_depth_heatmap` | yes / yes | Layer x depth AUROC heatmap - **NOT RUN panel** (no GPU) |
-| F9 | `fig9_lead_time` | yes / yes | Lead time distribution + threshold tradeoff |
-| F10 | `fig10_reliability` | yes / yes | Reliability diagram + ECE |
+| F9 | `fig9_lead_time` | yes / yes | Lead time distribution + threshold tradeoff (paper Fig. 7) |
+| F10 | `fig10_reliability` | yes / yes | Reliability diagram + ECE (paper Fig. 8) |
 | F11 | `fig11_recovery_vs_corruption` | yes / yes | Recovery vs corruption per policy |
 | F12 | `fig12_cost_frontier` | yes / yes | Accuracy change vs token cost |
 | F13 | `fig13_transfer` | yes / yes | Cross-domain transfer |
 | F14 | `fig14_activation_pca` | yes / yes | PCA of activations - **NOT RUN panel** (no GPU) |
+| F15 | `fig15_online_auroc_by_step` | yes / yes | Length-blind AUROC after k observed steps (paper Fig. 6) |
 
 ## Paper mapping (`\RES{}` placeholder in main.tex -> value -> source)
 
@@ -262,17 +353,17 @@ Note: BIG-Bench Mistake positive rates differ sharply by task (the dataset over-
 | KW_eta2 | `0.005` | Sec. VI-C | results/tables/table_stats_tests.json, kruskal_tiers.eta_squared |
 | KW_does_shift | `does` | Sec. VI-C | rule: p < 0.05 |
 | AUROC_lexical_25 | `0.588` | Abstract; Sec. VI-B | results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=lexical, fraction=0.25 |
-| AUROC_lexical_25_ci | `[0.547, 0.627]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
+| AUROC_lexical_25_ci | `[0.552, 0.626]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
 | AUROC_lexical_100 | `0.626` | Abstract; Sec. VI-B | results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=lexical, fraction=1.0 |
-| AUROC_lexical_100_ci | `[0.587, 0.663]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
+| AUROC_lexical_100_ci | `[0.590, 0.661]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
 | AUROC_surface_100 | `0.618` | Sec. VI-B | results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=surface, fraction=1.0 |
-| AUROC_surface_100_ci | `[0.577, 0.653]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
+| AUROC_surface_100_ci | `[0.583, 0.654]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
 | AUROC_surface_25 | `0.548` | Sec. VI-B | results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=surface, fraction=0.25 |
-| AUROC_surface_25_ci | `[0.509, 0.584]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
+| AUROC_surface_25_ci | `[0.512, 0.588]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
 | AUROC_length_25 | `0.515` | Sec. VI-B | results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=length-only, fraction=0.25 |
-| AUROC_length_25_ci | `[0.476, 0.552]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
+| AUROC_length_25_ci | `[0.478, 0.554]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
 | AUROC_length_100 | `0.539` | Sec. VI-B | results/tables/table2_prefix_auroc.csv, target=answer_incorrect, representation=length-only, fraction=1.0 |
-| AUROC_length_100_ci | `[0.502, 0.578]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
+| AUROC_length_100_ci | `[0.500, 0.579]` | Sec. VI-B | results/tables/table2_prefix_auroc.csv ci_lo/ci_hi |
 | prefix_grid | `10, 20, 25, 30, 40, 50, 60, 70, 75, 80, 90, 100` | Contributions item 3 | configs/default.yaml prefix_grid |
 | n_prefix_fractions | `12` | Contributions item 3 | configs/default.yaml prefix_grid (count) |
 | n_questions | `2842` | Sec. V-A Datasets | processed_traces_quality_report.json, n_questions |
@@ -287,8 +378,304 @@ Note: BIG-Bench Mistake positive rates differ sharply by task (the dataset over-
 | KS_discrete_null_D95 | `0.026` | Sec. VI-A | table_stats_tests.json, ks_discrete_uniform_step_null.null_D_vs_null_q95 |
 | n_simulations | `1000` | Sec. VI-A | table_stats_tests.json, n_simulations |
 | n_test | `866` | Sec. V-C | table2_prefix_auroc.csv, n_test |
-| lexical_length_ci_overlap | `10, 20, 25, 30, 70, 75` | Sec. VI-B | table2_prefix_auroc.csv, fractions where lexical ci_lo <= length-only ci_hi |
+| n_train | `2534` | Study guide | table1_descriptive.csv n_traces (ALL) - table2_prefix_auroc.csv n_test |
 | AUROC_lexical_100_process_error | `0.735` | Sec. VI-B | table2_prefix_auroc.csv, target=has_error, lexical, fraction=1.0 |
+| E3_lex_10 | `0.563` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.1 |
+| E3_lex_10_ci | `0.526--0.602` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.1, ci |
+| E3_lex_20 | `0.559` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.2 |
+| E3_lex_20_ci | `0.519--0.598` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.2, ci |
+| E3_lex_25 | `0.588` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.25 |
+| E3_lex_25_ci | `0.552--0.626` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.25, ci |
+| E3_lex_30 | `0.598` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.3 |
+| E3_lex_30_ci | `0.562--0.634` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.3, ci |
+| E3_lex_40 | `0.605` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.4 |
+| E3_lex_40_ci | `0.571--0.641` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.4, ci |
+| E3_lex_50 | `0.617` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.5 |
+| E3_lex_50_ci | `0.584--0.654` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.5, ci |
+| E3_lex_60 | `0.609` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.6 |
+| E3_lex_60_ci | `0.575--0.647` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.6, ci |
+| E3_lex_70 | `0.610` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.7 |
+| E3_lex_70_ci | `0.574--0.646` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.7, ci |
+| E3_lex_75 | `0.611` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.75 |
+| E3_lex_75_ci | `0.573--0.648` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.75, ci |
+| E3_lex_80 | `0.614` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.8 |
+| E3_lex_80_ci | `0.578--0.652` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.8, ci |
+| E3_lex_90 | `0.624` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.9 |
+| E3_lex_90_ci | `0.588--0.660` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=0.9, ci |
+| E3_lex_100 | `0.626` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=1.0 |
+| E3_lex_100_ci | `0.590--0.661` | Table III | results/tables/table2_prefix_auroc.csv, lexical, fraction=1.0, ci |
+| E3_surf_10 | `0.538` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.1 |
+| E3_surf_10_ci | `0.504--0.579` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.1, ci |
+| E3_surf_20 | `0.530` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.2 |
+| E3_surf_20_ci | `0.494--0.570` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.2, ci |
+| E3_surf_25 | `0.548` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.25 |
+| E3_surf_25_ci | `0.512--0.588` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.25, ci |
+| E3_surf_30 | `0.574` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.3 |
+| E3_surf_30_ci | `0.538--0.614` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.3, ci |
+| E3_surf_40 | `0.572` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.4 |
+| E3_surf_40_ci | `0.537--0.610` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.4, ci |
+| E3_surf_50 | `0.592` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.5 |
+| E3_surf_50_ci | `0.558--0.629` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.5, ci |
+| E3_surf_60 | `0.594` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.6 |
+| E3_surf_60_ci | `0.560--0.633` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.6, ci |
+| E3_surf_70 | `0.598` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.7 |
+| E3_surf_70_ci | `0.564--0.638` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.7, ci |
+| E3_surf_75 | `0.604` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.75 |
+| E3_surf_75_ci | `0.571--0.643` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.75, ci |
+| E3_surf_80 | `0.610` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.8 |
+| E3_surf_80_ci | `0.577--0.649` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.8, ci |
+| E3_surf_90 | `0.615` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.9 |
+| E3_surf_90_ci | `0.580--0.652` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=0.9, ci |
+| E3_surf_100 | `0.618` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=1.0 |
+| E3_surf_100_ci | `0.583--0.654` | Table III | results/tables/table2_prefix_auroc.csv, surface, fraction=1.0, ci |
+| E3_len_10 | `0.548` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.1 |
+| E3_len_10_ci | `0.510--0.588` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.1, ci |
+| E3_len_20 | `0.519` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.2 |
+| E3_len_20_ci | `0.483--0.558` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.2, ci |
+| E3_len_25 | `0.515` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.25 |
+| E3_len_25_ci | `0.478--0.554` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.25, ci |
+| E3_len_30 | `0.529` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.3 |
+| E3_len_30_ci | `0.491--0.568` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.3, ci |
+| E3_len_40 | `0.518` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.4 |
+| E3_len_40_ci | `0.479--0.557` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.4, ci |
+| E3_len_50 | `0.536` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.5 |
+| E3_len_50_ci | `0.497--0.575` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.5, ci |
+| E3_len_60 | `0.526` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.6 |
+| E3_len_60_ci | `0.488--0.565` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.6, ci |
+| E3_len_70 | `0.534` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.7 |
+| E3_len_70_ci | `0.496--0.574` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.7, ci |
+| E3_len_75 | `0.543` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.75 |
+| E3_len_75_ci | `0.505--0.584` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.75, ci |
+| E3_len_80 | `0.526` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.8 |
+| E3_len_80_ci | `0.488--0.565` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.8, ci |
+| E3_len_90 | `0.540` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.9 |
+| E3_len_90_ci | `0.503--0.579` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=0.9, ci |
+| E3_len_100 | `0.539` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=1.0 |
+| E3_len_100_ci | `0.500--0.579` | Table III | results/tables/table2_prefix_auroc.csv, length-only, fraction=1.0, ci |
+| E3_mlp_10 | `0.546` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.1 |
+| E3_mlp_10_ci | `0.510--0.586` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.1, ci |
+| E3_mlp_20 | `0.534` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.2 |
+| E3_mlp_20_ci | `0.497--0.574` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.2, ci |
+| E3_mlp_25 | `0.554` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.25 |
+| E3_mlp_25_ci | `0.518--0.593` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.25, ci |
+| E3_mlp_30 | `0.578` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.3 |
+| E3_mlp_30_ci | `0.540--0.615` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.3, ci |
+| E3_mlp_40 | `0.577` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.4 |
+| E3_mlp_40_ci | `0.541--0.612` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.4, ci |
+| E3_mlp_50 | `0.591` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.5 |
+| E3_mlp_50_ci | `0.554--0.626` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.5, ci |
+| E3_mlp_60 | `0.605` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.6 |
+| E3_mlp_60_ci | `0.571--0.643` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.6, ci |
+| E3_mlp_70 | `0.599` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.7 |
+| E3_mlp_70_ci | `0.562--0.637` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.7, ci |
+| E3_mlp_75 | `0.604` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.75 |
+| E3_mlp_75_ci | `0.570--0.641` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.75, ci |
+| E3_mlp_80 | `0.618` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.8 |
+| E3_mlp_80_ci | `0.583--0.654` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.8, ci |
+| E3_mlp_90 | `0.622` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.9 |
+| E3_mlp_90_ci | `0.588--0.657` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=0.9, ci |
+| E3_mlp_100 | `0.626` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=1.0 |
+| E3_mlp_100_ci | `0.591--0.661` | Table III | results/tables/table2_prefix_auroc.csv, surface-MLP, fraction=1.0, ci |
+| E3_gru_10 | `0.535` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.1 |
+| E3_gru_10_ci | `0.498--0.572` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.1, ci |
+| E3_gru_20 | `0.516` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.2 |
+| E3_gru_20_ci | `0.477--0.556` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.2, ci |
+| E3_gru_25 | `0.543` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.25 |
+| E3_gru_25_ci | `0.504--0.583` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.25, ci |
+| E3_gru_30 | `0.571` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.3 |
+| E3_gru_30_ci | `0.535--0.609` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.3, ci |
+| E3_gru_40 | `0.568` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.4 |
+| E3_gru_40_ci | `0.532--0.608` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.4, ci |
+| E3_gru_50 | `0.563` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.5 |
+| E3_gru_50_ci | `0.525--0.602` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.5, ci |
+| E3_gru_60 | `0.576` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.6 |
+| E3_gru_60_ci | `0.539--0.614` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.6, ci |
+| E3_gru_70 | `0.552` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.7 |
+| E3_gru_70_ci | `0.515--0.589` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.7, ci |
+| E3_gru_75 | `0.560` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.75 |
+| E3_gru_75_ci | `0.522--0.597` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.75, ci |
+| E3_gru_80 | `0.553` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.8 |
+| E3_gru_80_ci | `0.514--0.591` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.8, ci |
+| E3_gru_90 | `0.552` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.9 |
+| E3_gru_90_ci | `0.515--0.590` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=0.9, ci |
+| E3_gru_100 | `0.558` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=1.0 |
+| E3_gru_100_ci | `0.520--0.595` | Table III | results/tables/table2_prefix_auroc.csv, surface-GRU, fraction=1.0, ci |
+| diff_lex_len_10 | `+0.015` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.1 |
+| diff_lex_len_10_ci | `-0.035, +0.066` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.1, ci |
+| diff_lex_len_10_p | `0.582` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.1, p_value |
+| diff_lex_len_20 | `+0.039` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.2 |
+| diff_lex_len_20_ci | `-0.010, +0.087` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.2, ci |
+| diff_lex_len_20_p | `0.140` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.2, p_value |
+| diff_lex_len_25 | `+0.073` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.25 |
+| diff_lex_len_25_ci | `+0.022, +0.123` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.25, ci |
+| diff_lex_len_25_p | `0.004` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.25, p_value |
+| diff_lex_len_30 | `+0.069` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.3 |
+| diff_lex_len_30_ci | `+0.017, +0.123` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.3, ci |
+| diff_lex_len_30_p | `0.006` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.3, p_value |
+| diff_lex_len_40 | `+0.087` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.4 |
+| diff_lex_len_40_ci | `+0.036, +0.137` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.4, ci |
+| diff_lex_len_40_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.4, p_value |
+| diff_lex_len_50 | `+0.081` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.5 |
+| diff_lex_len_50_ci | `+0.031, +0.131` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.5, ci |
+| diff_lex_len_50_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.5, p_value |
+| diff_lex_len_60 | `+0.083` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.6 |
+| diff_lex_len_60_ci | `+0.032, +0.135` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.6, ci |
+| diff_lex_len_60_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.6, p_value |
+| diff_lex_len_70 | `+0.076` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.7 |
+| diff_lex_len_70_ci | `+0.024, +0.125` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.7, ci |
+| diff_lex_len_70_p | `0.004` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.7, p_value |
+| diff_lex_len_75 | `+0.068` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.75 |
+| diff_lex_len_75_ci | `+0.017, +0.119` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.75, ci |
+| diff_lex_len_75_p | `0.008` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.75, p_value |
+| diff_lex_len_80 | `+0.088` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.8 |
+| diff_lex_len_80_ci | `+0.036, +0.139` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.8, ci |
+| diff_lex_len_80_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.8, p_value |
+| diff_lex_len_90 | `+0.084` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.9 |
+| diff_lex_len_90_ci | `+0.032, +0.132` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.9, ci |
+| diff_lex_len_90_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=0.9, p_value |
+| diff_lex_len_100 | `+0.087` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=1.0 |
+| diff_lex_len_100_ci | `+0.036, +0.136` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=1.0, ci |
+| diff_lex_len_100_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - length-only, fraction=1.0, p_value |
+| diff_lex_surf_10 | `+0.025` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.1 |
+| diff_lex_surf_10_ci | `-0.027, +0.075` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.1, ci |
+| diff_lex_surf_10_p | `0.314` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.1, p_value |
+| diff_lex_surf_20 | `+0.029` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.2 |
+| diff_lex_surf_20_ci | `-0.017, +0.073` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.2, ci |
+| diff_lex_surf_20_p | `0.212` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.2, p_value |
+| diff_lex_surf_25 | `+0.039` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.25 |
+| diff_lex_surf_25_ci | `-0.007, +0.087` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.25, ci |
+| diff_lex_surf_25_p | `0.068` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.25, p_value |
+| diff_lex_surf_30 | `+0.024` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.3 |
+| diff_lex_surf_30_ci | `-0.022, +0.070` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.3, ci |
+| diff_lex_surf_30_p | `0.270` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.3, p_value |
+| diff_lex_surf_40 | `+0.034` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.4 |
+| diff_lex_surf_40_ci | `-0.010, +0.077` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.4, ci |
+| diff_lex_surf_40_p | `0.124` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.4, p_value |
+| diff_lex_surf_50 | `+0.025` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.5 |
+| diff_lex_surf_50_ci | `-0.016, +0.067` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.5, ci |
+| diff_lex_surf_50_p | `0.218` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.5, p_value |
+| diff_lex_surf_60 | `+0.015` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.6 |
+| diff_lex_surf_60_ci | `-0.026, +0.058` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.6, ci |
+| diff_lex_surf_60_p | `0.468` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.6, p_value |
+| diff_lex_surf_70 | `+0.012` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.7 |
+| diff_lex_surf_70_ci | `-0.029, +0.052` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.7, ci |
+| diff_lex_surf_70_p | `0.548` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.7, p_value |
+| diff_lex_surf_75 | `+0.007` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.75 |
+| diff_lex_surf_75_ci | `-0.032, +0.047` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.75, ci |
+| diff_lex_surf_75_p | `0.722` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.75, p_value |
+| diff_lex_surf_80 | `+0.004` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.8 |
+| diff_lex_surf_80_ci | `-0.037, +0.044` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.8, ci |
+| diff_lex_surf_80_p | `0.846` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.8, p_value |
+| diff_lex_surf_90 | `+0.009` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.9 |
+| diff_lex_surf_90_ci | `-0.030, +0.050` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.9, ci |
+| diff_lex_surf_90_p | `0.630` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=0.9, p_value |
+| diff_lex_surf_100 | `+0.008` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, lexical - surface, fraction=1.0 |
+| diff_lex_surf_100_ci | `-0.033, +0.047` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=1.0, ci |
+| diff_lex_surf_100_p | `0.676` | Sec. VI-B | table2b_paired_auroc_differences.csv, lexical - surface, fraction=1.0, p_value |
+| diff_surf_len_10 | `-0.010` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.1 |
+| diff_surf_len_10_ci | `-0.046, +0.028` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.1, ci |
+| diff_surf_len_10_p | `0.598` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.1, p_value |
+| diff_surf_len_20 | `+0.011` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.2 |
+| diff_surf_len_20_ci | `-0.014, +0.038` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.2, ci |
+| diff_surf_len_20_p | `0.406` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.2, p_value |
+| diff_surf_len_25 | `+0.034` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.25 |
+| diff_surf_len_25_ci | `+0.004, +0.062` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.25, ci |
+| diff_surf_len_25_p | `0.028` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.25, p_value |
+| diff_surf_len_30 | `+0.045` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.3 |
+| diff_surf_len_30_ci | `+0.014, +0.078` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.3, ci |
+| diff_surf_len_30_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.3, p_value |
+| diff_surf_len_40 | `+0.054` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.4 |
+| diff_surf_len_40_ci | `+0.024, +0.085` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.4, ci |
+| diff_surf_len_40_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.4, p_value |
+| diff_surf_len_50 | `+0.056` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.5 |
+| diff_surf_len_50_ci | `+0.026, +0.091` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.5, ci |
+| diff_surf_len_50_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.5, p_value |
+| diff_surf_len_60 | `+0.068` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.6 |
+| diff_surf_len_60_ci | `+0.033, +0.104` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.6, ci |
+| diff_surf_len_60_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.6, p_value |
+| diff_surf_len_70 | `+0.064` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.7 |
+| diff_surf_len_70_ci | `+0.028, +0.098` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.7, ci |
+| diff_surf_len_70_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.7, p_value |
+| diff_surf_len_75 | `+0.061` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.75 |
+| diff_surf_len_75_ci | `+0.028, +0.094` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.75, ci |
+| diff_surf_len_75_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.75, p_value |
+| diff_surf_len_80 | `+0.084` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.8 |
+| diff_surf_len_80_ci | `+0.050, +0.120` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.8, ci |
+| diff_surf_len_80_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.8, p_value |
+| diff_surf_len_90 | `+0.075` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.9 |
+| diff_surf_len_90_ci | `+0.042, +0.108` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.9, ci |
+| diff_surf_len_90_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=0.9, p_value |
+| diff_surf_len_100 | `+0.079` | Sec. VI-B; Table III | table2b_paired_auroc_differences.csv, surface - length-only, fraction=1.0 |
+| diff_surf_len_100_ci | `+0.045, +0.113` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=1.0, ci |
+| diff_surf_len_100_p | `0.001` | Sec. VI-B | table2b_paired_auroc_differences.csv, surface - length-only, fraction=1.0, p_value |
+| robust_len_25_mean | `0.544` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=0.25, mean |
+| robust_len_25_sd | `0.021` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=0.25, sd |
+| robust_len_25_min | `0.515` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=0.25, min |
+| robust_len_25_max | `0.573` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=0.25, max |
+| robust_len_50_mean | `0.552` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=0.5, mean |
+| robust_len_50_sd | `0.016` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=0.5, sd |
+| robust_len_50_min | `0.536` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=0.5, min |
+| robust_len_50_max | `0.575` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=0.5, max |
+| robust_len_100_mean | `0.551` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=1.0, mean |
+| robust_len_100_sd | `0.014` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=1.0, sd |
+| robust_len_100_min | `0.537` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=1.0, min |
+| robust_len_100_max | `0.569` | Sec. VI-B | table2c_split_robustness_summary.csv, length-only, fraction=1.0, max |
+| robust_lex_25_mean | `0.577` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=0.25, mean |
+| robust_lex_25_sd | `0.015` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=0.25, sd |
+| robust_lex_25_min | `0.554` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=0.25, min |
+| robust_lex_25_max | `0.590` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=0.25, max |
+| robust_lex_50_mean | `0.599` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=0.5, mean |
+| robust_lex_50_sd | `0.017` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=0.5, sd |
+| robust_lex_50_min | `0.574` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=0.5, min |
+| robust_lex_50_max | `0.617` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=0.5, max |
+| robust_lex_100_mean | `0.611` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=1.0, mean |
+| robust_lex_100_sd | `0.016` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=1.0, sd |
+| robust_lex_100_min | `0.586` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=1.0, min |
+| robust_lex_100_max | `0.626` | Sec. VI-B | table2c_split_robustness_summary.csv, lexical, fraction=1.0, max |
+| robust_surf_25_mean | `0.568` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=0.25, mean |
+| robust_surf_25_sd | `0.017` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=0.25, sd |
+| robust_surf_25_min | `0.548` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=0.25, min |
+| robust_surf_25_max | `0.590` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=0.25, max |
+| robust_surf_50_mean | `0.602` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=0.5, mean |
+| robust_surf_50_sd | `0.009` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=0.5, sd |
+| robust_surf_50_min | `0.592` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=0.5, min |
+| robust_surf_50_max | `0.612` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=0.5, max |
+| robust_surf_100_mean | `0.621` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=1.0, mean |
+| robust_surf_100_sd | `0.008` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=1.0, sd |
+| robust_surf_100_min | `0.613` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=1.0, min |
+| robust_surf_100_max | `0.630` | Sec. VI-B | table2c_split_robustness_summary.csv, surface, fraction=1.0, max |
+| robust_n_splits | `5` | Sec. VI-B | table2c_split_robustness_summary.csv |
+| online_1 | `0.566` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=1 |
+| online_1_ci | `0.526--0.604` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=1, ci |
+| online_1_n | `866` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=1, n_traces |
+| online_2 | `0.583` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=2 |
+| online_2_ci | `0.549--0.619` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=2, ci |
+| online_2_n | `858` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=2, n_traces |
+| online_3 | `0.588` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=3 |
+| online_3_ci | `0.550--0.626` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=3, ci |
+| online_3_n | `826` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=3, n_traces |
+| online_4 | `0.610` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=4 |
+| online_4_ci | `0.570--0.650` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=4, ci |
+| online_4_n | `714` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=4, n_traces |
+| online_5 | `0.603` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=5 |
+| online_5_ci | `0.559--0.647` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=5, ci |
+| online_5_n | `576` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=5, n_traces |
+| online_6 | `0.613` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=6 |
+| online_6_ci | `0.567--0.665` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=6, ci |
+| online_6_n | `442` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=6, n_traces |
+| online_7 | `0.589` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=7 |
+| online_7_ci | `0.527--0.648` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=7, ci |
+| online_7_n | `352` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=7, n_traces |
+| online_8 | `0.590` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=8 |
+| online_8_ci | `0.521--0.654` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=8, ci |
+| online_8_n | `263` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=8, n_traces |
+| online_9 | `0.585` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=9 |
+| online_9_ci | `0.514--0.662` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=9, ci |
+| online_9_n | `205` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=9, n_traces |
+| online_10 | `0.568` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=10 |
+| online_10_ci | `0.476--0.649` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=10, ci |
+| online_10_n | `153` | Sec. VI-C | table_online_auroc_by_step.csv, steps_observed=10, n_traces |
+| online_max_k | `10` | Sec. VI-C | table_online_auroc_by_step.csv |
 | lead_alarm_rate_050 | `90.8` | Sec. VI-D | table_lead_summary.csv, threshold=0.5, alarm_rate |
 | lead_warned_050 | `63.4` | Sec. VI-D | table_lead_summary.csv, threshold=0.5, frac_warned_before_error |
 | lead_median_delta_050 | `1` | Sec. VI-D | table_lead_summary.csv, threshold=0.5, median_delta |
@@ -301,6 +688,62 @@ Note: BIG-Bench Mistake positive rates differ sharply by task (the dataset over-
 | ECE_surface-GRU | `0.164` | Sec. VI-D | table_calibration_ece.csv, detector=surface-GRU |
 | transfer_lexical_min | `0.172` | Sec. VI-D | table_transfer.csv, lexical, min over BBM tasks |
 | transfer_lexical_max | `0.502` | Sec. VI-D | table_transfer.csv, lexical, max over BBM tasks |
+| transfer_lexical_ProcessBench | `0.626` | Table IV | table_transfer.csv, lexical, ProcessBench (in-domain test) |
+| transfer_lexical_ProcessBench_ci | `0.590--0.661` | Table IV | table_transfer.csv, lexical, ProcessBench (in-domain test), ci |
+| transfer_lexical_ProcessBench_n | `866` | Table IV | table_transfer.csv, lexical, ProcessBench (in-domain test), n_eval |
+| transfer_lexical_ProcessBench_pos | `48.8` | Table IV | table_transfer.csv, lexical, ProcessBench (in-domain test), positive_rate |
+| transfer_lexical_dyck_languages | `0.172` | Table IV | table_transfer.csv, lexical, BBM: dyck_languages |
+| transfer_lexical_dyck_languages_ci | `0.146--0.199` | Table IV | table_transfer.csv, lexical, BBM: dyck_languages, ci |
+| transfer_lexical_dyck_languages_n | `986` | Table IV | table_transfer.csv, lexical, BBM: dyck_languages, n_eval |
+| transfer_lexical_dyck_languages_pos | `51.1` | Table IV | table_transfer.csv, lexical, BBM: dyck_languages, positive_rate |
+| transfer_lexical_logical_deduction | `0.495` | Table IV | table_transfer.csv, lexical, BBM: logical_deduction |
+| transfer_lexical_logical_deduction_ci | `0.392--0.599` | Table IV | table_transfer.csv, lexical, BBM: logical_deduction, ci |
+| transfer_lexical_logical_deduction_n | `300` | Table IV | table_transfer.csv, lexical, BBM: logical_deduction, n_eval |
+| transfer_lexical_logical_deduction_pos | `85.0` | Table IV | table_transfer.csv, lexical, BBM: logical_deduction, positive_rate |
+| transfer_lexical_multistep_arithmetic | `0.502` | Table IV | table_transfer.csv, lexical, BBM: multistep_arithmetic |
+| transfer_lexical_multistep_arithmetic_ci | `0.410--0.598` | Table IV | table_transfer.csv, lexical, BBM: multistep_arithmetic, ci |
+| transfer_lexical_multistep_arithmetic_n | `300` | Table IV | table_transfer.csv, lexical, BBM: multistep_arithmetic, n_eval |
+| transfer_lexical_multistep_arithmetic_pos | `85.0` | Table IV | table_transfer.csv, lexical, BBM: multistep_arithmetic, positive_rate |
+| transfer_lexical_tracking_shuffled_objects | `0.480` | Table IV | table_transfer.csv, lexical, BBM: tracking_shuffled_objects |
+| transfer_lexical_tracking_shuffled_objects_ci | `0.410--0.557` | Table IV | table_transfer.csv, lexical, BBM: tracking_shuffled_objects, ci |
+| transfer_lexical_tracking_shuffled_objects_n | `300` | Table IV | table_transfer.csv, lexical, BBM: tracking_shuffled_objects, n_eval |
+| transfer_lexical_tracking_shuffled_objects_pos | `85.0` | Table IV | table_transfer.csv, lexical, BBM: tracking_shuffled_objects, positive_rate |
+| transfer_lexical_word_sorting | `0.372` | Table IV | table_transfer.csv, lexical, BBM: word_sorting |
+| transfer_lexical_word_sorting_ci | `0.284--0.453` | Table IV | table_transfer.csv, lexical, BBM: word_sorting, ci |
+| transfer_lexical_word_sorting_n | `300` | Table IV | table_transfer.csv, lexical, BBM: word_sorting, n_eval |
+| transfer_lexical_word_sorting_pos | `85.0` | Table IV | table_transfer.csv, lexical, BBM: word_sorting, positive_rate |
+| transfer_lexical_all_tasks | `0.552` | Table IV | table_transfer.csv, lexical, BBM: all tasks |
+| transfer_lexical_all_tasks_ci | `0.530--0.575` | Table IV | table_transfer.csv, lexical, BBM: all tasks, ci |
+| transfer_lexical_all_tasks_n | `2186` | Table IV | table_transfer.csv, lexical, BBM: all tasks, n_eval |
+| transfer_lexical_all_tasks_pos | `69.7` | Table IV | table_transfer.csv, lexical, BBM: all tasks, positive_rate |
+| transfer_surface_ProcessBench | `0.618` | Table IV | table_transfer.csv, surface, ProcessBench (in-domain test) |
+| transfer_surface_ProcessBench_ci | `0.583--0.654` | Table IV | table_transfer.csv, surface, ProcessBench (in-domain test), ci |
+| transfer_surface_ProcessBench_n | `866` | Table IV | table_transfer.csv, surface, ProcessBench (in-domain test), n_eval |
+| transfer_surface_ProcessBench_pos | `48.8` | Table IV | table_transfer.csv, surface, ProcessBench (in-domain test), positive_rate |
+| transfer_surface_dyck_languages | `0.206` | Table IV | table_transfer.csv, surface, BBM: dyck_languages |
+| transfer_surface_dyck_languages_ci | `0.180--0.235` | Table IV | table_transfer.csv, surface, BBM: dyck_languages, ci |
+| transfer_surface_dyck_languages_n | `986` | Table IV | table_transfer.csv, surface, BBM: dyck_languages, n_eval |
+| transfer_surface_dyck_languages_pos | `51.1` | Table IV | table_transfer.csv, surface, BBM: dyck_languages, positive_rate |
+| transfer_surface_logical_deduction | `0.676` | Table IV | table_transfer.csv, surface, BBM: logical_deduction |
+| transfer_surface_logical_deduction_ci | `0.580--0.761` | Table IV | table_transfer.csv, surface, BBM: logical_deduction, ci |
+| transfer_surface_logical_deduction_n | `300` | Table IV | table_transfer.csv, surface, BBM: logical_deduction, n_eval |
+| transfer_surface_logical_deduction_pos | `85.0` | Table IV | table_transfer.csv, surface, BBM: logical_deduction, positive_rate |
+| transfer_surface_multistep_arithmetic | `0.785` | Table IV | table_transfer.csv, surface, BBM: multistep_arithmetic |
+| transfer_surface_multistep_arithmetic_ci | `0.732--0.837` | Table IV | table_transfer.csv, surface, BBM: multistep_arithmetic, ci |
+| transfer_surface_multistep_arithmetic_n | `300` | Table IV | table_transfer.csv, surface, BBM: multistep_arithmetic, n_eval |
+| transfer_surface_multistep_arithmetic_pos | `85.0` | Table IV | table_transfer.csv, surface, BBM: multistep_arithmetic, positive_rate |
+| transfer_surface_tracking_shuffled_objects | `0.576` | Table IV | table_transfer.csv, surface, BBM: tracking_shuffled_objects |
+| transfer_surface_tracking_shuffled_objects_ci | `0.495--0.656` | Table IV | table_transfer.csv, surface, BBM: tracking_shuffled_objects, ci |
+| transfer_surface_tracking_shuffled_objects_n | `300` | Table IV | table_transfer.csv, surface, BBM: tracking_shuffled_objects, n_eval |
+| transfer_surface_tracking_shuffled_objects_pos | `85.0` | Table IV | table_transfer.csv, surface, BBM: tracking_shuffled_objects, positive_rate |
+| transfer_surface_word_sorting | `0.832` | Table IV | table_transfer.csv, surface, BBM: word_sorting |
+| transfer_surface_word_sorting_ci | `0.757--0.894` | Table IV | table_transfer.csv, surface, BBM: word_sorting, ci |
+| transfer_surface_word_sorting_n | `300` | Table IV | table_transfer.csv, surface, BBM: word_sorting, n_eval |
+| transfer_surface_word_sorting_pos | `85.0` | Table IV | table_transfer.csv, surface, BBM: word_sorting, positive_rate |
+| transfer_surface_all_tasks | `0.646` | Table IV | table_transfer.csv, surface, BBM: all tasks |
+| transfer_surface_all_tasks_ci | `0.624--0.670` | Table IV | table_transfer.csv, surface, BBM: all tasks, ci |
+| transfer_surface_all_tasks_n | `2186` | Table IV | table_transfer.csv, surface, BBM: all tasks, n_eval |
+| transfer_surface_all_tasks_pos | `69.7` | Table IV | table_transfer.csv, surface, BBM: all tasks, positive_rate |
 | transfer_lexical_min_task | `dyck_languages` | Sec. VI-D | table_transfer.csv, task with the minimum |
 
 - Model/temperature/samples/layer placeholders are CONFIG values (configs/default.yaml probes.*), not results; the experiment that uses them (E4) did not run in this build.

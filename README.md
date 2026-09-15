@@ -3,6 +3,7 @@
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Tests: pytest](https://img.shields.io/badge/tests-pytest-lightgrey)
+![CI](https://github.com/HarshDubey23/early-failure-detection-cot/actions/workflows/ci.yml/badge.svg)
 
 When a language model reasons step by step and reaches a wrong answer, the mistake is
 often made before the final step and then carried forward. This repository studies
@@ -44,9 +45,23 @@ experiment E4 did not run):
 Vector source: `docs/diagrams/architecture.tex` (also Fig. 1 of the paper). Phase I
 evaluates a detector at each step boundary; Phase II intervenes only when the risk
 exceeds a calibrated threshold, escalating from verification to regeneration and
-reverting revisions that do not reduce risk. The experimental pipeline is drawn in
-`docs/diagrams/rendered/pipeline.pdf`, and a real ProcessBench trace with its first error
-marked in `docs/diagrams/rendered/worked_example_processbench.pdf`.
+reverting revisions that do not reduce risk.
+
+## Pipeline
+
+![Experimental pipeline](docs/diagrams/rendered/pipeline.png)
+
+Vector source: `docs/diagrams/pipeline.tex`. The ten stages run from download and
+preprocessing through onset analysis, predictability curves, lead-time and calibration
+analysis, transfer tests, intervention simulation, and the final report.
+
+## Worked example
+
+![Worked example: real ProcessBench trace with first error marked](docs/diagrams/rendered/worked_example_processbench.png)
+
+A real ProcessBench trace with its first error marked
+(vector source: `docs/diagrams/worked_example_processbench.tex`,
+render script: `docs/diagrams/render.py`).
 
 ## Installation
 
@@ -145,6 +160,21 @@ Overleaf package, checks that every `\RES{}` value in `main.tex` exists in
 
 Every value, with its confidence interval and source file, is in `docs/RESULTS.md`.
 
+## Key figures
+
+![Headline: relative error position](results/figures/fig4_relative_error_position_HEADLINE.png)
+
+First errors come earlier than the discrete null predicts and rarely fall on the
+final step (F4, headline result).
+
+![Predictability vs prefix](results/figures/fig7_auroc_vs_prefix_KEY.png)
+
+Failure becomes predictable from a fraction of the chain (F7, key result).
+
+![Detection lead time](results/figures/fig9_lead_time.png)
+
+Step-wise alarms usually precede the first error (F9).
+
 ## Datasets and licences
 
 | Dataset | Source | Licence (as declared) | Role |
@@ -176,10 +206,6 @@ Details and verification status: `docs/BENCHMARKS.md`.
 The datasets and prior work used here should be cited from the paper's bibliography (30
 references), including Zheng et al. (2024) ProcessBench and Tyen et al. (2024) BIG-Bench
 Mistake.
-
-A complete study and viva guide (every concept, the paper section by section, every code
-file, a question bank) is in `docs/study_guide/study_guide.pdf`; its numbers are checked
-against the result files like the paper's.
 
 ## Acknowledgements
 

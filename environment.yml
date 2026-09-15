@@ -1,9 +1,9 @@
 name: choke-points-llm
 channels:
   - conda-forge
-  - pytorch
 dependencies:
-  - python=3.10
+  - python=3.13
   - pip
+  - tectonic=0.17.0   # LaTeX engine for `make diagrams` / `make paper`
   - pip:
     - -r requirements.txt

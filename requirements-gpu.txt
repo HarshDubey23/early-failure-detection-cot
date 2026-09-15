@@ -1,0 +1,5 @@
+# Extra packages for the GPU-only stages 06-07 (activation extraction).
+# NOT exercised on the build machine (no CUDA): lower bounds, not tested pins.
+-r requirements.txt
+transformers>=4.45
+accelerate>=0.34

@@ -30,9 +30,10 @@ class Trace:
     question: str
     steps: list
     n_steps: int
-    first_error_idx: int | None  # None when no error / not annotated
+    first_error_idx: int | None  # 1-INDEXED e in {1..n}; None when no error / not annotated
     final_correct: bool | None
     generator: str | None  # which model produced the trace
+    gold_answer: str | None = None  # only for generation corpora (GSM8K) - used to grade
 
 
 # ---------------------------------------------------------------------------
@@ -68,19 +69,108 @@ def _as_step_texts(raw_steps) -> list:
     return texts
 
 
+def question_id_from_text(dataset: str, question_text: str) -> str:
+    """Stable question identifier derived from the question text itself.
+
+    Why not the dataset's own row id: ProcessBench has 3,400 row ids but only
+    2,842 distinct problems (several generators solved the same problem).
+    Grouping by row id would let the same problem sit in train AND test, which
+    is exactly the leakage rule P6 forbids. Hashing whitespace-normalised
+    question text makes every copy of a problem share one group.
+
+    Example:
+        >>> question_id_from_text("pb", "What is  2+2?") == question_id_from_text("pb", "What is 2+2?")
+        True
+    """
+    import hashlib
+
+    normalised = " ".join(str(question_text).split())
+    digest = hashlib.sha1(normalised.encode("utf-8")).hexdigest()[:16]
+    return f"{dataset}:{digest}"
+
+
+def zero_indexed_to_first_error(label, error_free_code: int = -1) -> int | None:
+    """Convert a 0-indexed first-error label to the paper's 1-indexed `e`.
+
+    ProcessBench and BIG-Bench Mistake both store the first erroneous step as
+    a 0-INDEXED position (0 = the first step is wrong), with -1 / null for
+    error-free traces. The paper defines e in {1, ..., n} so that
+    rho = e / n lies in (0, 1]. Using the raw label as e would shift every
+    onset one step earlier and allow rho = 0.
+
+    Example:
+        >>> zero_indexed_to_first_error(0)
+        1
+        >>> zero_indexed_to_first_error(-1) is None
+        True
+    """
+    if label is None:
+        return None
+    label = int(label)
+    if label == error_free_code:
+        return None
+    if label < 0:
+        raise DatasetSchemaError(f"Unexpected negative first-error label {label}.")
+    return label + 1
+
+
 # ---------------------------------------------------------------------------
 # Primary loader: ProcessBench
 # ---------------------------------------------------------------------------
 
 PROCESSBENCH_REPO = "Qwen/ProcessBench"
+PROCESSBENCH_REQUIRED = ["id", "generator", "problem", "steps", "final_answer_correct", "label"]
 
 
-def load_processbench(split: str | None = None) -> list:
-    """Load ProcessBench (`Qwen/ProcessBench`) across all configs.
+def processbench_row_to_trace(row: dict, split_name: str, row_index: int) -> Trace:
+    """Map one ProcessBench row to the uniform `Trace` schema.
+
+    Args:
+        row: Native row with id, generator, problem, steps, final_answer_correct, label.
+        split_name: The difficulty tier (gsm8k / math / olympiadbench / omnimath).
+        row_index: Position in the split (for a unique trace id).
 
     Returns:
-        List of `Trace` with `first_error_idx` set (`-1` in source means
-        error-free and becomes None) and `final_correct` derived from it.
+        Trace with a 1-indexed `first_error_idx` and `final_correct` taken from
+        the dataset's own `final_answer_correct` field (NOT inferred from the
+        process label: 521 traces contain a process error yet reach the
+        correct final answer).
+
+    Example:
+        >>> t = processbench_row_to_trace({"id": "gsm8k-0", "generator": "g",
+        ...     "problem": "p", "steps": ["a", "b"], "final_answer_correct": False,
+        ...     "label": 1}, "gsm8k", 0)
+        >>> (t.first_error_idx, t.final_correct, t.subset)
+        (2, False, 'gsm8k')
+    """
+    steps = _as_step_texts(row["steps"])
+    return Trace(
+        trace_id=f"processbench:{split_name}:{row.get('id', row_index)}",
+        question_id=question_id_from_text("processbench", row["problem"]),
+        dataset="processbench",
+        subset=split_name,
+        question=str(row["problem"]),
+        steps=steps,
+        n_steps=len(steps),
+        first_error_idx=zero_indexed_to_first_error(row["label"]),
+        final_correct=bool(row["final_answer_correct"]),
+        generator=row.get("generator"),
+    )
+
+
+def load_processbench() -> list:
+    """Load every split of every config of ProcessBench (`Qwen/ProcessBench`).
+
+    The live layout (verified 2026-09-15) is ONE config, `default`, with FOUR
+    splits named after the difficulty tiers: gsm8k (400), math (1000),
+    olympiadbench (1000), omnimath (1000). Each split becomes a `subset`.
+
+    Returns:
+        List of `Trace`.
+
+    Raises:
+        DatasetSchemaError: When a split lacks a required column (the error
+            lists the columns actually observed).
     """
     from datasets import get_dataset_config_names, load_dataset
 
@@ -88,38 +178,19 @@ def load_processbench(split: str | None = None) -> list:
     print(f"[ProcessBench] configs: {configs}")
     traces: list[Trace] = []
     for cfg in configs:
-        ds = load_dataset(PROCESSBENCH_REPO, cfg)
-        split_name = split or next(iter(ds.keys()))
-        cols = ds[split_name].column_names
-        print(f"[ProcessBench:{cfg}] split={split_name} columns={cols}")
-        steps_col = find_column(cols, _STEP_CANDIDATES)
-        label_col = find_column(cols, _LABEL_CANDIDATES)
-        if steps_col is None or label_col is None:
-            raise DatasetSchemaError(
-                f"ProcessBench config '{cfg}': could not find step/label columns. "
-                f"Observed columns: {cols}"
-            )
-        question_col = find_column(cols, _QUESTION_CANDIDATES)
-        for i, row in enumerate(ds[split_name]):
-            steps = _as_step_texts(row[steps_col])
-            label = row[label_col]
-            has_error = label is not None and int(label) != -1
-            traces.append(
-                Trace(
-                    trace_id=f"processbench:{cfg}:{i}",
-                    question_id=str(
-                        row.get("id", row.get("question_id", f"{cfg}:{i}"))
-                    ),
-                    dataset="processbench",
-                    subset=cfg,
-                    question=str(row.get(question_col, "") if question_col else ""),
-                    steps=steps,
-                    n_steps=len(steps),
-                    first_error_idx=int(label) if has_error else None,
-                    final_correct=(not has_error),
-                    generator=row.get("generator"),
+        dataset_dict = load_dataset(PROCESSBENCH_REPO, cfg)
+        print(f"[ProcessBench:{cfg}] splits: {list(dataset_dict.keys())}")
+        for split_name, split in dataset_dict.items():
+            cols = split.column_names
+            print(f"[ProcessBench:{cfg}/{split_name}] rows={len(split)} columns={cols}")
+            missing = [c for c in PROCESSBENCH_REQUIRED if c not in cols]
+            if missing:
+                raise DatasetSchemaError(
+                    f"ProcessBench {cfg}/{split_name}: missing columns {missing}. "
+                    f"Observed columns: {cols}"
                 )
-            )
+            for i, row in enumerate(split):
+                traces.append(processbench_row_to_trace(row, split_name, i))
     return traces
 
 
@@ -130,8 +201,13 @@ def load_processbench(split: str | None = None) -> list:
 def load_prm800k(data_dir: str | Path, phase: str = "phase1_train") -> list:
     """Load PRM800K from a local GitHub checkout (`openai/prm800k`).
 
-    PRM800K labels each step as correct/incorrect/neutral. The first step
-    labelled incorrect becomes `first_error_idx`.
+    PRM800K rates each step +1 (good), 0 (neutral) or -1 (bad). The first
+    step rated -1 becomes `first_error_idx` (1-indexed).
+
+    UNVERIFIED MAPPING: PRM800K was not downloaded in this build, so the
+    flattened `steps`/`completions` layout assumed here has not been checked
+    against the real files (which nest completions under `label.steps`).
+    The function raises `DatasetSchemaError` rather than guessing if it differs.
 
     Args:
         data_dir: Local checkout directory containing `phase1_train.jsonl`
@@ -175,7 +251,8 @@ def load_prm800k(data_dir: str | Path, phase: str = "phase1_train") -> list:
             text = step.get("text", "") if isinstance(step, dict) else str(step)
             steps.append(text)
             rating = (step.get("rating", 1) if isinstance(step, dict) else 1)
-            if first_error is None and rating == 0:
+            # PRM800K rates each step -1 (bad), 0 (neutral) or +1 (good); only -1 is an error.
+            if first_error is None and rating == -1:
                 first_error = j + 1  # 1-indexed to match Trace convention
         traces.append(
             Trace(
@@ -202,19 +279,24 @@ def load_gsm8k(split: str = "test", limit: int | None = None) -> list:
     """Load GSM8K questions (`openai/gsm8k`, config `main`).
 
     GSM8K carries outcome labels only, so `first_error_idx` is None. It is used
-    to generate trajectories from an open model for activation extraction.
+    to generate trajectories from an open model for activation extraction; the
+    gold answer (the number after `####`) is kept in `gold_answer` so every
+    generated trajectory can be graded.
     """
     from datasets import load_dataset
 
     ds = load_dataset("openai/gsm8k", "main")
-    print(f"[GSM8K] splits={list(ds.keys())} columns={ds[split].column_names}")
+    cols = ds[split].column_names
+    print(f"[GSM8K] splits={list(ds.keys())} columns={cols}")
+    if "question" not in cols or "answer" not in cols:
+        raise DatasetSchemaError(f"GSM8K: expected question/answer columns. Observed: {cols}")
     rows = ds[split]
     if limit is not None:
         rows = rows.select(range(min(limit, len(rows))))
     return [
         Trace(
             trace_id=f"gsm8k:{split}:{i}",
-            question_id=f"gsm8k:{split}:{i}",
+            question_id=question_id_from_text("gsm8k", row["question"]),
             dataset="gsm8k",
             subset=split,
             question=str(row["question"]),
@@ -223,16 +305,56 @@ def load_gsm8k(split: str = "test", limit: int | None = None) -> list:
             first_error_idx=None,
             final_correct=None,
             generator=None,
+            gold_answer=extract_gsm8k_gold(row["answer"]),
         )
         for i, row in enumerate(rows)
     ]
+
+
+def extract_gsm8k_gold(answer_text: str) -> str | None:
+    """Return the gold number after `####` in a GSM8K answer string.
+
+    Example:
+        >>> extract_gsm8k_gold("3 + 4 = 7 #### 1,007")
+        '1007'
+    """
+    import re
+
+    match = re.search(r"####\s*(-?[\d,\.]+)", answer_text or "")
+    return match.group(1).replace(",", "").strip() if match else None
+
+
+def extract_last_number(generated_text: str) -> str | None:
+    """Return the last number in a generated solution (the prototype's grader).
+
+    Example:
+        >>> extract_last_number("so v = 60 / 2 = 30 km/h")
+        '30'
+    """
+    import re
+
+    numbers = re.findall(r"-?\d+(?:\.\d+)?", (generated_text or "").replace(",", ""))
+    return numbers[-1] if numbers else None
+
+
+def numbers_match(predicted: str | None, gold: str | None) -> bool:
+    """Numeric equality with float tolerance, so '30.0' matches '30'."""
+    if predicted is None or gold is None:
+        return False
+    try:
+        return abs(float(predicted) - float(gold)) < 1e-6
+    except ValueError:
+        return predicted.strip() == gold.strip()
 
 
 def load_math(split: str = "test", limit: int | None = None) -> list:
     """Load MATH / MATH-500 competition problems (harder trajectory generation).
 
     Tries `HuggingFaceH4/MATH-500` first, then `hendrycks/competition_math`.
-    Records which identifier resolved in the trace `subset` field.
+    Records which identifier resolved in the trace `subset` field. Note: on
+    2026-09-15 `hendrycks/competition_math` is marked `disabled` on the Hub,
+    so only MATH-500 resolves (see docs/BENCHMARKS.md). Not used by any
+    experiment in the current build.
     """
     from datasets import load_dataset
 
@@ -278,50 +400,104 @@ def load_math(split: str = "test", limit: int | None = None) -> list:
 # Cross-domain corpora: BIG-Bench Mistake, StrategyQA
 # ---------------------------------------------------------------------------
 
-def load_bigbench_mistake(data_dir: str | Path) -> list:
-    """Load BIG-Bench mistake-detection traces from a local checkout.
+BIGBENCH_MISTAKE_BASE_URL = "https://raw.githubusercontent.com/WHGTyen/BIG-Bench-Mistake/main"
+BIGBENCH_MISTAKE_TASKS = [
+    "dyck_languages",
+    "logical_deduction",
+    "multistep_arithmetic",
+    "tracking_shuffled_objects",
+    "word_sorting",
+]
 
-    Expected layout: JSONL files with `steps` and `first_mistake` fields
-    (see Google Research `bigbench` repo, mistake-detection tasks).
+
+def download_bigbench_mistake(data_dir: str | Path) -> list:
+    """Download the five BIG-Bench Mistake JSONL files from the authors' repo.
+
+    Source: github.com/WHGTyen/BIG-Bench-Mistake (Apache-2.0), released with
+    Tyen et al. (2024). Network access happens only when this is called.
+
+    Returns:
+        Paths of the files written.
+    """
+    import urllib.request
+
+    data_dir = Path(data_dir)
+    data_dir.mkdir(parents=True, exist_ok=True)
+    written = []
+    for task in BIGBENCH_MISTAKE_TASKS:
+        target = data_dir / f"{task}.jsonl"
+        url = f"{BIGBENCH_MISTAKE_BASE_URL}/{task}.jsonl"
+        with urllib.request.urlopen(url, timeout=60) as response:  # noqa: S310 - fixed https URL
+            target.write_bytes(response.read())
+        written.append(target)
+    return written
+
+
+def _normalise_answer(text) -> str:
+    """Collapse whitespace so '(A) ' and '(A)' compare equal."""
+    return " ".join(str(text).split()).strip()
+
+
+def bigbench_mistake_row_to_trace(record: dict, task: str, row_index: int) -> Trace:
+    """Map one BIG-Bench Mistake record to `Trace`.
+
+    Native fields: input, steps, answer, target, mistake_index. The dataset
+    README states `mistake_index` is 0-INDEXED (null = no mistake), so it is
+    converted to the paper's 1-indexed e. `final_correct` is exact match of
+    the whitespace-normalised extracted answer against the target - the
+    matching rule the dataset authors describe.
+
+    Example:
+        >>> t = bigbench_mistake_row_to_trace({"input": "q", "steps": ["a", "b"],
+        ...     "answer": "(A)", "target": "(B)", "mistake_index": 0}, "word_sorting", 0)
+        >>> (t.first_error_idx, t.final_correct)
+        (1, False)
+    """
+    for key in ("input", "steps", "answer", "target", "mistake_index"):
+        if key not in record:
+            raise DatasetSchemaError(
+                f"BIG-Bench Mistake {task} row {row_index}: missing '{key}'. "
+                f"Observed keys: {sorted(record.keys())}"
+            )
+    steps = _as_step_texts(record["steps"])
+    return Trace(
+        trace_id=f"bbm:{task}:{row_index}",
+        question_id=question_id_from_text(f"bbm-{task}", record["input"]),
+        dataset="bigbench_mistake",
+        subset=task,
+        question=str(record["input"]),
+        steps=steps,
+        n_steps=len(steps),
+        first_error_idx=zero_indexed_to_first_error(record["mistake_index"]),
+        final_correct=_normalise_answer(record["answer"]) == _normalise_answer(record["target"]),
+        generator="PaLM-2-L (Unicorn)",
+    )
+
+
+def load_bigbench_mistake(data_dir: str | Path) -> list:
+    """Load BIG-Bench Mistake traces from local JSONL files (one per task).
+
+    Raises:
+        FileNotFoundError: when the JSONL files are absent (run `make data`).
     """
     import json
-    from pathlib import Path as _Path
 
-    data_dir = _Path(data_dir)
-    files = sorted(data_dir.glob("*.jsonl"))
-    if not data_dir.exists() or not files:
+    data_dir = Path(data_dir)
+    files = sorted(data_dir.glob("*.jsonl")) if data_dir.exists() else []
+    if not files:
         raise FileNotFoundError(
-            f"BIG-Bench Mistake data not found under {data_dir}. Place the "
-            f"task JSONL files there (see docs/BENCHMARKS.md). Nothing is "
+            f"BIG-Bench Mistake data not found under {data_dir}. Run `make data` "
+            f"(downloads from {BIGBENCH_MISTAKE_BASE_URL}). Nothing is "
             f"substituted in their place."
         )
     traces = []
     for path in files:
-        for i, line in enumerate(path.read_text(encoding="utf-8").splitlines()):
-            if not line.strip():
-                continue
-            record = json.loads(line)
-            if "steps" not in record:
-                raise DatasetSchemaError(
-                    f"BIG-Bench Mistake {path.name} row {i}: missing 'steps'. "
-                    f"Observed keys: {sorted(record.keys())}"
-                )
-            steps = _as_step_texts(record["steps"])
-            first = record.get("first_mistake", record.get("first_error_idx"))
-            traces.append(
-                Trace(
-                    trace_id=f"bbm:{path.stem}:{i}",
-                    question_id=str(record.get("question_id", f"{path.stem}:{i}")),
-                    dataset="bigbench_mistake",
-                    subset=path.stem,
-                    question=str(record.get("question", "")),
-                    steps=steps,
-                    n_steps=len(steps),
-                    first_error_idx=int(first) if first is not None else None,
-                    final_correct=(first is None),
-                    generator=record.get("generator"),
-                )
-            )
+        records = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()
+                   if line.strip()]
+        print(f"[BIG-Bench Mistake:{path.stem}] rows={len(records)} "
+              f"keys={sorted(records[0].keys()) if records else []}")
+        for i, record in enumerate(records):
+            traces.append(bigbench_mistake_row_to_trace(record, path.stem, i))
     return traces
 
 
@@ -375,14 +551,19 @@ def load_strategyqa(split: str = "train", limit: int | None = None) -> list:
 def traces_to_frame(traces: list) -> object:
     """Convert a trace list to the processed dataframe used by all analysis.
 
-    Columns: trace_id, question_id, dataset, subset, n_steps, first_error_idx,
-    has_error, relative_onset, steps_remaining, question, steps, generator.
+    Columns: trace_id, question_id, dataset, subset, question, steps, n_steps,
+    first_error_idx (1-indexed e), has_error (a process error exists),
+    relative_onset (rho = e / n, via P4), steps_remaining (n - e),
+    final_correct, answer_incorrect (the paper's y), generator.
     """
     import pandas as pd
+
+    from .preprocessing import apply_p4_relative_onset
 
     records = []
     for trace in traces:
         has_error = trace.first_error_idx is not None
+        relative_onset = apply_p4_relative_onset(trace.first_error_idx, trace.n_steps)
         records.append(
             {
                 "trace_id": trace.trace_id,
@@ -394,17 +575,17 @@ def traces_to_frame(traces: list) -> object:
                 "n_steps": trace.n_steps,
                 "first_error_idx": trace.first_error_idx,
                 "has_error": has_error,
-                # P4 normalisation lives in preprocessing; mirrored here for
-                # convenience on already-processed traces.
                 "relative_onset": (
-                    trace.first_error_idx / trace.n_steps
-                    if has_error and trace.n_steps
-                    else float("nan")
+                    relative_onset if relative_onset is not None else float("nan")
                 ),
                 "steps_remaining": (
                     trace.n_steps - trace.first_error_idx if has_error else float("nan")
                 ),
                 "final_correct": trace.final_correct,
+                # The paper's y: 1 when the final answer disagrees with gold.
+                "answer_incorrect": (
+                    (not trace.final_correct) if trace.final_correct is not None else None
+                ),
                 "generator": trace.generator,
             }
         )

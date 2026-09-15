@@ -58,6 +58,10 @@ def apply_p4_relative_onset(first_error_idx: int | None, n_steps: int) -> float 
     Step 4 of 5 and step 4 of 40 are not the same event; without this, every
     positional claim is invalid.
 
+    `first_error_idx` must be the paper's 1-indexed e in {1, ..., n}; loaders
+    convert the datasets' 0-indexed labels before this point. The assertion
+    makes an indexing slip fail loudly instead of silently shifting rho.
+
     Example:
         >>> apply_p4_relative_onset(2, 10)
         0.2
@@ -66,6 +70,11 @@ def apply_p4_relative_onset(first_error_idx: int | None, n_steps: int) -> float 
     """
     if first_error_idx is None or not n_steps:
         return None
+    if not 1 <= first_error_idx <= n_steps:
+        raise ValueError(
+            f"P4: first_error_idx={first_error_idx} outside 1..n={n_steps}. "
+            "Was a 0-indexed label passed without conversion?"
+        )
     return first_error_idx / n_steps
 
 
@@ -117,6 +126,39 @@ def apply_all(
         cleaned.append(trace)
     _ = apply_p6_grouped_split_notice()
     return cleaned
+
+
+def quality_report(raw_traces: list, cleaned_traces: list, frame) -> dict:
+    """Data-quality numbers behind the viva statement "no missing values after cleaning".
+
+    Structural missingness (first_error_idx / relative_onset / steps_remaining
+    empty for error-free traces) is separated from unexpected missingness in
+    any other column, which must be zero.
+
+    Returns:
+        Dict with n_raw, n_clean, dropped_by_p5, n_questions, duplicate_trace_ids,
+        frac_has_error, frac_answer_incorrect, unexpected_missing.
+    """
+    structural = {"first_error_idx", "relative_onset", "steps_remaining", "generator"}
+    unexpected = {
+        column: int(frame[column].isna().sum())
+        for column in frame.columns
+        if column not in structural and int(frame[column].isna().sum()) > 0
+    }
+    # Structural missingness must line up exactly with error-free traces.
+    mismatched = int((frame["first_error_idx"].isna() != ~frame["has_error"]).sum())
+    if mismatched:
+        unexpected["first_error_idx_vs_has_error"] = mismatched
+    return {
+        "n_raw": len(raw_traces),
+        "n_clean": len(cleaned_traces),
+        "dropped_by_p5": len(raw_traces) - len(cleaned_traces),
+        "n_questions": int(frame["question_id"].nunique()),
+        "duplicate_trace_ids": int(frame["trace_id"].duplicated().sum()),
+        "frac_has_error": float(frame["has_error"].mean()),
+        "frac_answer_incorrect": float(frame["answer_incorrect"].astype(float).mean()),
+        "unexpected_missing": unexpected,
+    }
 
 
 def relative_onset_column(first_error_idx, n_steps) -> float:

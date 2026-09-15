@@ -91,6 +91,32 @@ def describe_onset(df: pd.DataFrame, target: str, n_bootstrap: int = 1000,
     return pd.DataFrame(rows).set_index("subset")
 
 
+def describe_generators(df: pd.DataFrame, target: str) -> pd.DataFrame:
+    """Per-generator counts, error rates and mean onset (supplementary E1 view).
+
+    Caveat printed with the table: ProcessBench was assembled to contain equal
+    numbers of correct and incorrect final answers per tier, so these rates
+    describe the benchmark's sample, NOT the accuracy of each model.
+    The parameter count is parsed from the model name (e.g. "Qwen2-72B-Instruct" -> 72).
+    """
+    import re
+
+    rows = []
+    for generator, group in df.groupby("generator"):
+        erroneous = group[group["has_error"]]
+        match = re.search(r"(\d+(?:\.\d+)?)B", str(generator))
+        rows.append({
+            "generator": generator,
+            "params_billion": float(match.group(1)) if match else float("nan"),
+            "n_traces": int(len(group)),
+            "pct_erroneous": 100.0 * float(group["has_error"].mean()),
+            "pct_answer_incorrect": 100.0 * float(group[target].astype(float).mean()),
+            "mean_relative_onset": float(erroneous["relative_onset"].mean()) if len(erroneous) else float("nan"),
+            "mean_steps": float(group["n_steps"].mean()),
+        })
+    return pd.DataFrame(rows).sort_values(["params_billion", "generator"]).reset_index(drop=True)
+
+
 def paper_table_latex(table: pd.DataFrame, tier_labels: dict) -> str:
     """LaTeX body rows for paper Table I (Subset, Traces, % err., Med. n, Mean rho).
 

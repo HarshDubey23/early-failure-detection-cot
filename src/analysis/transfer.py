@@ -75,7 +75,8 @@ def transfer_table(source_df: pd.DataFrame, target_df: pd.DataFrame, target: str
     for representation in representations:
         score = fit_full_trace_detector(train_df, target, representation, seed, **tfidf_kwargs)
         in_domain = auroc_with_ci(source_test[target].astype(int).to_numpy(),
-                                  score(source_test), n_bootstrap, seed)
+                                  score(source_test), n_bootstrap, seed,
+                                  groups=source_test["question_id"].to_numpy())
         rows.append({"representation": representation,
                      "evaluation_domain": f"{source_name} (in-domain test)",
                      **in_domain, "n_eval": int(len(source_test)),
@@ -87,7 +88,8 @@ def transfer_table(source_df: pd.DataFrame, target_df: pd.DataFrame, target: str
             y_eval = group[target].astype(int).to_numpy()
             if len(np.unique(y_eval)) < 2:
                 continue
-            stats = auroc_with_ci(y_eval, score(group), n_bootstrap, seed)
+            stats = auroc_with_ci(y_eval, score(group), n_bootstrap, seed,
+                                  groups=group["question_id"].to_numpy())
             rows.append({"representation": representation, "evaluation_domain": domain_name,
                          **stats, "n_eval": int(len(group)),
                          "positive_rate": float(np.mean(y_eval)),
@@ -116,6 +118,7 @@ def leave_one_tier_out(df: pd.DataFrame, target: str, representation: str, seed:
             continue
         score = fit_full_trace_detector(train_df, target, representation, seed, **tfidf_kwargs)
         rows.append({"representation": representation, "held_out_tier": held_out,
-                     **auroc_with_ci(y_eval, score(eval_df), n_bootstrap, seed),
+                     **auroc_with_ci(y_eval, score(eval_df), n_bootstrap, seed,
+                                     groups=eval_df["question_id"].to_numpy()),
                      "n_eval": int(len(eval_df))})
     return pd.DataFrame(rows)

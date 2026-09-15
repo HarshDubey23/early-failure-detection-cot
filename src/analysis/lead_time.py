@@ -121,6 +121,35 @@ def stepwise_risk_series(df: pd.DataFrame, target: str, split: tuple, representa
     return {"risks": risks, "fitted_up_to_k": fitted_up_to_k}
 
 
+def online_auroc_by_step(df: pd.DataFrame, risk_series: dict, target: str, max_step: int,
+                         min_traces: int, n_bootstrap: int, seed: int) -> pd.DataFrame:
+    """AUROC of r_k after k observed steps, for traces that still have steps left (n > k).
+
+    Unlike the prefix-fraction curve, this never uses n: an online monitor
+    after k steps does not know how long the trace will be. Only traces with
+    n > k are scored, so every prediction is made before the final step. The
+    evaluated set changes with k (short traces drop out), so its size and
+    positive rate are reported beside each AUROC.
+
+    Returns:
+        Rows with steps_observed, n_traces, positive_rate, auroc, ci_lo, ci_hi.
+    """
+    from src.analysis.statistics import auroc_with_ci
+
+    scored = df[df["trace_id"].isin(list(risk_series.keys()))]
+    rows = []
+    for k in range(1, max_step + 1):
+        eligible = scored[scored["n_steps"] > k]
+        if len(eligible) < min_traces or eligible[target].nunique() < 2:
+            continue
+        y = eligible[target].astype(int).to_numpy()
+        risks = np.array([risk_series[t][k - 1] for t in eligible["trace_id"]])
+        stats = auroc_with_ci(y, risks, n_bootstrap, seed, groups=eligible["question_id"].to_numpy())
+        rows.append({"steps_observed": k, "n_traces": int(len(eligible)),
+                     "positive_rate": float(y.mean()), **stats})
+    return pd.DataFrame(rows)
+
+
 def lead_times(df: pd.DataFrame, risk_series: dict, thresholds: list) -> pd.DataFrame:
     """Compute Delta = e - k* per annotated trace, per threshold.
 

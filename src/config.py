@@ -52,6 +52,19 @@ class DetectorConfig:
 
 
 @dataclass
+class RobustnessConfig:
+    split_seeds: list      # independent grouped splits for E3 stability
+    fractions: list        # prefix fractions re-evaluated on each split
+    comparison_pairs: list  # [[a, b], ...] paired AUROC differences a - b
+
+
+@dataclass
+class OnlineConfig:
+    max_step: int          # length-blind AUROC after k = 1..max_step steps
+    min_traces: int        # skip k when fewer test traces have n > k
+
+
+@dataclass
 class ProbesConfig:
     model: str
     generation_temperature: float
@@ -125,6 +138,8 @@ class Config:
     split: SplitConfig
     prefix_grid: list
     detector: DetectorConfig
+    robustness: RobustnessConfig
+    online: OnlineConfig
     probes: ProbesConfig
     baselines: BaselinesConfig
     metrics: MetricsConfig
@@ -210,6 +225,12 @@ def load_config(path: str | Path) -> Config:
     if detector.stepwise_representation not in ("surface", "lexical"):
         raise ValueError("Config error: detector.stepwise_representation must be surface|lexical.")
 
+    robustness = _section(raw, "robustness", RobustnessConfig, {
+        "split_seeds": lambda v: [int(x) for x in v],
+        "fractions": lambda v: [float(x) for x in v],
+        "comparison_pairs": lambda v: [list(pair) for pair in v],
+    })
+    online = _section(raw, "online", OnlineConfig, {"max_step": int, "min_traces": int})
     probes = _section(raw, "probes", ProbesConfig, {
         "model": str, "generation_temperature": float, "top_p": float,
         "samples_per_question": int, "default_layer": int, "layer_sweep": list,
@@ -246,5 +267,5 @@ def load_config(path: str | Path) -> Config:
     })
     return Config(seed=int(_require(raw, "seed", "<root>")), data=data,
                   preprocessing=preprocessing, split=split, prefix_grid=prefix_grid,
-                  detector=detector, probes=probes, baselines=baselines, metrics=metrics,
+                  detector=detector, robustness=robustness, online=online, probes=probes, baselines=baselines, metrics=metrics,
                   intervention=intervention, outputs=outputs)

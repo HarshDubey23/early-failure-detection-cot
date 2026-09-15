@@ -15,6 +15,7 @@ from src.analysis.lead_time import (
     false_alarm_rates,
     lead_time_summary,
     lead_times,
+    online_auroc_by_step,
     stepwise_risk_series,
 )
 from src.analysis.predictability import make_split
@@ -55,6 +56,10 @@ def main() -> None:
                       json.dumps({"representation": cfg.detector.stepwise_representation,
                                   "target": target, "fitted_up_to_k": series["fitted_up_to_k"],
                                   "risks": risks}))
+    online = online_auroc_by_step(df, risks, target, cfg.online.max_step, cfg.online.min_traces,
+                                  cfg.metrics.bootstrap_resamples, cfg.seed)
+    atomic_write_dataframe(online, tables / "table_online_auroc_by_step.csv")
+    figures.plot_f15(online, figs)
     thresholds = list(cfg.intervention.thresholds)
     lead_df = lead_times(df, risks, thresholds)
     lead_summary = lead_time_summary(lead_df)
@@ -105,6 +110,8 @@ def main() -> None:
         f"P(Delta>0) {at_half['frac_warned_before_error']:.3f}, median Delta {at_half['median_delta']:.1f}, "
         f"false alarms on error-free traces {at_half['false_alarm_rate_error_free']:.3f}",
     ]
+    summary += [f"Online AUROC after k={int(r.steps_observed)} steps (n>k, {r.n_traces} traces): "
+                f"{r.auroc:.3f} [{r.ci_lo:.3f}, {r.ci_hi:.3f}]" for r in online.itertuples()]
     summary += [f"ECE ({cfg.metrics.ece_bins} bins) {name:<12}: {value:.4f}" for name, value in eces.items()]
     for representation in pooled.index:
         row = pooled.loc[representation]

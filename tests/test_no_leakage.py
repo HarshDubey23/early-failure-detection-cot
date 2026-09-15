@@ -60,7 +60,7 @@ def test_shared_e3_split_is_question_disjoint(corpus):
     assert train_q.isdisjoint(test_q)
     curve, scores = run_surface_curve(corpus, "answer_incorrect", [0.5, 1.0], (train_idx, test_idx),
                                       seed=42, n_bootstrap=10)
-    assert len(scores) == len(test_idx)
+    assert len(scores[1.0]) == len(test_idx)
     assert (curve["n_test"] == len(test_idx)).all()
 
 

@@ -8,7 +8,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.analysis.onset import describe_onset, paper_table_latex
+from src.analysis.onset import describe_generators, describe_onset, paper_table_latex
 from src.config import load_config
 from src.utils.io import Manifest, atomic_write_dataframe, atomic_write_text, read_traces_frame
 from src.utils.logging import get_logger, print_summary_block
@@ -38,6 +38,7 @@ def main() -> None:
     atomic_write_text(tables / "table1_descriptive.tex",
                       table1.reset_index().to_latex(index=False, float_format="%.3f"))
     atomic_write_text(tables / "table1_paper_rows.tex", paper_table_latex(table1, PAPER_TIER_LABELS))
+    atomic_write_dataframe(describe_generators(df, target), tables / "table1c_generators.csv")
     table1b = describe_onset(transfer, target, cfg.metrics.bootstrap_resamples, cfg.seed)
     atomic_write_dataframe(table1b.reset_index(), tables / "table1b_descriptive_transfer.csv")
 

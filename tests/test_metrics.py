@@ -11,7 +11,9 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.analysis.lead_time import first_alarm, lead_time_summary, lead_times
 from src.analysis.onset import uniform_step_expected_rho
 from src.analysis.statistics import (
+    auroc,
     auroc_with_ci,
+    paired_auroc_difference,
     expected_calibration_error,
     ks_discrete_uniform_null,
     mann_whitney_length,
@@ -129,3 +131,49 @@ def test_oracle_regenerates_from_true_error():
     out = simulate_oracle(df, {"f": [0.0] * 3, "s": [0.0]}, assumptions(), "answer_incorrect")
     assert out["recovery_rate"] == 1.0 and out["corruption_rate"] == 0.0
     assert out["extra_tokens_per_question"] == pytest.approx(4 / 2)  # "bbb"+"c" = 4 chars over 2 traces
+
+
+def test_rank_auroc_matches_sklearn_with_ties():
+    from sklearn.metrics import roc_auc_score
+
+    rng = np.random.default_rng(0)
+    y = rng.integers(0, 2, 300)
+    scores = np.round(rng.random(300), 1)  # many ties
+    assert auroc(y, scores) == pytest.approx(roc_auc_score(y, scores))
+
+
+def test_cluster_bootstrap_is_wider_when_rows_are_duplicated():
+    rng = np.random.default_rng(1)
+    y = rng.integers(0, 2, 100)
+    scores = y * 0.3 + rng.random(100)
+    # Duplicate every row 5 times: row bootstrap sees 500 "independent" rows,
+    # question bootstrap correctly sees only 100 independent questions.
+    y5, s5, g5 = np.repeat(y, 5), np.repeat(scores, 5), np.repeat(np.arange(100), 5)
+    rows = auroc_with_ci(y5, s5, n_bootstrap=300, seed=0)
+    clustered = auroc_with_ci(y5, s5, n_bootstrap=300, seed=0, groups=g5)
+    assert (clustered["ci_hi"] - clustered["ci_lo"]) > (rows["ci_hi"] - rows["ci_lo"])
+
+
+def test_paired_difference_detects_a_better_detector():
+    rng = np.random.default_rng(2)
+    y = rng.integers(0, 2, 400)
+    good = y + rng.normal(0, 0.5, 400)
+    noise = rng.random(400)
+    result = paired_auroc_difference(y, good, noise, n_bootstrap=300, seed=0)
+    assert result["difference"] > 0.2 and result["ci_lo"] > 0 and result["p_value"] < 0.01
+    same = paired_auroc_difference(y, good, good, n_bootstrap=50, seed=0)
+    assert same["difference"] == 0.0
+
+
+def test_online_auroc_only_uses_traces_with_steps_left():
+    from src.analysis.lead_time import online_auroc_by_step
+
+    df = pd.DataFrame({"trace_id": ["a", "b", "c", "d"], "question_id": ["q1", "q2", "q3", "q4"],
+                       "n_steps": [3, 3, 1, 3], "answer_incorrect": [True, False, True, False]})
+    risks = {"a": [0.9, 0.9, 0.9], "b": [0.1, 0.1, 0.1], "c": [0.0], "d": [0.2, 0.2, 0.2]}
+    table = online_auroc_by_step(df, risks, "answer_incorrect", max_step=3, min_traces=2,
+                                 n_bootstrap=10, seed=0)
+    # k=1 excludes trace c (n=1 is not > 1); k=3 has no trace with n > 3.
+    assert table["steps_observed"].tolist() == [1, 2]
+    assert table["n_traces"].tolist() == [3, 3]
+    assert table["auroc"].iloc[0] == 1.0

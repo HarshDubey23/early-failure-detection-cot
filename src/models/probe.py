@@ -86,6 +86,6 @@ def layer_depth_auroc(meta: pd.DataFrame, states_by_layer: dict, depth_bins: lis
                 continue
             scaler, clf = fit_probe(states[tr], y_all[tr], C, max_iter, seed)
             stats = auroc_with_ci(y_all[te], predict_risk(scaler, clf, states[te]),
-                                  n_bootstrap, seed)
+                                  n_bootstrap, seed, groups=meta["question_id"].to_numpy()[te])
             rows.append({**row, **stats, "status": "OK"})
     return pd.DataFrame(rows)

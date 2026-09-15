@@ -153,30 +153,104 @@ def kruskal_across_tiers(groups: list) -> dict:
     }
 
 
-def auroc_with_ci(y_true: np.ndarray, scores: np.ndarray,
-                  n_bootstrap: int = 1000, seed: int = 42) -> dict:
-    """AUROC with seeded bootstrap 95% CI.
+def auroc(y_true: np.ndarray, scores: np.ndarray) -> float:
+    """AUROC via the Mann-Whitney rank formula (ties get average ranks).
 
-    Measures P(a random failing trace scores above a random succeeding one).
-    0.5 = random, 0.7 = useful, 0.8 = strong. Reported instead of accuracy
-    because classes are imbalanced.
+    AUROC = (sum of the ranks of positives - n1 (n1 + 1) / 2) / (n1 n0): the
+    fraction of (positive, negative) pairs ordered correctly, ties counting
+    one half. Identical to sklearn's roc_auc_score, but fast enough to call
+    thousands of times inside a bootstrap.
+
+    Example:
+        >>> auroc(np.array([0, 0, 1, 1]), np.array([0.1, 0.4, 0.35, 0.8]))
+        0.75
     """
-    from sklearn.metrics import roc_auc_score
+    from scipy.stats import rankdata
 
+    y_true = np.asarray(y_true).astype(bool)
+    n_pos, n_neg = int(y_true.sum()), int((~y_true).sum())
+    if n_pos == 0 or n_neg == 0:
+        return float("nan")
+    ranks = rankdata(np.asarray(scores, dtype=float))
+    return float((ranks[y_true].sum() - n_pos * (n_pos + 1) / 2.0) / (n_pos * n_neg))
+
+
+def _resample_indices(rng, n_rows: int, group_rows: list | None) -> np.ndarray:
+    """One bootstrap resample: rows (plain) or whole question groups (cluster)."""
+    if group_rows is None:
+        return rng.integers(0, n_rows, n_rows)
+    picked = rng.integers(0, len(group_rows), len(group_rows))
+    return np.concatenate([group_rows[i] for i in picked])
+
+
+def _group_rows(groups) -> list | None:
+    """Row indices per group, so resampling a group takes all of its rows."""
+    if groups is None:
+        return None
+    groups = np.asarray(groups)
+    order = np.argsort(groups, kind="stable")
+    boundaries = np.flatnonzero(groups[order][1:] != groups[order][:-1]) + 1
+    return np.split(order, boundaries)
+
+
+def auroc_with_ci(y_true: np.ndarray, scores: np.ndarray,
+                  n_bootstrap: int = 1000, seed: int = 42, groups=None) -> dict:
+    """AUROC with a seeded bootstrap 95% CI.
+
+    Measures P(a random failing trace scores above a random succeeding one);
+    0.5 is chance. When `groups` (question ids) is given, the bootstrap
+    resamples whole questions (a cluster bootstrap): traces of the same
+    problem are correlated, so resampling single traces would understate the
+    uncertainty.
+    """
     y_true = np.asarray(y_true)
     scores = np.asarray(scores, dtype=float)
-    point = float(roc_auc_score(y_true, scores))
+    point = auroc(y_true, scores)
     rng = np.random.default_rng(seed)
+    rows = _group_rows(groups)
     boot = []
     for _ in range(n_bootstrap):
-        idx = rng.integers(0, len(y_true), len(y_true))
-        if len(np.unique(y_true[idx])) < 2:
-            continue
-        boot.append(roc_auc_score(y_true[idx], scores[idx]))
+        idx = _resample_indices(rng, len(y_true), rows)
+        value = auroc(y_true[idx], scores[idx])
+        if not np.isnan(value):
+            boot.append(value)
     return {
         "auroc": point,
         "ci_lo": float(np.quantile(boot, 0.025)) if boot else float("nan"),
         "ci_hi": float(np.quantile(boot, 0.975)) if boot else float("nan"),
+    }
+
+
+def paired_auroc_difference(y_true: np.ndarray, scores_a: np.ndarray, scores_b: np.ndarray,
+                            n_bootstrap: int = 1000, seed: int = 42, groups=None) -> dict:
+    """AUROC(a) - AUROC(b) on the SAME test traces, with a paired bootstrap.
+
+    Both detectors are re-scored on each resample, so the correlation between
+    them (same traces, same labels) is respected; this is a proper test of
+    whether one detector beats another, which "the two CIs overlap" is not.
+    The two-sided p-value is 2 x the smaller tail of the bootstrap
+    distribution around 0 (bounded below by the resolution 1/n_bootstrap).
+    """
+    y_true = np.asarray(y_true)
+    scores_a = np.asarray(scores_a, dtype=float)
+    scores_b = np.asarray(scores_b, dtype=float)
+    difference = auroc(y_true, scores_a) - auroc(y_true, scores_b)
+    rng = np.random.default_rng(seed)
+    rows = _group_rows(groups)
+    boot = []
+    for _ in range(n_bootstrap):
+        idx = _resample_indices(rng, len(y_true), rows)
+        a, b = auroc(y_true[idx], scores_a[idx]), auroc(y_true[idx], scores_b[idx])
+        if not (np.isnan(a) or np.isnan(b)):
+            boot.append(a - b)
+    boot = np.asarray(boot)
+    tail = min(np.mean(boot <= 0), np.mean(boot >= 0)) if len(boot) else float("nan")
+    return {
+        "difference": float(difference),
+        "ci_lo": float(np.quantile(boot, 0.025)) if len(boot) else float("nan"),
+        "ci_hi": float(np.quantile(boot, 0.975)) if len(boot) else float("nan"),
+        "p_value": float(max(2.0 * tail, 1.0 / max(1, len(boot)))) if len(boot) else float("nan"),
+        "n_bootstrap": int(len(boot)),
     }
 
 

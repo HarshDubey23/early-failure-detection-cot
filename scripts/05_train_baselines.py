@@ -39,7 +39,7 @@ def main() -> None:
     common = {"prefix_grid": cfg.prefix_grid, "split": split, "seed": cfg.seed,
               "n_bootstrap": cfg.metrics.bootstrap_resamples}
 
-    curves, full_scores = [], {}
+    curves, full_scores, scores_primary = [], {}, {}
     for target in (cfg.detector.target, cfg.detector.secondary_target):
         primary = target == cfg.detector.target
         log.info("E3 curves for target=%s", target)
@@ -57,15 +57,31 @@ def main() -> None:
                     lr=cfg.probes.gru_lr, **common)),
             ]
         for name, run in runs:
-            curve, scores = run()
+            curve, scores_by_fraction = run()
             curves.append(curve)
             if primary:
-                full_scores[name] = scores
+                scores_primary[name] = scores_by_fraction
+                full_scores[name] = scores_by_fraction[max(cfg.prefix_grid)]
             log.info("  %s done (AUROC at 100%% = %.4f)", name, curve["auroc"].iloc[-1])
 
     curve = pd.concat(curves, ignore_index=True)
     atomic_write_dataframe(curve, tables / "table2_prefix_auroc.csv")
     atomic_write_text(tables / "table2_prefix_auroc.tex", curve.to_latex(index=False, float_format="%.3f"))
+
+    # Paired-bootstrap tests: is one detector really better on the SAME test traces?
+    groups_test = df["question_id"].to_numpy()[test_idx]
+    y_primary = df[cfg.detector.target].astype(int).to_numpy()[test_idx]
+    comparisons = pred.paired_comparisons(
+        y_primary, groups_test, scores_primary, [tuple(pair) for pair in cfg.robustness.comparison_pairs],
+        cfg.prefix_grid, cfg.metrics.bootstrap_resamples, cfg.seed, cfg.detector.target)
+    atomic_write_dataframe(comparisons, tables / "table2b_paired_auroc_differences.csv")
+
+    # Stability: the same curves on independent grouped splits.
+    robustness = pred.split_robustness(df, cfg.detector.target, cfg.robustness.fractions,
+                                       cfg.robustness.split_seeds, cfg.split.test_size, tfidf,
+                                       cfg.baselines.logistic_C)
+    atomic_write_dataframe(robustness, tables / "table2c_split_robustness.csv")
+    atomic_write_dataframe(pred.summarise_robustness(robustness), tables / "table2c_split_robustness_summary.csv")
 
     # Majority-class baseline: a constant score; AUROC computed, not assumed.
     y_test = df[cfg.detector.target].astype(int).to_numpy()[test_idx]
@@ -108,6 +124,10 @@ def main() -> None:
     for representation in ("lexical", "surface", "length-only", "surface-MLP", "surface-GRU"):
         summary.append(f"{representation:<12} AUROC @25%: {auroc_at(representation, 0.25):<24} "
                        f"@100%: {auroc_at(representation, 1.0)}")
+    for row in comparisons[np.isclose(comparisons["fraction_observed"], 0.25)
+                           | np.isclose(comparisons["fraction_observed"], 1.0)].itertuples():
+        summary.append(f"paired {row.comparison:<24} @{100 * row.fraction_observed:g}%: "
+                       f"{row.difference:+.3f} [{row.ci_lo:+.3f}, {row.ci_hi:+.3f}] p={row.p_value:.3f}")
     summary += [f"majority-class AUROC: {majority['auroc']:.3f}",
                 "uncertainty + hidden-state: NOT_RUN (see table2_representation_status.csv)",
                 "Figures: F6 (ROC), F7 (curve, paper target), F7b (curve, process-error target)"]

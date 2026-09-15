@@ -11,7 +11,7 @@ PAPER_DIR ?= ../04_Paper_Overleaf_Package/paper
 TECTONIC ?= tectonic
 
 .PHONY: setup smoke data preprocess eda baselines activations probes analysis \
-        intervention report all test lint diagrams paper
+        intervention report all test lint diagrams paper guide
 
 setup:
 	$(PY) -m pip install -r requirements.txt
@@ -69,3 +69,7 @@ diagrams:   # TikZ -> PDF (+ PNG preview for the README); needs Tectonic
 
 paper:      # copy vector figures + diagrams into the Overleaf package and compile it
 	$(PY) docs/diagrams/export_paper_assets.py --paper-dir $(PAPER_DIR) --tectonic $(TECTONIC)
+
+guide:      # study and viva guide: check every number, then compile (needs Tectonic)
+	$(PY) docs/diagrams/check_paper_values.py docs/study_guide/study_guide.tex --tables
+	cd docs/study_guide && $(TECTONIC) study_guide.tex

@@ -20,9 +20,16 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-PAPER_FIGURES = [
+PAPER_FIGURES = [  # results/figures -> paper/figures
     "fig4_relative_error_position_HEADLINE.pdf",
     "fig7_auroc_vs_prefix_KEY.pdf",
+    "fig9_lead_time.pdf",
+    "fig10_reliability.pdf",
+    "fig15_online_auroc_by_step.pdf",
+]
+PAPER_DIAGRAMS = [  # docs/diagrams/rendered -> paper/figures (vector PDFs from TikZ)
+    "pipeline.pdf",
+    "worked_example_processbench.pdf",
 ]
 
 
@@ -41,6 +48,12 @@ def main() -> None:
         source = ROOT / "results" / "figures" / name
         if not source.exists():
             sys.exit(f"{source} missing - run `make all` first.")
+        shutil.copy2(source, figures_dir / name)
+        print(f"copied {source.relative_to(ROOT)} -> {figures_dir / name}")
+    for name in PAPER_DIAGRAMS:
+        source = ROOT / "docs" / "diagrams" / "rendered" / name
+        if not source.exists():
+            sys.exit(f"{source} missing - run `make diagrams` first.")
         shutil.copy2(source, figures_dir / name)
         print(f"copied {source.relative_to(ROOT)} -> {figures_dir / name}")
     shutil.copy2(ROOT / "docs" / "diagrams" / "architecture.tex", figures_dir / "architecture.tex")

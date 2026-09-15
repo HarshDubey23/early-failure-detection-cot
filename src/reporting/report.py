@@ -24,18 +24,19 @@ FIGURES = [
     ("F1", "fig1_class_balance", "Class balance by dataset and tier"),
     ("F2", "fig2_chain_length", "Trace length, split by outcome"),
     ("F3", "fig3_absolute_error_index", "Absolute first-error index"),
-    ("F4", "fig4_relative_error_position_HEADLINE", "Relative onset: histogram + CDF (paper Fig. 2)"),
+    ("F4", "fig4_relative_error_position_HEADLINE", "Relative onset: histogram + CDF (paper Fig. 4)"),
     ("F5", "fig5_difficulty_breakdown", "Onset by difficulty tier"),
     ("F6", "fig6_roc_all_representations", "ROC curves, all representations"),
-    ("F7", "fig7_auroc_vs_prefix_KEY", "AUROC vs observed prefix (paper Fig. 3)"),
+    ("F7", "fig7_auroc_vs_prefix_KEY", "AUROC vs observed prefix (paper Fig. 5)"),
     ("F7b", "fig7b_auroc_vs_prefix_process_error", "AUROC vs prefix, process-error target"),
     ("F8", "fig8_layer_depth_heatmap", "Layer x depth AUROC heatmap"),
-    ("F9", "fig9_lead_time", "Lead time distribution + threshold tradeoff"),
-    ("F10", "fig10_reliability", "Reliability diagram + ECE"),
+    ("F9", "fig9_lead_time", "Lead time distribution + threshold tradeoff (paper Fig. 7)"),
+    ("F10", "fig10_reliability", "Reliability diagram + ECE (paper Fig. 8)"),
     ("F11", "fig11_recovery_vs_corruption", "Recovery vs corruption per policy"),
     ("F12", "fig12_cost_frontier", "Accuracy change vs token cost"),
     ("F13", "fig13_transfer", "Cross-domain transfer"),
     ("F14", "fig14_activation_pca", "PCA of activations"),
+    ("F15", "fig15_online_auroc_by_step", "Length-blind AUROC after k observed steps (paper Fig. 6)"),
 ]
 
 
@@ -209,15 +210,57 @@ def build_paper_values(cfg) -> dict:
         target_curve = curve[curve["target"] == target]
         put("n_test", f"{int(target_curve['n_test'].iloc[0])}", "table2_prefix_auroc.csv, n_test",
             "Sec. V-C", int(target_curve["n_test"].iloc[0]))
-        lexical = target_curve[target_curve["representation"] == "lexical"].set_index("fraction_observed")
-        length = target_curve[target_curve["representation"] == "length-only"].set_index("fraction_observed")
-        overlap = [f for f in lexical.index if lexical.loc[f, "ci_lo"] <= length.loc[f, "ci_hi"]]
-        put("lexical_length_ci_overlap", ", ".join(f"{100 * f:g}" for f in overlap),
-            "table2_prefix_auroc.csv, fractions where lexical ci_lo <= length-only ci_hi", "Sec. VI-B")
+        if desc is not None:
+            n_total = int(desc.set_index("subset").loc["ALL", "n_traces"])
+            put("n_train", f"{n_total - int(target_curve['n_test'].iloc[0])}",
+                "table1_descriptive.csv n_traces (ALL) - table2_prefix_auroc.csv n_test", "Study guide")
         point = _curve_point(curve, cfg.detector.secondary_target, "lexical", 1.0)
         if point is not None:
             put("AUROC_lexical_100_process_error", f"{point['auroc']:.3f}",
                 f"table2_prefix_auroc.csv, target={cfg.detector.secondary_target}, lexical, fraction=1.0", "Sec. VI-B")
+    if curve is not None:
+        src = "results/tables/table2_prefix_auroc.csv"
+        for representation, short in (("lexical", "lex"), ("surface", "surf"), ("length-only", "len"),
+                                      ("surface-MLP", "mlp"), ("surface-GRU", "gru")):
+            for fraction in cfg.prefix_grid:
+                point = _curve_point(curve, target, representation, fraction)
+                if point is None:
+                    continue
+                key = f"E3_{short}_{100 * fraction:g}"
+                put(key, f"{point['auroc']:.3f}", f"{src}, {representation}, fraction={fraction}", "Table III")
+                put(key + "_ci", f"{point['ci_lo']:.3f}--{point['ci_hi']:.3f}",
+                    f"{src}, {representation}, fraction={fraction}, ci", "Table III")
+    paired = _read_csv(tables / "table2b_paired_auroc_differences.csv")
+    if paired is not None:
+        names = {"lexical - length-only": "lex_len", "lexical - surface": "lex_surf",
+                 "surface - length-only": "surf_len"}
+        for row in paired.itertuples():
+            key = f"diff_{names.get(row.comparison, row.comparison)}_{100 * row.fraction_observed:g}"
+            src = f"table2b_paired_auroc_differences.csv, {row.comparison}, fraction={row.fraction_observed}"
+            put(key, f"{row.difference:+.3f}", src, "Sec. VI-B; Table III")
+            put(key + "_ci", f"{row.ci_lo:+.3f}, {row.ci_hi:+.3f}", src + ", ci", "Sec. VI-B")
+            put(key + "_p", f"{row.p_value:.3f}", src + ", p_value", "Sec. VI-B")
+    robust = _read_csv(tables / "table2c_split_robustness_summary.csv")
+    if robust is not None:
+        for row in robust.itertuples():
+            short = {"lexical": "lex", "surface": "surf", "length-only": "len"}[row.representation]
+            key = f"robust_{short}_{100 * row.fraction_observed:g}"
+            src = f"table2c_split_robustness_summary.csv, {row.representation}, fraction={row.fraction_observed}"
+            put(key + "_mean", f"{row.mean:.3f}", src + ", mean", "Sec. VI-B")
+            put(key + "_sd", f"{row.sd:.3f}", src + ", sd", "Sec. VI-B")
+            put(key + "_min", f"{row.min:.3f}", src + ", min", "Sec. VI-B")
+            put(key + "_max", f"{row.max:.3f}", src + ", max", "Sec. VI-B")
+        put("robust_n_splits", f"{int(robust['n_splits'].max())}", "table2c_split_robustness_summary.csv",
+            "Sec. VI-B")
+    online = _read_csv(tables / "table_online_auroc_by_step.csv")
+    if online is not None and not online.empty:
+        for row in online.itertuples():
+            k = int(row.steps_observed)
+            src = f"table_online_auroc_by_step.csv, steps_observed={k}"
+            put(f"online_{k}", f"{row.auroc:.3f}", src, "Sec. VI-C")
+            put(f"online_{k}_ci", f"{row.ci_lo:.3f}--{row.ci_hi:.3f}", src + ", ci", "Sec. VI-C")
+            put(f"online_{k}_n", f"{int(row.n_traces)}", src + ", n_traces", "Sec. VI-C")
+        put("online_max_k", f"{int(online['steps_observed'].max())}", "table_online_auroc_by_step.csv", "Sec. VI-C")
     lead = _read_csv(tables / "table_lead_summary.csv")
     if lead is not None and (lead["threshold"] == 0.5).any():
         row = lead[lead["threshold"] == 0.5].iloc[0]
@@ -244,6 +287,15 @@ def build_paper_values(cfg) -> dict:
             "Sec. VI-D")
         put("transfer_lexical_max", f"{lex['auroc'].max():.3f}", "table_transfer.csv, lexical, max over BBM tasks",
             "Sec. VI-D")
+        for row in transfer.itertuples():
+            domain = row.evaluation_domain.replace("BBM: ", "").replace(" (in-domain test)", "").replace(" ", "_")
+            src = f"table_transfer.csv, {row.representation}, {row.evaluation_domain}"
+            put(f"transfer_{row.representation}_{domain}", f"{row.auroc:.3f}", src, "Table IV")
+            put(f"transfer_{row.representation}_{domain}_ci", f"{row.ci_lo:.3f}--{row.ci_hi:.3f}", src + ", ci",
+                "Table IV")
+            put(f"transfer_{row.representation}_{domain}_n", f"{int(row.n_eval)}", src + ", n_eval", "Table IV")
+            put(f"transfer_{row.representation}_{domain}_pos", f"{100 * row.positive_rate:.1f}",
+                src + ", positive_rate", "Table IV")
         put("transfer_lexical_min_task", lex.loc[lex["auroc"].idxmin(), "evaluation_domain"].replace("BBM: ", ""),
             "table_transfer.csv, task with the minimum", "Sec. VI-D")
     notes.append("Model/temperature/samples/layer placeholders are CONFIG values (configs/default.yaml "
@@ -303,6 +355,12 @@ def render_results_markdown(cfg, values: dict, stage_status: dict) -> str:
                               "mean_relative_onset", "expected_mean_rho_uniform_step",
                               "mean_steps_remaining"]].round(3).to_markdown(index=False), ""]
 
+    generators = _read_csv(tables / "table1c_generators.csv")
+    if generators is not None:
+        lines += ["Per generator (caveat: ProcessBench was sampled to balance correct and incorrect answers, so these "
+                  "rates describe the benchmark's sample, not each model's accuracy):", "",
+                  generators.round(3).to_markdown(index=False), ""]
+
     # ---------------- E2
     stats = _read_json(tables / "table_stats_tests.json")
     lines += ["## E2 - Statistical tests (effect size beside every p-value)", ""]
@@ -352,17 +410,38 @@ def render_results_markdown(cfg, values: dict, stage_status: dict) -> str:
         status = _read_csv(tables / "table2_representation_status.csv")
         if status is not None:
             lines += ["Representation status:", "", status.to_markdown(index=False), ""]
+        paired_md = _read_csv(tables / "table2b_paired_auroc_differences.csv")
+        if paired_md is not None:
+            lines += ["Paired bootstrap AUROC differences on the same test traces (question-level resampling; "
+                      "p is two-sided):", "",
+                      paired_md[["comparison", "fraction_observed", "difference", "ci_lo", "ci_hi", "p_value"]]
+                      .round(3).to_markdown(index=False), ""]
+        robust_md = _read_csv(tables / "table2c_split_robustness_summary.csv")
+        if robust_md is not None:
+            lines += ["Stability over independent grouped splits (point AUROC per split; split seeds in the config):",
+                      "", robust_md.round(3).to_markdown(index=False), ""]
         lexical = curve[(curve["target"] == target) & (curve["representation"] == "lexical")].set_index("fraction_observed")
         length = curve[(curve["target"] == target) & (curve["representation"] == "length-only")].set_index("fraction_observed")
         margins = (lexical["auroc"] - length["auroc"]).dropna()
-        overlap = [f for f in margins.index if lexical.loc[f, "ci_lo"] <= length.loc[f, "ci_hi"]]
-        lines += ["Honest reading (rule-based):", "",
+        lines += ["Honest reading (rule-based; significance = paired bootstrap p < 0.05):", "",
                   f"- Lexical minus length-only AUROC ranges from {margins.min():+.3f} to {margins.max():+.3f} "
                   "across prefixes. Because k = ceil(f n), the prefix length reveals n at every f, so length-only "
-                  "is the confound floor the paper must clear.",
-                  f"- Prefixes where the lexical CI overlaps the length-only CI: "
-                  f"{', '.join(f'{100 * f:g}%' for f in overlap) if overlap else 'none'}.",
-                  "- Uncertainty and hidden-state representations are NOT_RUN, so this build cannot say "
+                  "is the confound floor the paper must clear."]
+        if paired_md is not None:
+            for comparison in paired_md["comparison"].unique():
+                rows = paired_md[paired_md["comparison"] == comparison]
+                significant = rows[rows["p_value"] < 0.05]["fraction_observed"]
+                lines.append(f"- {comparison}: significant at "
+                             f"{', '.join(f'{100 * f:g}%' for f in significant) if len(significant) else 'no prefix'}.")
+        if robust_md is not None:
+            lexical_25 = robust_md[(robust_md["representation"] == "lexical")
+                                   & np.isclose(robust_md["fraction_observed"], 0.25)]
+            if not lexical_25.empty and 0.25 in lexical.index:
+                row = lexical_25.iloc[0]
+                lines.append(f"- Lexical AUROC at 25% on the main split ({lexical.loc[0.25, 'auroc']:.3f}) vs mean over "
+                             f"{int(row['n_splits'])} splits {row['mean']:.3f} (range {row['min']:.3f}-{row['max']:.3f}): "
+                             "quote both.")
+        lines += ["- Uncertainty and hidden-state representations are NOT_RUN, so this build cannot say "
                   "whether internal states add anything beyond text.", ""]
 
     # ---------------- E4
@@ -397,6 +476,12 @@ def render_results_markdown(cfg, values: dict, stage_status: dict) -> str:
         lines += ["", "A positive Delta from an alarm that fires on most error-free traces too is not evidence of "
                   "useful early warning: most first errors occur after step 1, so an indiscriminate early alarm "
                   "produces Delta > 0 by construction.", ""]
+
+    online_md = _read_csv(tables / "table_online_auroc_by_step.csv")
+    if online_md is not None and not online_md.empty:
+        lines += ["Length-blind predictability: AUROC of r_k after k observed steps, over test traces that still "
+                  "have steps to come (n > k). The evaluated set shrinks with k, so its size and positive rate "
+                  "are shown:", "", online_md.round(3).to_markdown(index=False), ""]
 
     # ---------------- E6
     ece = _read_csv(tables / "table_calibration_ece.csv")

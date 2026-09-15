@@ -1,4 +1,4 @@
-"""Stage 01: download (and cache) datasets. Thin CLI wrapper - no logic here."""
+"""Stage 01: download + cache datasets and verify every identifier. Thin CLI wrapper."""
 from __future__ import annotations
 
 import argparse
@@ -10,73 +10,74 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from src.config import load_config
 from src.data import loaders
+from src.data.verification import verify_identifiers
 from src.utils.io import Manifest, atomic_write_text
 from src.utils.logging import get_logger, print_summary_block
 from src.utils.seeds import seed_everything
 
 
-def parse_args():
+def main() -> None:
     parser = argparse.ArgumentParser(description="01: download datasets")
     parser.add_argument("--config", required=True)
-    return parser.parse_args()
-
-
-def main() -> None:
-    args = parse_args()
+    args = parser.parse_args()
     cfg = load_config(args.config)
     seed_everything(cfg.seed)
     log = get_logger("01_download_data", cfg.outputs.logs_dir)
+    manifest = Manifest(cfg.outputs.manifest)
     raw_dir = Path(cfg.data.raw_dir)
     raw_dir.mkdir(parents=True, exist_ok=True)
-    manifest = Manifest(cfg.outputs.manifest)
-    summary, status, details = [], "OK", {}
+    summary, details, failures = [], {}, []
 
     if cfg.data.synthetic:
-        # Smoke mode: no network. Real downloads are skipped by design.
         log.info("synthetic=true: skipping network downloads (smoke test).")
-        summary.append("Synthetic mode: no datasets downloaded (smoke test).")
-        details["synthetic"] = True
-    else:
-        # ProcessBench: verify identifier resolves, cache one JSONL of traces.
-        try:
-            traces = loaders.load_processbench()
-            out = raw_dir / "processbench.jsonl"
-            lines = "\n".join(
-                json.dumps(r) for r in loaders.to_records(traces)
-            )
-            atomic_write_text(out, lines)
-            msg = f"ProcessBench: {len(traces)} traces cached -> {out}"
-            log.info(msg)
-            summary.append(msg)
-            details["processbench_n"] = len(traces)
-        except Exception as exc:  # noqa: BLE001 - must record, then continue
-            msg = f"ProcessBench FAILED: {exc}"
-            log.error(msg)
-            summary.append(msg)
-            status = "FAILED"
-            details["processbench_error"] = str(exc)[:500]
-        # GSM8K questions (for trajectory generation): small, cached too.
-        try:
-            questions = loaders.load_gsm8k(limit=cfg.probes.n_problems)
-            out = raw_dir / "gsm8k_questions.jsonl"
-            atomic_write_text(out, "\n".join(
-                json.dumps(loaders.to_records([q])[0]) for q in questions))
-            msg = f"GSM8K: {len(questions)} questions cached -> {out}"
-            log.info(msg)
-            summary.append(msg)
-            details["gsm8k_n"] = len(questions)
-        except Exception as exc:  # noqa: BLE001
-            msg = f"GSM8K FAILED: {exc}"
-            log.error(msg)
-            summary.append(msg)
-            status = "FAILED" if status == "OK" else status
-            details["gsm8k_error"] = str(exc)[:500]
-        for name in ("PRM800K", "MATH", "BIG-Bench Mistake", "StrategyQA"):
-            summary.append(f"{name}: loader implemented; see docs/BENCHMARKS.md "
-                           f"for identifier verification status.")
+        manifest.log("01_download_data", args.config, "OK", {"synthetic": True})
+        print_summary_block("01_download_data", ["Synthetic mode: no datasets downloaded."])
+        return
+
+    # 1) Primary corpus: ProcessBench, all splits, cached as JSONL of Trace records.
+    try:
+        traces = loaders.load_processbench()
+        out = raw_dir / "processbench.jsonl"
+        atomic_write_text(out, "\n".join(json.dumps(r, ensure_ascii=False)
+                                         for r in loaders.to_records(traces)))
+        summary.append(f"ProcessBench      : {len(traces)} traces cached -> {out}")
+        details["processbench_n"] = len(traces)
+    except Exception as exc:  # noqa: BLE001 - record, then fail the stage
+        failures.append(f"ProcessBench FAILED: {exc}")
+
+    # 2) Cross-domain corpus with first-mistake labels: BIG-Bench Mistake.
+    try:
+        files = loaders.download_bigbench_mistake(cfg.data.bigbench_mistake_dir)
+        n_bbm = len(loaders.load_bigbench_mistake(cfg.data.bigbench_mistake_dir))
+        summary.append(f"BIG-Bench Mistake : {n_bbm} traces in {len(files)} task files")
+        details["bigbench_mistake_n"] = n_bbm
+    except Exception as exc:  # noqa: BLE001
+        failures.append(f"BIG-Bench Mistake FAILED: {exc}")
+
+    # 3) GSM8K questions (with gold answers) for GPU trajectory generation (stage 06).
+    try:
+        questions = loaders.load_gsm8k(limit=cfg.probes.n_problems)
+        out = raw_dir / "gsm8k_questions.jsonl"
+        atomic_write_text(out, "\n".join(json.dumps(r, ensure_ascii=False)
+                                         for r in loaders.to_records(questions)))
+        summary.append(f"GSM8K             : {len(questions)} questions cached -> {out}")
+        details["gsm8k_n"] = len(questions)
+    except Exception as exc:  # noqa: BLE001
+        failures.append(f"GSM8K FAILED: {exc}")
+
+    # 4) Identifier verification for every dataset named in the brief (no bulk download).
+    verification = verify_identifiers()
+    out = Path(cfg.outputs.tables_dir) / "dataset_identifier_verification.json"
+    atomic_write_text(out, json.dumps(verification, indent=2))
+    for row in verification:
+        summary.append(f"  verify {row['identifier']:<32} -> {row['status']}")
+    summary += failures
+    for line in summary:
+        log.info(line)
+    status = "FAILED" if failures else "OK"
     manifest.log("01_download_data", args.config, status, details)
     print_summary_block("01_download_data", summary)
-    if status == "FAILED":
+    if failures:
         sys.exit(1)
 
 

@@ -1,96 +1,120 @@
-"""Stage 05: baseline detectors + predictability curve (E3) -> F6, F7."""
+"""Stage 05: baselines + predictability curves (E3) -> tables, F6, F7. Thin CLI wrapper."""
 from __future__ import annotations
 
 import argparse
-import ast
 import sys
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.analysis.predictability import (
-    run_prefix_curve,
-    run_tfidf_prefix_curve,
-)
+from src.analysis import predictability as pred
 from src.analysis.statistics import auroc_with_ci
 from src.config import load_config
-from src.features.surface import batch_surface
-from src.utils.io import Manifest, atomic_write_dataframe
+from src.utils.io import Manifest, atomic_write_dataframe, atomic_write_text, read_traces_frame
 from src.utils.logging import get_logger, print_summary_block
-from src.utils.seeds import grouped_split, seed_everything
+from src.utils.seeds import seed_everything
 from src.viz import figures
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="05: baselines + E3 curve")
+    parser = argparse.ArgumentParser(description="05: baselines + E3 curves")
     parser.add_argument("--config", required=True)
     args = parser.parse_args()
     cfg = load_config(args.config)
     seed_everything(cfg.seed)
     log = get_logger("05_train_baselines", cfg.outputs.logs_dir)
     manifest = Manifest(cfg.outputs.manifest)
+    tables, figs = Path(cfg.outputs.tables_dir), cfg.outputs.figures_dir
 
-    prefix = "synthetic_" if cfg.data.synthetic else ""
-    df = pd.read_csv(Path(cfg.data.processed_dir) / f"{prefix}processed_traces.csv")
-    df["steps"] = df["steps"].apply(
-        lambda s: ast.literal_eval(s) if isinstance(s, str) and s.startswith("[") else []
-    )
-    y = df["has_error"].astype(int).to_numpy()
+    df = read_traces_frame(Path(cfg.data.processed_dir) / "processed_traces.jsonl")
+    # ONE grouped split by question id, shared by every representation and target.
+    split = pred.make_split(df, cfg.seed, cfg.split.test_size, context="E3 shared split")
+    train_idx, test_idx = split
+    tfidf = {"max_features": cfg.baselines.tfidf_max_features,
+             "ngram_range": tuple(cfg.baselines.tfidf_ngram_range),
+             "min_df": cfg.baselines.tfidf_min_df, "C": cfg.baselines.logistic_C}
+    common = {"prefix_grid": cfg.prefix_grid, "split": split, "seed": cfg.seed,
+              "n_bootstrap": cfg.metrics.bootstrap_resamples}
 
-    # Baseline 1: surface features (full trace), grouped split.
-    from sklearn.linear_model import LogisticRegression
-    from sklearn.preprocessing import StandardScaler
+    curves, full_scores = [], {}
+    for target in (cfg.detector.target, cfg.detector.secondary_target):
+        primary = target == cfg.detector.target
+        log.info("E3 curves for target=%s", target)
+        runs = [
+            ("surface", lambda t=target: pred.run_surface_curve(df, t, C=cfg.baselines.logistic_C, **common)),
+            ("length-only", lambda t=target: pred.run_length_only_curve(df, t, **common)),
+            ("lexical", lambda t=target: pred.run_tfidf_curve(df, t, **tfidf, **common)),
+        ]
+        if primary:  # nonlinear / sequence extensions on the paper's target only
+            runs += [
+                ("surface-MLP", lambda t=target: pred.run_mlp_curve(
+                    df, t, hidden=tuple(cfg.probes.mlp_hidden), max_iter=cfg.probes.mlp_max_iter, **common)),
+                ("surface-GRU", lambda t=target: pred.run_gru_curve(
+                    df, t, hidden_size=cfg.probes.gru_hidden, epochs=cfg.probes.gru_epochs,
+                    lr=cfg.probes.gru_lr, **common)),
+            ]
+        for name, run in runs:
+            curve, scores = run()
+            curves.append(curve)
+            if primary:
+                full_scores[name] = scores
+            log.info("  %s done (AUROC at 100%% = %.4f)", name, curve["auroc"].iloc[-1])
 
-    X = batch_surface(list(df["steps"]))
-    tr, te = grouped_split(df["question_id"].to_numpy(), cfg.split.test_size,
-                           cfg.seed, context="surface_baseline")
-    scaler = StandardScaler().fit(X[tr])
-    clf = LogisticRegression(max_iter=1000, random_state=cfg.seed)
-    clf.fit(scaler.transform(X[tr]), y[tr])
-    surface_scores = clf.predict_proba(scaler.transform(X[te]))[:, 1]
-    surface = auroc_with_ci(y[te], surface_scores,
-                            cfg.metrics.bootstrap_resamples, cfg.seed)
+    curve = pd.concat(curves, ignore_index=True)
+    atomic_write_dataframe(curve, tables / "table2_prefix_auroc.csv")
+    atomic_write_text(tables / "table2_prefix_auroc.tex", curve.to_latex(index=False, float_format="%.3f"))
 
-    # E3: prefix curves for surface + lexical (same harness family).
-    surface_curve = run_prefix_curve(
-        df, lambda steps: __import__("src.features.surface", fromlist=["surface_features"]).surface_features(steps),
-        cfg.prefix_grid, cfg.seed, cfg.split.test_size,
-        cfg.metrics.bootstrap_resamples, representation="surface",
-    )
-    lexical_curve = run_tfidf_prefix_curve(
-        df, cfg.prefix_grid, cfg.seed, cfg.split.test_size,
-        cfg.metrics.bootstrap_resamples, cfg.baselines.tfidf_max_features,
-        tuple(cfg.baselines.tfidf_ngram_range), cfg.baselines.tfidf_min_df,
-    )
-    curve = pd.concat([surface_curve, lexical_curve], ignore_index=True)
-    atomic_write_dataframe(curve, Path(cfg.outputs.tables_dir) / f"{prefix}table2_prefix_auroc.csv")
-    (Path(cfg.outputs.tables_dir) / f"{prefix}table2_prefix_auroc.tex").write_text(
-        curve.to_latex(index=False, float_format="%.4f"))
+    # Majority-class baseline: a constant score; AUROC computed, not assumed.
+    y_test = df[cfg.detector.target].astype(int).to_numpy()[test_idx]
+    prevalence = float(df[cfg.detector.target].astype(int).to_numpy()[train_idx].mean())
+    majority = auroc_with_ci(y_test, np.full(len(y_test), prevalence), 10, cfg.seed)
+    status = pd.DataFrame([
+        {"representation": "majority-class", "status": "OK", "auroc_full_prefix": majority["auroc"],
+         "note": f"constant score = train prevalence {prevalence:.3f}"},
+        {"representation": "uncertainty (token entropy / logit margin)", "status": "NOT_RUN",
+         "auroc_full_prefix": float("nan"),
+         "note": "ProcessBench stores step text only; no token log-probabilities exist for its "
+                 "generators. Requires re-generating traces with an open model (GPU)."},
+        {"representation": "hidden-state (linear probe)", "status": "NOT_RUN",
+         "auroc_full_prefix": float("nan"),
+         "note": "Requires stage 06 activations (GPU); see table3_probe_heatmap.csv."},
+    ])
+    atomic_write_dataframe(status, tables / "table2_representation_status.csv")
 
-    # F6 needs test-set scores at full prefix: reuse surface scores + lexical.
-    figures.plot_f7(curve, cfg.outputs.figures_dir)
-    from sklearn.metrics import roc_curve  # noqa: F401 (kept for F6 data export)
-    pd.DataFrame({"y_true": y[te], "surface_score": surface_scores}).to_csv(
-        Path(cfg.outputs.tables_dir) / f"{prefix}f6_scores.csv", index=False)
-    figures.plot_f6(y[te], {"Surface": surface_scores}, cfg.outputs.figures_dir)
+    scores_frame = pd.DataFrame({"trace_id": df["trace_id"].to_numpy()[test_idx],
+                                 "question_id": df["question_id"].to_numpy()[test_idx],
+                                 "y_true": y_test, **full_scores})
+    atomic_write_dataframe(scores_frame, tables / "full_prefix_test_scores.csv")
 
-    best = curve.loc[curve["auroc"].idxmax()]
-    summary = [
-        (
-            f"Surface-only AUROC (full trace): {surface['auroc']:.4f} "
-            f"[{surface['ci_lo']:.3f}, {surface['ci_hi']:.3f}]"
-        ),
-        (
-            f"Best prefix AUROC              : {best['auroc']:.4f} "
-            f"({best['representation']} @ {best['fraction_observed']:.0%})"
-        ),
-        "Figures: F6 (ROC), F7 (predictability curve, PNG+PDF)",
-    ]
-    log.info("baselines complete: %s", summary)
+    figures.plot_f6(y_test, full_scores, figs)
+    primary_curve = curve[curve["target"] == cfg.detector.target]
+    figures.plot_f7(primary_curve, figs)
+    figures.plot_f7(curve[curve["target"] == cfg.detector.secondary_target], figs,
+                    name="fig7b_auroc_vs_prefix_process_error")
+
+    def auroc_at(representation: str, fraction: float) -> str:
+        row = primary_curve[(primary_curve["representation"] == representation)
+                            & np.isclose(primary_curve["fraction_observed"], fraction)]
+        if row.empty:
+            return "n/a"
+        r = row.iloc[0]
+        return f"{r['auroc']:.3f} [{r['ci_lo']:.3f}, {r['ci_hi']:.3f}]"
+
+    summary = [f"Split: {len(train_idx)} train / {len(test_idx)} test traces, "
+               f"question-disjoint (asserted). Target y = {cfg.detector.target}."]
+    for representation in ("lexical", "surface", "length-only", "surface-MLP", "surface-GRU"):
+        summary.append(f"{representation:<12} AUROC @25%: {auroc_at(representation, 0.25):<24} "
+                       f"@100%: {auroc_at(representation, 1.0)}")
+    summary += [f"majority-class AUROC: {majority['auroc']:.3f}",
+                "uncertainty + hidden-state: NOT_RUN (see table2_representation_status.csv)",
+                "Figures: F6 (ROC), F7 (curve, paper target), F7b (curve, process-error target)"]
+    for line in summary:
+        log.info(line)
     manifest.log("05_train_baselines", args.config, "OK",
-                 {"surface_auroc": surface["auroc"], "best_auroc": float(best["auroc"])})
+                 {"n_train": int(len(train_idx)), "n_test": int(len(test_idx))})
     print_summary_block("05_train_baselines", summary)
 
 

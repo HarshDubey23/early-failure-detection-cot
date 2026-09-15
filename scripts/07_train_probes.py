@@ -1,4 +1,4 @@
-"""Stage 07: probes per layer x depth bin (E4) -> F8, F14."""
+"""Stage 07: linear probes per layer x depth bin (E4) -> F8, F14. Skips when stage 06 did not run."""
 from __future__ import annotations
 
 import argparse
@@ -10,13 +10,14 @@ import pandas as pd
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from src.analysis.statistics import auroc_with_ci
 from src.config import load_config
-from src.models.probe import fit_probe, predict_risk
-from src.utils.io import Manifest, atomic_write_dataframe
+from src.models.probe import layer_depth_auroc
+from src.utils.io import Manifest, atomic_write_dataframe, atomic_write_text
 from src.utils.logging import get_logger, print_summary_block
-from src.utils.seeds import grouped_split, seed_everything
+from src.utils.seeds import seed_everything
 from src.viz import figures
+
+EMPTY_COLUMNS = ["layer", "depth_bin", "n_train", "n_test", "auroc", "ci_lo", "ci_hi", "status"]
 
 
 def main() -> None:
@@ -27,71 +28,43 @@ def main() -> None:
     seed_everything(cfg.seed)
     log = get_logger("07_train_probes", cfg.outputs.logs_dir)
     manifest = Manifest(cfg.outputs.manifest)
+    tables, figs = Path(cfg.outputs.tables_dir), cfg.outputs.figures_dir
+    processed = Path(cfg.data.processed_dir)
 
-    meta_path = Path(cfg.data.processed_dir) / "activation_metadata.csv"
-    layers_available = [l for l in cfg.probes.layer_sweep
-                        if (Path(cfg.data.processed_dir) / f"hidden_states_L{l}.npy").exists()]
-    if not meta_path.exists() or not layers_available:
-        msg = ("SKIPPED: no activation tensors found (GPU stage did not run). "
-               "F8/F14 will read NOT_RUN; everything else is unaffected.")
-        log.info(msg)
-        empty = pd.DataFrame(columns=["layer", "depth_bin", "auroc", "ci_lo", "ci_hi"])
-        atomic_write_dataframe(
-            empty, Path(cfg.outputs.tables_dir) / "table3_probe_heatmap.csv")
-        figures.plot_f8(empty, cfg.outputs.figures_dir)
-        manifest.log("07_train_probes", args.config, "SKIPPED_GPU_ABSENT",
-                     {"reason": "no activation tensors"})
-        print_summary_block("07_train_probes", [msg])
+    meta_path = processed / "activation_metadata.csv"
+    layers = [layer for layer in cfg.probes.layer_sweep
+              if (processed / f"hidden_states_L{layer}.npy").exists()]
+    if not meta_path.exists() or not layers:
+        reason = "no activation tensors: GPU stage 06 did not run on this machine"
+        log.info("SKIPPED: %s", reason)
+        atomic_write_dataframe(pd.DataFrame(columns=EMPTY_COLUMNS), tables / "table3_probe_heatmap.csv")
+        atomic_write_text(tables / "table3_probe_heatmap.tex", f"% NOT_RUN: {reason}\n")
+        figures.plot_f8(pd.DataFrame(columns=EMPTY_COLUMNS), figs, reason="GPU stage 06 did not run")
+        figures.plot_f14(None, None, None, figs, reason="GPU stage 06 did not run")
+        manifest.log("07_train_probes", args.config, "SKIPPED_GPU_ABSENT", {"reason": reason})
+        print_summary_block("07_train_probes", [f"SKIPPED: {reason}. F8/F14 written as NOT RUN panels."])
         return
 
     meta = pd.read_csv(meta_path)
-    # Labels: activation metadata has no gold outcomes in smoke; fall back to
-    # the processed outcome column when question_ids overlap, else NOT_RUN.
-    rows = []
-    for layer in layers_available:
-        H = np.load(Path(cfg.data.processed_dir) / f"hidden_states_L{layer}.npy")
-        for lo, hi in cfg.probes.depth_bins:
-            mask = (meta["rel_pos"] > lo) & (meta["rel_pos"] <= hi)
-            idx = np.where(mask.to_numpy())[0]
-            # Without outcome labels on generated traces, probe training needs
-            # graded answers; absence is recorded, not worked around.
-            if "final_correct" not in meta.columns or meta.loc[mask, "final_correct"].nunique() < 2:
-                log.info("layer %d bin %.0f-%.0f%%: no outcome labels, skipped",
-                         layer, 100 * lo, 100 * hi)
-                continue
-            y = (1 - meta.loc[mask, "final_correct"].astype(int)).to_numpy()
-            groups = meta.loc[mask, "question_id"].to_numpy()
-            tr, te = grouped_split(groups, cfg.split.test_size, cfg.seed,
-                                   context=f"probe L{layer} bin {lo}-{hi}")
-            scaler, clf = fit_probe(H[idx][tr], y[tr], cfg.probes.logistic_C,
-                                    cfg.probes.logistic_max_iter, cfg.seed)
-            stats = auroc_with_ci(y[te], predict_risk(scaler, clf, H[idx][te]),
-                                  cfg.metrics.bootstrap_resamples, cfg.seed)
-            rows.append({"layer": layer, "depth_bin": f"{lo:.0%}-{hi:.0%}",
-                         **stats, "n_test": len(te)})
-            log.info("layer %d depth %.0f-%.0f%%: AUROC=%.4f", layer,
-                     100 * lo, 100 * hi, stats["auroc"])
-    heat = pd.DataFrame(rows)
-    atomic_write_dataframe(heat, Path(cfg.outputs.tables_dir) / "table3_probe_heatmap.csv")
-    (Path(cfg.outputs.tables_dir) / "table3_probe_heatmap.tex").write_text(
-        heat.to_latex(index=False, float_format="%.4f") if not heat.empty else "% NOT_RUN\n")
-    figures.plot_f8(heat if not heat.empty else
-                    pd.DataFrame(columns=["layer", "depth_bin", "auroc"]),
-                    cfg.outputs.figures_dir)
-    # F14: PCA over the default layer when available.
-    default = cfg.probes.default_layer
-    if default in layers_available and not heat.empty:
-        H = np.load(Path(cfg.data.processed_dir) / f"hidden_states_L{default}.npy")
-        y_all = ((1 - meta["final_correct"].astype(int)).to_numpy()
-                 if "final_correct" in meta.columns else np.zeros(len(meta)))
-        figures.plot_f14(H, y_all, meta["rel_pos"].to_numpy(), cfg.outputs.figures_dir)
-        f14 = "F14 written (PCA)."
-    else:
-        f14 = "F14 NOT_RUN (no activations)."
-    summary = [f"Probe cells trained: {len(heat)}",
-               f"Best cell AUROC: {heat['auroc'].max():.4f}" if not heat.empty else "Best: NOT_RUN",
-               f14]
-    manifest.log("07_train_probes", args.config, "OK", {"cells": len(heat)})
+    states_by_layer = {layer: np.load(processed / f"hidden_states_L{layer}.npy") for layer in layers}
+    heat = layer_depth_auroc(meta, states_by_layer, cfg.probes.depth_bins, cfg.seed,
+                             cfg.split.test_size, cfg.metrics.bootstrap_resamples,
+                             cfg.probes.logistic_C, cfg.probes.logistic_max_iter)
+    atomic_write_dataframe(heat, tables / "table3_probe_heatmap.csv")
+    atomic_write_text(tables / "table3_probe_heatmap.tex", heat.to_latex(index=False, float_format="%.3f"))
+    figures.plot_f8(heat, figs)
+    layer = cfg.probes.default_layer if cfg.probes.default_layer in layers else layers[0]
+    figures.plot_f14(states_by_layer[layer], 1 - meta["final_correct"].astype(int).to_numpy(),
+                     meta["rel_pos"].to_numpy(), figs)
+
+    ok = heat[heat["status"] == "OK"]
+    summary = [f"Probe cells: {len(heat)} ({len(ok)} trained, {len(heat) - len(ok)} too few states)"]
+    if not ok.empty:
+        best = ok.loc[ok["auroc"].idxmax()]
+        summary.append(f"Best cell: layer {best['layer']} depth {best['depth_bin']} "
+                       f"AUROC {best['auroc']:.3f} [{best['ci_lo']:.3f}, {best['ci_hi']:.3f}]")
+    summary.append(f"F14 PCA drawn from layer {layer}.")
+    manifest.log("07_train_probes", args.config, "OK", {"cells": len(heat), "trained": len(ok)})
     print_summary_block("07_train_probes", summary)
 
 

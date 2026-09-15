@@ -152,16 +152,16 @@ def plot_f4(df: pd.DataFrame, outdir, ks_d: float | None = None, ks_p: float | N
     sorted_rho = np.sort(rho)
     grid = np.linspace(0, 1, 1001)
     ax[1].step(sorted_rho, np.arange(1, len(sorted_rho) + 1) / len(sorted_rho), where="post",
-               color=PALETTE["error"], lw=1.6, label=r"observed $\rho$")
+               color=PALETTE["error"], lw=1.6, label="observed")
     ax[1].plot(grid, _null_cdf_uniform_steps(grid, n_steps), color=PALETTE["black"], lw=1.1,
-               label="null: e ~ Uniform{1..n}")
+               label="null: e ~ U{1..n}")
     ax[1].plot([0, 1], [0, 1], color=PALETTE["neutral"], ls="--", lw=1, label="Uniform(0,1)")
     for quantile in (0.25, 0.5, 0.75):
         value = float(np.quantile(sorted_rho, quantile))
         ax[1].plot([value, value], [0, quantile], color=PALETTE["accent"], ls=":", lw=0.8)
         ax[1].text(value - 0.01, quantile + 0.02, f"{quantile:.0%} of errors by {value:.2f}",
                    fontsize=6, ha="right")
-    title = "" if ks_d is None else f"KS vs Uniform(0,1): D = {ks_d:.3f}"
+    title = "" if ks_d is None else f"KS vs U(0,1): D = {ks_d:.3f}"
     ax[1].legend(frameon=False, loc="lower right", title=title, title_fontsize=6.5, fontsize=6.5)
     ax[1].set_xlabel(r"Relative onset $\rho$ (fraction of chain)")
     ax[1].set_ylabel("Cumulative fraction of errors")
@@ -425,3 +425,31 @@ def plot_f14(states: np.ndarray | None, labels: np.ndarray | None, depths: np.nd
     axes[0].legend(frameon=False, markerscale=3)
     fig.tight_layout()
     return save(fig, "fig14_activation_pca", outdir)
+
+
+def plot_f15(online_df: pd.DataFrame, outdir) -> list:
+    """F15: length-blind AUROC after k observed steps (traces with steps still to come)."""
+    import matplotlib.pyplot as plt
+
+    if online_df.empty:
+        return _not_run_figure("fig15_online_auroc_by_step", outdir, "no step-wise risk series",
+                               "Steps observed k", "AUROC")
+    fig, ax = plt.subplots(figsize=SINGLE)
+    k = online_df["steps_observed"]
+    ax.fill_between(k, online_df["ci_lo"], online_df["ci_hi"], color=PALETTE["accent"], alpha=0.15, lw=0)
+    ax.plot(k, online_df["auroc"], "s-", color=PALETTE["accent"], ms=3.5, label="lexical, step-wise")
+    ax.axhline(0.5, color=PALETTE["black"], ls="--", lw=0.8, label="chance (0.50)")
+    ax2 = ax.twinx()
+    ax2.bar(k, online_df["n_traces"], color=PALETTE["neutral"], alpha=0.18, width=0.6)
+    ax2.set_ylabel("Test traces with n > k (count)", color=PALETTE["neutral"])
+    ax2.tick_params(axis="y", colors=PALETTE["neutral"])
+    ax2.grid(False)
+    ax.set_zorder(ax2.get_zorder() + 1)
+    ax.patch.set_visible(False)
+    ax.set_xlabel("Steps observed, k (trace length unknown)")
+    ax.set_ylabel("AUROC (held-out questions)")
+    ax.set_xticks(list(k))
+    ax.set_ylim(0.4, max(0.8, float(online_df["ci_hi"].max()) + 0.02))
+    ax.legend(frameon=False, loc="upper left")
+    fig.tight_layout()
+    return save(fig, "fig15_online_auroc_by_step", outdir)

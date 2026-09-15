@@ -34,3 +34,5 @@ results/smoke/
 *.synctex.gz
 
 # Files over 50 MB must never be committed; `git ls-files -s | ...` check in README.
+docs/study_guide/
+docs/explained/

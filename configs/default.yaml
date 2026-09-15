@@ -1,0 +1,56 @@
+# All hyperparameters. No magic numbers in code: every script reads this file.
+# Reproduce any run from this file alone (+ the git commit hash in manifest.json).
+
+seed: 42
+
+data:
+  raw_dir: "data/raw"
+  processed_dir: "data/processed"
+  synthetic: false
+  # Number of traces for the synthetic smoke corpus (quick.yaml only).
+  synthetic_n_questions: 40
+  synthetic_steps_range: [3, 8]
+
+preprocessing:
+  min_steps: 2          # P5: discard traces with n < 2
+  error_free_code: -1   # P3: ProcessBench convention
+
+split:
+  test_size: 0.25
+  group_field: "question_id"   # P6: split by question, never by row
+
+prefix_grid: [0.10, 0.25, 0.40, 0.50, 0.75, 1.00]  # paper §Contributions; full tenths available
+
+probes:
+  model: "Qwen/Qwen2.5-Math-1.5B-Instruct"
+  generation_temperature: 0.7
+  samples_per_question: 4
+  default_layer: 18
+  layer_sweep: [8, 12, 18, 24]
+  depth_bins: [[0.0, 0.25], [0.25, 0.50], [0.50, 0.75], [0.75, 1.01]]
+  n_problems: 120
+  max_new_tokens: 400
+  logistic_C: 0.1
+  logistic_max_iter: 3000
+
+baselines:
+  tfidf_max_features: 20000
+  tfidf_ngram_range: [1, 2]
+  tfidf_min_df: 2
+
+metrics:
+  bootstrap_resamples: 1000
+  ece_bins: 10
+
+intervention:
+  thresholds: [0.3, 0.5, 0.7, 0.9]
+  escalation_threshold: 0.8
+  token_budget: 256
+  self_consistency_N: [2, 4, 8]
+
+outputs:
+  results_dir: "results"
+  tables_dir: "results/tables"
+  figures_dir: "results/figures"
+  logs_dir: "results/logs"
+  manifest: "results/manifest.json"

@@ -1,0 +1,9 @@
+name: choke-points-llm
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - python=3.10
+  - pip
+  - pip:
+    - -r requirements.txt

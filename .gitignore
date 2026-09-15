@@ -1,0 +1,15 @@
+__pycache__/
+.ipynb_checkpoints/
+*.npy
+*.pt
+*.bin
+data/raw/
+.env
+venv/
+.venv/
+*.egg-info/
+.pytest_cache/
+.ruff_cache/
+results/logs/
+# Any file over 50 MB is never committed (see README: activation tensors are
+# not committed - commit the extraction script + manifest checksums instead).

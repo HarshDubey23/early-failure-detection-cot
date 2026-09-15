@@ -1,0 +1,20 @@
+% Worked failing trajectory with the choke point annotated (vector TikZ).
+% Train example: v = d x t instead of d / t; error at step 3 of 5 (rho = 0.6).
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  >={Stealth[length=2mm]},
+  ok/.style={rectangle, rounded corners=1.5pt, draw=black!70,
+             minimum height=7mm, align=left, inner xsep=2.5mm, fill=green!8},
+  bad/.style={rectangle, rounded corners=1.5pt, draw=red!70!black,
+              minimum height=7mm, align=left, inner xsep=2.5mm, fill=red!8},
+  prop/.style={rectangle, rounded corners=1.5pt, draw=black!40, dashed,
+               minimum height=7mm, align=left, inner xsep=2.5mm, fill=gray!6}
+]
+\node[ok] (s1) at (0,0) {s1: extract $d=60$, $t=2$ \checkmark};
+\node[ok] (s2) at (0,-1.1) {s2: goal $v=d/t$ \checkmark};
+\node[bad] (s3) at (0,-2.2) {s3: write $v=d\times t$ \ding{55} $\leftarrow$ CHOKE POINT ($e=3$, $\rho=0.6$)};
+\node[prop] (s4) at (0,-3.3) {s4: $v=120$ (inherits error)};
+\node[prop] (s5) at (0,-4.4) {s5: answer 120 km/h (wrong, $y=1$)};
+\draw[->] (s1)--(s2); \draw[->] (s2)--(s3);
+\draw[->] (s3)--(s4); \draw[->] (s4)--(s5);
+\end{tikzpicture}

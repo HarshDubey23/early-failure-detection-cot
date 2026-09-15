@@ -1,0 +1,98 @@
+%=======================================================================
+%  FIGURE 1 — SYSTEM ARCHITECTURE  (spans both columns)
+%  Edit the node text here to change the diagram. Everything is vector,
+%  so it stays sharp at any zoom — never paste a screenshot instead.
+%=======================================================================
+\begin{figure*}[t]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  node distance=6mm,
+  >={Stealth[length=2mm]},
+  box/.style={rectangle, rounded corners=1.5pt, draw=black!70, line width=0.45pt,
+              minimum height=7.5mm, align=center, inner xsep=2.2mm, fill=white},
+  gen/.style={box, fill=blue!6},
+  det/.style={box, fill=orange!12},
+  act/.style={box, fill=green!10},
+  dec/.style={diamond, aspect=2.1, draw=black!70, line width=0.45pt,
+              align=center, inner sep=0.6mm, fill=yellow!14},
+  term/.style={box, fill=black!8, rounded corners=3pt},
+  lbl/.style={font=\sffamily\tiny, inner sep=0.8mm},
+  ph/.style={font=\sffamily\bfseries\scriptsize}
+]
+
+% ---------------- generation row ----------------
+\node[term] (q) {Question $q$};
+\node[gen, right=of q] (llm) {LLM decoding\\step $s_k$};
+\node[gen, right=of llm] (bnd) {Step boundary\\detector};
+\node[det, right=of bnd] (hid) {Hidden state $\mathbf{h}_k$\\layer $\ell$};
+\node[det, right=of hid] (probe) {Linear probe\\$f_\theta$};
+\node[det, right=of probe] (risk) {Risk $r_k$\\$=P(y{=}1\mid\mathcal{T}_{1:k})$};
+
+\draw[->] (q)--(llm);
+\draw[->] (llm)--(bnd);
+\draw[->] (bnd)--(hid);
+\draw[->] (hid)--(probe);
+\draw[->] (probe)--(risk);
+
+% ---------------- decision ----------------
+\node[dec, below=9mm of risk] (thr) {$r_k \ge \tau$?};
+\draw[->] (risk)--(thr);
+
+% continue loop (NO branch)
+\node[gen, left=14mm of thr] (cont) {Continue\\generation};
+\draw[->] (thr)--node[lbl,above]{no}(cont);
+\draw[->] (cont.south) |- ++(0,-5mm) -| (llm.south);
+
+% ---------------- intervention branch ----------------
+\node[act, below=8mm of thr] (back) {Backtrack to\\$b=\arg\max_{i\le k} r_i$};
+\draw[->] (thr)--node[lbl,right]{yes}(back);
+
+\node[act, below left=8mm and 3mm of back] (ver) {Verify step $s_b$\\(cheap)};
+\node[act, below right=8mm and 3mm of back] (reg) {Regenerate from\\$s_{b-1}$ (costly)};
+\draw[->] (back)-|node[lbl,above left]{$r_k<\tau_{\mathrm{hi}}$}(ver);
+\draw[->] (back)-|node[lbl,above right]{$r_k\ge\tau_{\mathrm{hi}}$}(reg);
+
+\node[dec, below=8mm of back, yshift=-9mm] (imp) {risk\\improved?};
+\draw[->] (ver)|-(imp);
+\draw[->] (reg)|-(imp);
+
+\node[act, left=13mm of imp] (rev) {Revert to\\$\mathcal{T}_{1:k}$};
+\draw[->] (imp)--node[lbl,above]{no}(rev);
+\draw[->] (rev.west) -- ++(-4mm,0) |- (cont.west);
+
+\node[term, right=13mm of imp] (ans) {Final answer $a$};
+\draw[->] (imp)--node[lbl,above]{yes}(ans);
+\draw[->] (cont.east) -- ++(4mm,0) |- (ans.north);
+
+% ---------------- offline training ----------------
+\node[det, above=9mm of probe, xshift=-14mm] (train)
+  {\textbf{Offline:} annotated traces $\to$ split \emph{by question}\\
+   $\to$ fit $f_\theta$ $\to$ calibrate $\tau$ on corruption budget};
+\draw[->, dashed, black!55] (train.south) -- (probe.north);
+
+% ---------------- phase brackets ----------------
+\begin{scope}[on background layer]
+  \node[fit=(hid)(probe)(risk)(thr), draw=orange!70, dashed, line width=0.6pt,
+        rounded corners=2pt, inner sep=3.2mm] (p1) {};
+  \node[fit=(back)(ver)(reg)(imp)(rev), draw=green!55!black, dashed, line width=0.6pt,
+        rounded corners=2pt, inner sep=3.2mm] (p2) {};
+\end{scope}
+\node[ph, orange!70!black, above right=0.4mm and -22mm of p1.north east]
+  {PHASE I --- DETECTION};
+\node[ph, green!45!black, above right=1.2mm and 1mm of p2.south west]
+  {PHASE II --- SELECTIVE MITIGATION};
+
+\end{tikzpicture}%
+}
+\caption{System architecture. \textbf{Phase I (detection)} evaluates a linear
+probe on the hidden state at each step boundary to obtain a risk estimate
+$r_k$; the threshold $\tau$ is calibrated offline against a corruption budget.
+\textbf{Phase II (selective mitigation)} is entered only when $r_k \ge \tau$,
+escalating from cheap step verification to costly regeneration, and reverting
+any revision that does not reduce estimated risk. The default path is the
+\textsc{Continue} loop, so the marginal cost on low-risk trajectories is one
+probe evaluation per step.}
+\label{fig:arch}
+\end{figure*}

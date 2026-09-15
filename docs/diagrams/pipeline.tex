@@ -1,0 +1,21 @@
+% Experimental pipeline (vector TikZ source; render with pdflatex).
+% Boxes: raw data -> preprocessing (P1-P6) -> EDA/stats -> detectors ->
+% timing/calibration/transfer -> intervention replay -> report.
+\begin{tikzpicture}[
+  font=\sffamily\scriptsize,
+  >={Stealth[length=2mm]},
+  box/.style={rectangle, rounded corners=1.5pt, draw=black!70,
+              minimum height=8mm, align=center, inner xsep=2.5mm, fill=white},
+  lbl/.style={font=\sffamily\tiny}
+]
+\node[box] (raw) at (0,0) {Raw traces\\ProcessBench / GSM8K};
+\node[box] (pre) at (3.4,0) {P1--P6\\preprocess};
+\node[box] (eda) at (6.4,0) {E1--E2\\onset + tests};
+\node[box] (det) at (9.4,0) {E3--E4\\prefix probes};
+\node[box] (tim) at (12.4,0) {E5--E7\\lead time, ECE, transfer};
+\node[box] (int) at (12.4,-1.6) {E8\\intervention replay};
+\node[box] (rep) at (9.4,-1.6) {Report\\RESULTS.md + figures};
+\draw[->] (raw)--(pre); \draw[->] (pre)--(eda);
+\draw[->] (eda)--(det); \draw[->] (det)--(tim);
+\draw[->] (tim)--(int); \draw[->] (int)--(rep);
+\end{tikzpicture}

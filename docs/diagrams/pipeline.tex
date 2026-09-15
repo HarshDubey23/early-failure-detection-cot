@@ -1,21 +1,38 @@
-% Experimental pipeline (vector TikZ source; render with pdflatex).
-% Boxes: raw data -> preprocessing (P1-P6) -> EDA/stats -> detectors ->
-% timing/calibration/transfer -> intervention replay -> report.
+% Experimental pipeline (vector TikZ source; rendered by docs/diagrams/render.py).
+% One box per stage script; solid boxes ran in this build, the dashed GPU branch
+% (stages 06-07) runs only where CUDA is available.
 \begin{tikzpicture}[
   font=\sffamily\scriptsize,
   >={Stealth[length=2mm]},
-  box/.style={rectangle, rounded corners=1.5pt, draw=black!70,
-              minimum height=8mm, align=center, inner xsep=2.5mm, fill=white},
-  lbl/.style={font=\sffamily\tiny}
+  box/.style={rectangle, rounded corners=1.5pt, draw=black!70, line width=0.45pt,
+              minimum height=10mm, text width=25mm, align=center, fill=white},
+  data/.style={box, fill=blue!6},
+  ana/.style={box, fill=orange!12},
+  act/.style={box, fill=green!10},
+  gpu/.style={box, dashed, fill=black!4, draw=black!50},
+  result/.style={box, fill=black!8, rounded corners=3pt},
+  lbl/.style={font=\sffamily\tiny, inner sep=0.6mm}
 ]
-\node[box] (raw) at (0,0) {Raw traces\\ProcessBench / GSM8K};
-\node[box] (pre) at (3.4,0) {P1--P6\\preprocess};
-\node[box] (eda) at (6.4,0) {E1--E2\\onset + tests};
-\node[box] (det) at (9.4,0) {E3--E4\\prefix probes};
-\node[box] (tim) at (12.4,0) {E5--E7\\lead time, ECE, transfer};
-\node[box] (int) at (12.4,-1.6) {E8\\intervention replay};
-\node[box] (rep) at (9.4,-1.6) {Report\\RESULTS.md + figures};
-\draw[->] (raw)--(pre); \draw[->] (pre)--(eda);
-\draw[->] (eda)--(det); \draw[->] (det)--(tim);
-\draw[->] (tim)--(int); \draw[->] (int)--(rep);
+\node[data] (s01) at (0,0) {\textbf{01 data}\\ProcessBench (3 400)\\BIG-Bench Mistake\\GSM8K questions};
+\node[data] (s02) at (3.3,0) {\textbf{02 preprocess}\\P1--P5, question ids\\(P6 enforced later)};
+\node[ana]  (s03) at (6.6,0) {\textbf{03--04 E1, E2}\\onset $\rho=e/n$\\KS, MW, KW tests};
+\node[ana]  (s05) at (9.9,0) {\textbf{05 E3}\\prefix curves\\surface, length, lexical};
+\node[ana]  (s08) at (9.9,-2.1) {\textbf{08 E5--E7}\\lead time $\Delta$, ECE,\\transfer to BBM};
+\node[act]  (s09) at (6.3,-2.1) {\textbf{09 E8}\\Algorithm 2 replay\\(assumed repair rates)};
+\node[result]  (s10) at (3.15,-2.1) {\textbf{10 report}\\RESULTS.md\\paper\_values.json};
+\node[gpu]  (s06) at (13.2,0) {\textbf{06--07 E4} (GPU)\\generate + activations\\layer $\times$ depth probes};
+\node[result]  (paper) at (0,-2.1) {\textbf{paper}\\main.tex + Fig.\ PDFs};
+
+\draw[->] (s01)--(s02);
+\draw[->] (s02)--(s03);
+\draw[->] (s03)--(s05);
+\draw[->, dashed, black!55] (s05)--(s06);
+\draw[->] (s05)--node[lbl,right]{scores, split}(s08);
+\draw[->] (s08)--node[lbl,above]{risk series}(s09);
+\draw[->] (s09)--(s10);
+\draw[->] (s10)--(paper);
+\draw[->, dashed, black!55] (s06.south) |- node[lbl,below,pos=0.75]{F8, F14} (s08.east);
+\node[font=\sffamily\tiny, text width=120mm, align=left, anchor=north west] at (-1.25,-3.35)
+  {Every split is grouped by question id and asserted disjoint. Every stage appends one row to
+   results/manifest.json (config hash, git commit, status).};
 \end{tikzpicture}

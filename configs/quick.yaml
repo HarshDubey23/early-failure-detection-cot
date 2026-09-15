@@ -1,10 +1,13 @@
-# Tiny subset for a 5-minute smoke test. Uses labelled SYNTHETIC data only
-# (synthetic: true) so `make smoke` needs no network and no GPU.
+# Tiny smoke test (< 5 minutes). Uses labelled SYNTHETIC data only
+# (synthetic: true), so `make smoke` needs no network and no GPU.
+# All outputs go under results/smoke/ and data/processed/smoke/ so a smoke run
+# can never overwrite a real result.
 seed: 42
 
 data:
   raw_dir: "data/raw"
-  processed_dir: "data/processed"
+  processed_dir: "data/processed/smoke"
+  bigbench_mistake_dir: "data/raw/bigbench_mistake"
   synthetic: true
   synthetic_n_questions: 40
   synthetic_steps_range: [3, 8]
@@ -19,9 +22,16 @@ split:
 
 prefix_grid: [0.25, 0.50, 1.00]
 
+detector:
+  target: "answer_incorrect"
+  secondary_target: "has_error"
+  stepwise_representation: "lexical"
+  min_train_traces_per_step: 10
+
 probes:
   model: "Qwen/Qwen2.5-Math-1.5B-Instruct"
   generation_temperature: 0.7
+  top_p: 0.95
   samples_per_question: 1
   default_layer: 18
   layer_sweep: [18]
@@ -30,11 +40,17 @@ probes:
   max_new_tokens: 32
   logistic_C: 0.1
   logistic_max_iter: 1000
+  mlp_hidden: [16]
+  mlp_max_iter: 200
+  gru_hidden: 8
+  gru_epochs: 20
+  gru_lr: 0.01
 
 baselines:
   tfidf_max_features: 500
   tfidf_ngram_range: [1, 2]
   tfidf_min_df: 1
+  logistic_C: 1.0
 
 metrics:
   bootstrap_resamples: 100
@@ -45,10 +61,19 @@ intervention:
   escalation_threshold: 0.8
   token_budget: 64
   self_consistency_N: [2]
+  assumed:
+    p_verify_repair: 0.4
+    p_verify_corrupt: 0.05
+    p_regen_repair: 0.6
+    p_regen_corrupt: 0.10
+    p_revert_catches_corruption: 0.5
+    verify_tokens: 32
+    chars_per_token: 4.0
 
 outputs:
-  results_dir: "results"
-  tables_dir: "results/tables"
-  figures_dir: "results/figures"
-  logs_dir: "results/logs"
-  manifest: "results/manifest.json"
+  results_dir: "results/smoke"
+  tables_dir: "results/smoke/tables"
+  figures_dir: "results/smoke/figures"
+  logs_dir: "results/smoke/logs"
+  manifest: "results/smoke/manifest.json"
+  report: "results/smoke/RESULTS_SMOKE.md"

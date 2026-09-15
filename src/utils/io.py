@@ -54,8 +54,47 @@ def atomic_write_dataframe(df, path: str | Path, **kwargs) -> None:
             os.remove(tmp)
 
 
+def write_traces_frame(df, path: str | Path) -> None:
+    """Write a processed-trace DataFrame as JSON lines (atomic).
+
+    JSONL keeps each trace's `steps` as a real list and booleans as booleans,
+    so nothing has to be re-parsed from a CSV string later.
+    """
+    atomic_write_text(path, df.to_json(orient="records", lines=True, force_ascii=False))
+
+
+def read_traces_frame(path: str | Path):
+    """Read a processed-trace JSONL written by `write_traces_frame`.
+
+    Raises:
+        FileNotFoundError: naming the stage that produces the file.
+    """
+    import pandas as pd
+
+    path = Path(path)
+    if not path.exists():
+        raise FileNotFoundError(f"{path} missing - run the preprocessing stage (make preprocess).")
+    df = pd.read_json(path, orient="records", lines=True, dtype=False)
+    for column in ("has_error", "final_correct", "answer_incorrect"):
+        if column in df.columns and df[column].notna().all():
+            df[column] = df[column].astype(bool)
+    return df
+
+
+def git_commit() -> str | None:
+    """Current git commit hash (None outside a repository), for the manifest."""
+    import subprocess
+
+    try:
+        result = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True,
+                                text=True, check=True, timeout=10)
+        return result.stdout.strip()
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
 class Manifest:
-    """Append-only JSON-lines manifest of pipeline stages."""
+    """Append-only JSON-lines manifest of pipeline stages (one JSON object per line)."""
 
     def __init__(self, path: str | Path):
         self.path = Path(path)
@@ -81,6 +120,8 @@ class Manifest:
             "stage": stage,
             "status": status,
             "config_hash": config_hash(config_path) if config_path else None,
+            "config_path": str(config_path) if config_path else None,
+            "git_commit": git_commit(),
             "details": details or {},
         }
         with self.path.open("a", encoding="utf-8") as handle:

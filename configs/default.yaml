@@ -1,52 +1,78 @@
-# All hyperparameters. No magic numbers in code: every script reads this file.
-# Reproduce any run from this file alone (+ the git commit hash in manifest.json).
+# All hyperparameters for the full run. Every key is required (src/config.py).
+# Reproduce any run from this file alone (+ the git commit recorded in manifest.json).
 
 seed: 42
 
 data:
   raw_dir: "data/raw"
   processed_dir: "data/processed"
+  bigbench_mistake_dir: "data/raw/bigbench_mistake"
   synthetic: false
-  # Number of traces for the synthetic smoke corpus (quick.yaml only).
-  synthetic_n_questions: 40
-  synthetic_steps_range: [3, 8]
+  synthetic_n_questions: 40      # unused when synthetic: false
+  synthetic_steps_range: [3, 8]  # unused when synthetic: false
 
 preprocessing:
   min_steps: 2          # P5: discard traces with n < 2
-  error_free_code: -1   # P3: ProcessBench convention
+  error_free_code: -1   # P3: ProcessBench convention for "no error"
 
 split:
   test_size: 0.25
   group_field: "question_id"   # P6: split by question, never by row
 
-prefix_grid: [0.10, 0.25, 0.40, 0.50, 0.75, 1.00]  # paper §Contributions; full tenths available
+# Brief E3 asks for tenths; the paper reports 10/25/40/50/75/100 %. The grid is
+# the union of both so every paper placeholder AND the brief's curve are covered.
+prefix_grid: [0.10, 0.20, 0.25, 0.30, 0.40, 0.50, 0.60, 0.70, 0.75, 0.80, 0.90, 1.00]
+
+detector:
+  target: "answer_incorrect"        # paper's y: final answer disagrees with gold
+  secondary_target: "has_error"     # a process error exists anywhere in the trace
+  stepwise_representation: "lexical"  # drives lead time (E5) and intervention (E8)
+  min_train_traces_per_step: 50
 
 probes:
   model: "Qwen/Qwen2.5-Math-1.5B-Instruct"
   generation_temperature: 0.7
+  top_p: 0.95
   samples_per_question: 4
   default_layer: 18
-  layer_sweep: [8, 12, 18, 24]
+  layer_sweep: [4, 8, 12, 16, 18, 20, 24, 28]   # model has 28 transformer layers
   depth_bins: [[0.0, 0.25], [0.25, 0.50], [0.50, 0.75], [0.75, 1.01]]
   n_problems: 120
   max_new_tokens: 400
   logistic_C: 0.1
   logistic_max_iter: 3000
+  mlp_hidden: [64, 32]
+  mlp_max_iter: 500
+  gru_hidden: 32
+  gru_epochs: 200
+  gru_lr: 0.01
 
 baselines:
   tfidf_max_features: 20000
   tfidf_ngram_range: [1, 2]
   tfidf_min_df: 2
+  logistic_C: 1.0
 
 metrics:
   bootstrap_resamples: 1000
   ece_bins: 10
 
 intervention:
-  thresholds: [0.3, 0.5, 0.7, 0.9]
-  escalation_threshold: 0.8
+  thresholds: [0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9]
+  escalation_threshold: 0.8   # tau_hi in Algorithm 2
   token_budget: 256
   self_consistency_N: [2, 4, 8]
+  # ASSUMED, NOT MEASURED. No live model runs inside the simulator, so the effect
+  # of a verification or regeneration cannot be observed in this build. These are
+  # illustrative values chosen before the run; E8 output is conditional on them.
+  assumed:
+    p_verify_repair: 0.4
+    p_verify_corrupt: 0.05
+    p_regen_repair: 0.6
+    p_regen_corrupt: 0.10
+    p_revert_catches_corruption: 0.5
+    verify_tokens: 32
+    chars_per_token: 4.0      # common English approximation; ProcessBench has no token counts
 
 outputs:
   results_dir: "results"
@@ -54,3 +80,4 @@ outputs:
   figures_dir: "results/figures"
   logs_dir: "results/logs"
   manifest: "results/manifest.json"
+  report: "docs/RESULTS.md"

@@ -26,10 +26,12 @@ experiment E4 did not run):
   0.578); in particular only 4.1% of first errors fall on the final step, versus 15.5%
   expected. A mean of **4.12** steps remain after the first error.
 - **How early failure is predictable.** Predicting an incorrect final answer, a TF-IDF
-  detector reaches AUROC **0.588** [0.547, 0.627] from 25% of the chain and **0.626**
-  [0.587, 0.663] from the whole chain, against 0.618 for surface features and 0.539 for
-  trace length alone. The signal is real but weak, and at 10-30% and 70-75% of the chain
-  its confidence interval overlaps the length-only baseline.
+  detector reaches AUROC **0.588** [0.552, 0.626] from 25% of the chain and **0.626**
+  [0.590, 0.661] from the whole chain (question-level bootstrap intervals), against 0.618
+  for surface features and 0.539 for trace length alone. In paired bootstrap tests it beats
+  length-only from 25% onward (+0.073, p = 0.004 at 25%) but never significantly beats the
+  surface detector. Over 5 independent grouped splits its AUROC at 25% averages 0.577
+  (SD 0.015). A length-blind step-wise detector reaches 0.566 after one step.
 - **Timing and transfer.** Step-wise alarms usually precede the first error, but at
   tau = 0.5 they also fire on 72.3% of error-free traces, so the warning is not specific.
   Trained on maths, the text detector is at or below chance on all five BIG-Bench Mistake
@@ -74,7 +76,7 @@ numbers describe synthetic data only.
 make test
 ```
 
-43 tests, including the leakage test that checks every split in the code base.
+47 tests, including the leakage test that checks every split in the code base.
 
 ## Full reproduction
 
@@ -96,7 +98,7 @@ runs, in order (each stage prints a summary and `make` stops at the first failur
 | `make intervention` | 09 E8 simulated Algorithm 2 | F11, F12 |
 | `make report` | 10 results report + paper values | `docs/RESULTS.md`, `results/paper_values.json` |
 
-A clean full run (all outputs deleted first) took 11.4 minutes on the build machine's CPU.
+A clean full run (all outputs deleted first) took 7.7 minutes on the build machine's CPU.
 `make diagrams` renders the TikZ figures, and `make paper` copies the paper figures into the
 Overleaf package, checks that every `\RES{}` value in `main.tex` exists in
 `results/paper_values.json`, and compiles the paper (both need Tectonic; set
@@ -132,6 +134,9 @@ Overleaf package, checks that every `\RES{}` value in `main.tex` exists in
 | E2 | Kruskal-Wallis across tiers | H = 14.50, p = 0.002, eta^2 = 0.005 |
 | E3 | AUROC at 25% / 100%, lexical | 0.588 / 0.626 |
 | E3 | AUROC at 100%: surface / length-only / MLP / GRU / majority | 0.618 / 0.539 / 0.626 / 0.558 / 0.500 |
+| E3 | paired lexical - length-only / lexical - surface at 25% | +0.073 (p = 0.004) / +0.039 (p = 0.068) |
+| E3 | lexical AUROC at 25% over 5 grouped splits | mean 0.577, SD 0.015, range 0.554-0.590 |
+| E5 | length-blind AUROC after 1 / 6 observed steps | 0.566 / 0.613 |
 | E4 | hidden-state probes | NOT_RUN (no GPU) |
 | E5 | tau = 0.5: alarm rate erroneous / error-free; P(Delta > 0) | 0.908 / 0.723; 0.634 |
 | E6 | ECE lexical / surface / MLP / GRU | 0.025 / 0.021 / 0.046 / 0.164 |
@@ -160,20 +165,24 @@ Details and verification status: `docs/BENCHMARKS.md`.
 ```bibtex
 @misc{chokepoints2026,
   title        = {Detecting and Mitigating Choke Points in Large Language Model Reasoning},
-  author       = {Dubey, Harsh and Saini, Harshit and Jain, Prashant and Kumar, Himanshu and Kaushal, Gaurav},
+  author       = {Dubey, Harsh and Saini, Harshit and Jain, Prashant and Kumar, Himanshu and
+                  Kaushal, Gaurav and Chaudhary, Rohit},
   year         = {2026},
   howpublished = {Code and results repository},
-  note         = {KIET Group of Institutions, Ghaziabad, India. Mentor: Rohit}
+  note         = {Dept. of CSE (AI\&ML), KIET Group of Institutions, Ghaziabad, India}
 }
 ```
 
-The datasets and prior work used here should be cited from the paper's bibliography:
-Zheng et al. (2024) ProcessBench; Tyen et al. (2024) BIG-Bench Mistake; Lightman et al.
-(2023); Huang et al. (2024); Orgad et al. (2024); Wang et al. (2023, 2024); Farquhar et
-al. (2024); Kossen et al. (2024); Wei et al. (2022).
+The datasets and prior work used here should be cited from the paper's bibliography (30
+references), including Zheng et al. (2024) ProcessBench and Tyen et al. (2024) BIG-Bench
+Mistake.
+
+A complete study and viva guide (every concept, the paper section by section, every code
+file, a question bank) is in `docs/study_guide/study_guide.pdf`; its numbers are checked
+against the result files like the paper's.
 
 ## Acknowledgements
 
-Mentored by Rohit (KIET Group of Institutions). Built from the MSE-1 Colab prototype
+Supervised by Dr. Rohit Chaudhary (KIET Group of Institutions). Built from the MSE-1 Colab prototype
 (`notebooks/01_original_prototype.ipynb`) and the IEEE paper skeleton. Thanks to the
 authors of ProcessBench and BIG-Bench Mistake for releasing step-annotated reasoning traces.

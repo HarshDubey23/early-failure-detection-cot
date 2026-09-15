@@ -160,6 +160,29 @@ figure PDFs and `architecture.tex` into the Overleaf package and compiles it. Th
 worked example is selected from ProcessBench by a fixed rule written in
 `docs/diagrams/render.py`, so it is data rather than an invented illustration.
 
+## D16 - Question-level (cluster) bootstrap for every AUROC interval
+
+Traces of the same problem are correlated (OlympiadBench: 1,000 traces, 561 problems), so
+resampling single traces understates uncertainty. `auroc_with_ci(..., groups=question_id)`
+resamples whole questions. AUROC is computed with the Mann-Whitney rank formula, which is
+identical to scikit-learn's (tested, including ties) and fast enough for thousands of
+bootstrap replicates.
+
+## D17 - Paired tests between detectors and repeated splits
+
+"The two confidence intervals overlap" is not a test of a difference, because both detectors
+are scored on the same traces. `paired_auroc_difference` re-scores both detectors on each
+question-level resample and reports the difference, its interval and a two-sided p-value.
+Because one split can be lucky, E3 is also repeated on 5 independent grouped splits
+(`robustness.split_seeds`); the paper quotes the pre-specified split and the 5-split mean.
+
+## D18 - Length-blind (online) predictability
+
+The prefix-fraction curve cannot be computed online because k = ceil(f n) needs n. The
+step-wise detector (D13) is therefore also evaluated by AUROC after k observed steps, over
+test traces with n > k (so every prediction is made before the final step). The evaluated
+population shrinks with k; its size and positive rate are reported beside each AUROC.
+
 ## Open disagreements
 
 1. **KS against Uniform(0,1) is the wrong null for "errors concentrate".** Implemented as
@@ -173,8 +196,9 @@ worked example is selected from ProcessBench by a fixed rule written in
 2. **Prefix features leak total length.** Algorithm 1 sets k = ceil(f n), so the step
    count of a prefix at fraction f reveals n. Every "25 %" prediction therefore knows the
    final length, which an online detector cannot. Implemented as specified; the
-   length-only baseline is plotted on the same axes so the size of this confound is
-   visible, and the stepwise detector used for lead time (D13) does not have it.
+   length-only baseline is plotted on the same axes and tested against with paired
+   bootstraps (D17), and the length-blind step-wise AUROC (D18) shows that the signal
+   does not depend on knowing n.
 3. **Breadth vs depth of dataset coverage.** Six loaders exist as specified, but only
    ProcessBench and BIG-Bench Mistake carry what the experiments need (step text +
    first-error labels + graded answers without a GPU). GSM8K is used only for GPU

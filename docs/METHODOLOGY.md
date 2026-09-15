@@ -69,6 +69,11 @@ surface-MLP (64-32), surface-GRU (hidden 32, 200 full-batch epochs, per-step fea
 
 Caveat (open disagreement 2): because k = ceil(f n), a prefix reveals n.
 
+All AUROC intervals use a question-level (cluster) bootstrap with 1,000 resamples. Detectors
+are compared with a paired bootstrap on the same test traces (lexical - length-only,
+lexical - surface, surface - length-only at every prefix fraction). E3 is repeated on 5
+independent grouped splits (seeds 42, 1, 2, 3, 4) at 25%, 50% and 100%.
+
 ## E4 - Activation probing (GPU only; not run in this build)
 
 Generate 4 trajectories per GSM8K test question (first 120) with
@@ -84,7 +89,8 @@ Stepwise detectors (lexical; one per absolute step count k, trained on train tra
 >= k steps) give r_1..r_n for each test trace using s_1..s_k only. For
 tau in {0.3, ..., 0.9}: alarm rate, P(Delta > 0) with never-alarming traces counted as not
 warned, fraction alarming exactly at e, median and quartiles of Delta, and the alarm rate
-on error-free test traces.
+on error-free test traces. The same series gives a length-blind AUROC of r_k after k = 1..10
+observed steps, over test traces with n > k.
 
 ## E6 - Calibration
 

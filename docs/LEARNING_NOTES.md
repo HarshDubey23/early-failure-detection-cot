@@ -21,7 +21,7 @@ whether its final answer is right.
 | Question | Experiment | Finding (honest version) |
 |---|---|---|
 | Where does the first error happen? | E1, E2 | Mean relative position 0.500. Errors sit **earlier** than if they were spread evenly over each solution's steps (expected 0.578); the clearest gap is the last step: 4.1% of first errors vs 15.5% expected. |
-| Can we predict a wrong answer from part of the solution? | E3 | Weakly. Best text detector (TF-IDF) AUROC 0.588 at 25% of the chain, 0.626 at 100%. Surface features 0.618 at 100%. Length alone 0.539. |
+| Can we predict a wrong answer from part of the solution? | E3 | Weakly. Text detector (TF-IDF) AUROC 0.588 at 25% of the chain, 0.626 at 100%; significantly above length alone (0.539) but not above surface features (0.618). Mean 0.577 at 25% over 5 splits. Without knowing trace length: 0.566 after one step. |
 | Do alarms come before the error? | E5 | Often, but the alarm fires on correct solutions almost as often, so the "warning" is mostly not specific. |
 | Are the risk scores trustworthy as probabilities? | E6 | The logistic detectors are well calibrated (ECE 0.021-0.046); the GRU is not (0.164). |
 | Does it work on other kinds of reasoning? | E7 | No. On BIG-Bench Mistake the text detector is at or below chance on every task, and inverted on Dyck languages (0.172). |
@@ -114,8 +114,17 @@ shows how much knowing more of the solution helps.
 has 5 steps while a 25% prefix of a 4-step solution has 1 step, so the prefix length
 reveals the final length n, which a live detector would not know. The **length-only**
 baseline measures exactly how much of the curve that explains (0.515 at 25%, 0.539 at
-100%), and the lexical curve's confidence interval overlaps it at 10-30%, so early
-prediction is not clearly better than knowing the length.
+100%). A **paired bootstrap** on the same test traces shows the lexical detector beats
+length-only at every prefix from 25% onward (e.g. +0.073, p = 0.004 at 25%) but not at 10%
+or 20%, and it never significantly beats the surface detector (smallest p = 0.068). Two
+further checks: over 5 independent grouped splits, lexical AUROC at 25% averages 0.577
+(SD 0.015; the main split's 0.588 is on the high side), and a **length-blind** step-wise
+detector, which never uses n, still reaches AUROC 0.566 after one step and 0.613 after six.
+
+*Why a paired test and not "the intervals overlap":* both detectors are scored on the same
+traces, so their errors are correlated; overlapping intervals do not mean "no difference".
+*Why question-level bootstrap:* traces of the same problem are correlated, so resampling
+single traces makes intervals too narrow; the code resamples whole questions.
 
 ### Calibration and ECE
 
@@ -300,8 +309,9 @@ what an examiner may ask.
   placement over steps would predict, which is consistent with a detection window. They do
   not show that those states *cause* failure; that needs counterfactual resampling."
 - **"How early can you predict failure?"** -> "From 25% of the chain, AUROC 0.588 (95% CI
-  0.547-0.627) with a text detector - above chance but weak, and its interval overlaps a
-  length-only baseline at that point."
+  0.552-0.626) with a text detector - above chance but weak. It is significantly better than
+  trace length (+0.073, p = 0.004) but not than simple surface statistics, and it averages
+  0.577 over five resampled splits."
 - **"Isn't this just hallucination detection?"** -> "Hallucination detection judges a
   finished answer; this asks whether a partial trajectory predicts the outcome. Same target,
   different input and timing."

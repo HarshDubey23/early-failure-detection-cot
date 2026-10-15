@@ -1,4 +1,11 @@
-# Detecting and Mitigating Choke Points in Large Language Model Reasoning
+# Where Reasoning Fails First: An Empirical Study of Early Failure Prediction in Chain-of-Thought
+
+> **Status: preliminary empirical study.** Not peer-reviewed or submitted. Error-onset and
+> predictability results come from real data (ProcessBench, BIG-Bench Mistake). The
+> intervention policy (E8) has only been evaluated in an offline simulation under assumed
+> parameters. The hidden-state experiment (E4) has not been run. The repository was earlier
+> titled "Detecting and Mitigating Choke Points in LLM Reasoning". It was renamed because the
+> evidence supports detection analysis, not demonstrated mitigation.
 
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
@@ -194,7 +201,7 @@ Details and verification status: `docs/BENCHMARKS.md`.
 
 ```bibtex
 @misc{chokepoints2026,
-  title        = {Detecting and Mitigating Choke Points in Large Language Model Reasoning},
+  title        = {Where Reasoning Fails First: An Empirical Study of Early Failure Prediction in Chain-of-Thought},
   author       = {Dubey, Harsh and Saini, Harshit and Jain, Prashant and Kumar, Himanshu and
                   Kaushal, Gaurav and Chaudhary, Rohit},
   year         = {2026},

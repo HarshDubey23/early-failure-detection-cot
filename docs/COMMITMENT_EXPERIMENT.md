@@ -66,23 +66,24 @@ Caveats to state in the paper: ProcessBench re-segmented the original solutions 
 paragraphs, so prefixes are near-, not exactly, on-policy; temperature-0.7 continuations
 measure the model's sampling distribution, not the greedy decode that produced the trace.
 
-## Running it (Kaggle, 2x T4, or Colab)
+## Running it (Kaggle, 2x T4)
+
+Tested on Kaggle (2x Tesla T4, 2026-10-24): transformers 5.16 and vLLM 0.32 (torch 2.13 cu130)
+both run; vLLM is about 4-5x faster and is the default for the real runs.
 
 ```bash
-git clone https://github.com/HarshDubey23/early-failure-detection-cot && cd early-failure-detection-cot
-pip install -r requirements.txt vllm math-verify
-python scripts/01_download_data.py --config configs/default.yaml   # needs internet (HF)
-python scripts/02_preprocess.py --config configs/default.yaml
-make commitment-mock                                               # 1 minute, CPU: checks the pipeline
-make commitment GENERATOR=Qwen2.5-1.5B-Instruct M=16 DTYPE=half    # pilot, one T4
-make commitment GENERATOR=Qwen2.5-Math-7B-Instruct M=16 TP=2 DTYPE=half   # main, 2x T4
+git clone -b novelty-upgrade https://github.com/HarshDubey23/early-failure-detection-cot && cd early-failure-detection-cot
+bash scripts/kaggle_commitment.sh setup                       # math-verify + ProcessBench from HF
+bash scripts/kaggle_commitment.sh vllm                        # installs vLLM, removes the mismatched torchaudio
+BACKEND=vllm bash scripts/kaggle_commitment.sh smoke Qwen2.5-1.5B-Instruct          # 3 traces, m = 4
+BACKEND=vllm bash scripts/kaggle_commitment.sh run Qwen2.5-1.5B-Instruct 16         # one process per GPU
+BACKEND=vllm TP=2 bash scripts/kaggle_commitment.sh run Qwen2.5-Math-7B-Instruct 16 # 7B over both T4s
 ```
 
-T4s have no bfloat16, hence `DTYPE=half`. Stage 12 appends to its JSONL after every batch and
-skips finished prefixes on restart, so a session that times out can be resumed. Run the pilot
-first and read `results/commitment/<generator>.log` for the measured throughput before
-committing GPU hours to the 7B runs; if time is short, start the 7B model with
-`make commitment ... M=8` or `EXTRA="--max-per-group 60"`.
+T4s have no bfloat16, so everything runs in float16; vLLM runs eager with custom all-reduce off
+(compatibility settings for Turing GPUs). Prompts that do not fit the context window are recorded
+as skipped and their traces dropped from the analysis. Stage 12 appends to its JSONL after every
+batch and skips finished prefixes on restart, so a session that times out can be resumed.
 
 Outputs: `results/commitment/<generator>.jsonl` (every continuation's answer and correctness),
 `results/commitment/tables_<generator>/{per_trace.csv, commitment_categories.csv, summary.txt}`.

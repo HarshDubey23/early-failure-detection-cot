@@ -247,6 +247,7 @@ def main() -> None:
     ap.add_argument("--tiers", nargs="*", default=["gsm8k", "math", "olympiadbench", "omnimath"])
     ap.add_argument("--groups", nargs="*", default=["fatal", "recovered", "clean"])
     ap.add_argument("--max-per-group", type=int, default=0, help="0 = all")
+    ap.add_argument("--max-clean", type=int, default=0, help="cap on clean (error-free) traces only; 0 = all")
     ap.add_argument("--m", type=int, default=16, help="continuations per prefix")
     ap.add_argument("--temperature", type=float, default=0.7)
     ap.add_argument("--top-p", type=float, default=0.95)
@@ -297,6 +298,8 @@ def main() -> None:
         rng.shuffle(pool)
         if args.max_per_group:
             pool = pool[: args.max_per_group]
+        if grp == "clean" and args.max_clean:
+            pool = pool[: args.max_clean]
         for t in pool:
             if norm_problem(t["question"]) in gold:
                 selected.append(t)

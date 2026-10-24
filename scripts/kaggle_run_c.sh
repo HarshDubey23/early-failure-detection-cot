@@ -17,7 +17,7 @@ export TOKENIZERS_PARALLELISM=false
 
 log()  { echo "[$(date '+%F %T')] $*" | tee -a "$OUT/run_c.log"; }
 left() { echo $(( LIMIT - ($(date +%s) - START) )); }
-pack() { tar -czf "$ARCHIVE" "$OUT" 2>/dev/null; log "packed $(du -h "$ARCHIVE" | cut -f1)"; }
+pack() { tar -czf "$ARCHIVE" "$OUT" 2>/dev/null; log "packed $(du -h "$ARCHIVE" | cut -f1); disk free: $(df -h --output=avail / | tail -1)"; }
 part() {  # part NAME MAX_SECONDS COMMAND...
   local name=$1 budget=$2; shift 2
   local b=$(( $(left) - 600 )); [ "$b" -gt "$budget" ] && b=$budget
@@ -54,7 +54,8 @@ part signals_gen 3000 "
 # 2. Process reward model step scores: the four rolled-out generators first, then all of ProcessBench
 part signals_prm 3000 "
   python scripts/14_step_signals.py --mode prm --generators Qwen2.5-1.5B-Instruct Qwen2-1.5B-Instruct Qwen2.5-Math-7B-Instruct Llama-3.1-8B-Instruct $LIM --out $OUT/signals_prm.jsonl
-  python scripts/14_step_signals.py --mode prm --generators all $LIM --out $OUT/signals_prm.jsonl"
+  python scripts/14_step_signals.py --mode prm --generators all $LIM --out $OUT/signals_prm.jsonl
+  rm -rf ~/.cache/huggingface/hub/models--Qwen--Qwen2.5-Math-PRM-7B"
 
 # 3. Forced-answer probes at every prefix (answer curve a_k)
 part probes 4800 "

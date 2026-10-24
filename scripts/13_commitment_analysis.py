@@ -130,7 +130,7 @@ def main() -> None:
             if grp == "fatal":
                 row[f"category@{delta}"] = cm.classify_failing_trace(v, e, delta)
         if grp == "fatal":
-            row.update({"bt_restart": v_b[0], "bt_before_error": v_b[e - 1],
+            row.update({"v0_a": v_a[0], "bt_restart": v_b[0], "bt_before_error": v_b[e - 1],
                         "bt_before_decisive": v_b[(d_a or 1) - 1],
                         "bt_best_prefix_oracle": float(np.max(v[:-1])),
                         "tok_restart": c["tokens"][0], "tok_before_error": c["tokens"][e - 1],
@@ -176,20 +176,31 @@ def main() -> None:
                      f"[{floor[1]:+.3f}, {floor[2]:+.3f}]")
     summary["first_error_is_decisive"] = {"share": share, "chance": chance, "n": int(len(not_limited))}
 
-    # 4. Backtracking (sample-split): where to resample from?
-    if len(not_limited):
+    # 4. Backtracking (sample-split): where to resample from? Traces are selected as "not
+    #    capability-limited" on half A only (v0_a > delta) and every policy is scored on half B, so
+    #    neither the selection nor the choice of the decisive step reuses the evaluation samples.
+    bt_pool = fatal[fatal.v0_a > args.primary_delta] if "v0_a" in fatal else fatal.iloc[0:0]
+    if len(bt_pool):
         bt = {}
         for col in ["bt_restart", "bt_before_error", "bt_before_decisive", "bt_best_prefix_oracle"]:
-            bt[col] = bootstrap_share(not_limited[col].to_numpy(), seed=args.seed)
-            lines.append(f"[backtrack, fatal not limited] {col:<24} success {bt[col][0]:.3f} "
-                         f"[{bt[col][1]:.3f}, {bt[col][2]:.3f}]")
-        diff = (not_limited.bt_before_decisive - not_limited.bt_before_error).to_numpy()
-        d = bootstrap_share(diff, seed=args.seed)
+            bt[col] = bootstrap_share(bt_pool[col].to_numpy(), seed=args.seed)
+            lines.append(f"[backtrack, fatal, v0 (half A) > delta, n={len(bt_pool)}] {col:<24} success "
+                         f"{bt[col][0]:.3f} [{bt[col][1]:.3f}, {bt[col][2]:.3f}]")
+        d = bootstrap_share((bt_pool.bt_before_decisive - bt_pool.bt_before_error).to_numpy(), seed=args.seed)
+        r = bootstrap_share((bt_pool.bt_restart - bt_pool.bt_before_error).to_numpy(), seed=args.seed)
         lines.append(f"[backtrack] decisive-step minus first-error: {d[0]:+.3f} [{d[1]:+.3f}, {d[2]:+.3f}]")
+        lines.append(f"[backtrack] restart minus first-error: {r[0]:+.3f} [{r[1]:+.3f}, {r[2]:+.3f}]")
         for col in ["tok_restart", "tok_before_error", "tok_before_decisive"]:
-            lines.append(f"[backtrack] mean continuation tokens {col:<20} {not_limited[col].mean():.0f}")
+            lines.append(f"[backtrack] mean continuation tokens {col:<20} {bt_pool[col].mean():.0f}")
         summary["backtrack"] = bt
+        summary["backtrack_n"] = int(len(bt_pool))
         summary["backtrack_decisive_minus_error"] = d
+        summary["backtrack_restart_minus_error"] = r
+        # Robustness: all fatal traces, no selection at all.
+        d_all = bootstrap_share((fatal.bt_before_decisive - fatal.bt_before_error).to_numpy(), seed=args.seed)
+        lines.append(f"[backtrack, all fatal, n={len(fatal)}] decisive-step minus first-error: "
+                     f"{d_all[0]:+.3f} [{d_all[1]:+.3f}, {d_all[2]:+.3f}]")
+        summary["backtrack_all_fatal_decisive_minus_error"] = d_all
 
     # 5. Event study: success probability aligned at the annotated first error (r = k - e).
     #    r = -1 is "just before the error", r = 0 "just after it". Clean traces are aligned at a

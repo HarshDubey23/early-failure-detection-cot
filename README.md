@@ -33,9 +33,16 @@ Two controls change how the results below should be read (`make decomposition`; 
 - **Errors are not choke points.** 521 of 2,221 first errors (23.5%) still end in a correct
   answer (34% on Omni-MATH), and fatality is flat in error position. Failure detectors rank
   these non-fatal errors as riskier than fatal ones (AUROC 0.456).
-- **Next experiment (GPU, ready to run):** on-policy counterfactual rollouts from every prefix
-  measure where success probability actually collapses and compare it with the annotated first
-  error ([`docs/COMMITMENT_EXPERIMENT.md`](docs/COMMITMENT_EXPERIMENT.md), `make commitment`).
+- **Counterfactual commitment (GPU, run on Kaggle 2x T4).** 50,152 continuations sampled from
+  Qwen2.5-1.5B, Qwen2-1.5B and Qwen2.5-Math-7B at every prefix of their own ProcessBench traces.
+  33-66% of failures are decided before the first step (the model almost never solves the problem).
+  When the outcome is still open, the annotated first error is the largest drop in success
+  probability in 34-53% of traces (position-matched null 16-21%).
+- **Backtracking to the expert-labelled first error is worse than restarting.** With repeated
+  sample splitting, restarting beats resampling from just before the first error by +0.068 to
+  +0.215 in all three models (all CIs above zero); resampling from just before the largest drop in
+  success matches restarting with 15-29% fewer tokens. Raw rollouts: `results/commitment/`;
+  details: [`docs/COMMITMENT_EXPERIMENT.md`](docs/COMMITMENT_EXPERIMENT.md); paper: `paper/main.pdf`.
 - Fixed: the length-only baseline broke ties arbitrarily (platform-dependent); lexical −
   length-only at 25% is +0.052 (p = 0.032), not +0.073.
 

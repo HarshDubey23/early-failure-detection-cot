@@ -14,7 +14,7 @@
 \input{values}
 
 \title{\Large\bfseries Errors Are Not Choke Points: Difficulty, Error Onset and\\Counterfactual Commitment in LLM Reasoning Failures}
-\author{Harsh Dubey \quad Harshit Saini \quad Prashant Jain \quad Himanshu Kumar \quad Gaurav Kaushal \quad Rohit Chaudhary\\
+\author{Harsh Dubey \quad Harshit Saini \quad Prashant Jain\\ Himanshu Kumar \quad Gaurav Kaushal \quad Rohit Chaudhary\\
 \small Dept.\ of CSE (AI\&ML), KIET Group of Institutions, Ghaziabad, India\\
 \small \texttt{harsh.2428cseaiml127@kiet.edu}}
 \date{}
@@ -51,10 +51,18 @@ the error occurs, and a coded sample shows these are rarely repairs.
 \item \textbf{Failure detectors track error presence, not commitment.} They rank non-fatal errors as
 riskier than fatal ones (AUROC \twOutFR), and once an error has occurred its fatality is not
 predictable from the text.
-\item \textbf{A counterfactual measurement of commitment.} For traces written by open models we
-resample the \emph{same} model from every prefix and estimate the success probability $v_k$ after
-each step, which locates where a trajectory actually becomes unrecoverable and compares it with the
-human-annotated first error (Section~\ref{sec:counterfactual}).
+\item \textbf{A counterfactual measurement of commitment.} For traces written by three open models
+we resample the \emph{same} model from every prefix (\TotalRollouts\ scored continuations) and
+estimate the success probability $v_k$ after each step. \QwenSmallCapPct--\QwenMathCapPct\% of
+failures are capability-limited before the first step; when the outcome is still open, the annotated
+error is where success collapses in \QwenTwoDec--\QwenSmallDec\ of traces, against a
+position-matched null of \QwenMathDecNull--\QwenTwoDecNull\ (Section~\ref{sec:counterfactual}).
+\item \textbf{First-error backtracking loses to restarting.} With sample splitting, resampling from
+just before the expert-labelled first error succeeds less often than restarting from scratch in all
+three models (by \QwenMathBtRestErr\ to \QwenTwoBtRestErr), while resampling from just before the
+largest drop in $v$ matches restarting with \QwenTwoTokSave--\QwenMathTokSave\% fewer tokens. A
+simple supermartingale argument explains why restart is a strong baseline for any backtracking
+target that is not chosen with information about where success is lost.
 \end{enumerate}
 All code, tables and the generator of every number in this paper are released.\footnote{\url{https://github.com/HarshDubey23/early-failure-detection-cot}}
 
@@ -65,7 +73,9 @@ judgements because a completion can reach the right answer from a wrong step and
 Zhang et al.~\cite{zhang2025lessons} treat as label noise. ProcessBench~\cite{processbench} evaluates
 first-error identification. We study the disagreement itself.
 
-\textbf{Predicting failure early.} Hidden states predict CoT success before or during generation~\cite{afzal2025,lugoloobi2026}.
+\textbf{Predicting failure early.} Models carry information about their own correctness~\cite{kadavath2022,orgad2024},
+and hidden states predict CoT success before or during generation~\cite{afzal2025,lugoloobi2026};
+conformal methods certify reasoning prefixes~\cite{cheung2026crop}.
 Bulut~\cite{bulut2026} shows that such pooled AUROCs are largely explained by problem difficulty and
 fall to chance within a problem. We apply the same control to text detectors on human-annotated traces.
 
@@ -76,6 +86,12 @@ name incorrect solutions as future work; recoverability of error states has been
 distillation~\cite{jiang2026ocr}. None compares a counterfactual decision point with human first-error
 labels. Work on performative CoT~\cite{li2026performative,boppana2026} finds that answers are often
 fixed apart from the written reasoning, which our non-fatal errors echo.
+
+\textbf{Correcting and backtracking.} Unaided self-correction rarely helps~\cite{huang2024}, but
+models can correct a mistake once told where it is~\cite{tyen2024}, which motivates verifier-guided
+search that returns to the first error. Independent resampling from scratch, as in
+self-consistency~\cite{wang2023sc}, is the natural baseline for any such scheme; we compare the two
+directly.
 
 \section{Data and Definitions}
 \textbf{Data.} ProcessBench~\cite{processbench} contains 3,400 step-segmented solutions to GSM8K,
@@ -174,12 +190,13 @@ and the error step, the prefix up to it or the next one or two steps change this
 \begin{table}[t]\centering\small
 \caption{AUROC between outcome groups (positive vs negative).}
 \label{tab:threeway}
+\resizebox{\columnwidth}{!}{%
 \begin{tabular}{lccc}\toprule
 Detector (trained on) & rec.\ vs clean & fatal vs rec. & fatal vs clean\\\midrule
 Prefix 100\% (wrong answer) & \twOutRC & \twOutFR & \twOutFC\\
 Q+G+prefix (wrong answer) & \twOutQGRC & \twOutQGFR & \twOutQGFC\\
 Prefix 100\% (has error) & \twErrRC & \twErrFR & \twErrFC\\\bottomrule
-\end{tabular}
+\end{tabular}}
 \end{table}
 
 \input{counterfactual}
@@ -192,22 +209,39 @@ failure. On ProcessBench, text detectors pass this test only after half the chai
 
 \textbf{For process supervision.} Human first-error labels mark where reasoning first goes wrong,
 which is the right target for auditing reasoning. They are not, in general, where the outcome is
-decided. Verifiers that are trained or evaluated on first errors and then used to steer search
-inherit this gap; the counterfactual value curve measures it directly.
+decided, and as backtracking targets they are worse than no target at all: a perfect ProcessBench
+verifier used to choose where to resample loses to restarting. Verifier-guided search should report
+a restart baseline at matched compute, and verifiers meant to steer search should be trained on
+drops in the counterfactual value curve, which labels exactly the step where success is lost.
+
+\textbf{What a trajectory can tell a detector.} For the capability-limited failures
+(\QwenSmallCapPct--\QwenMathCapPct\%), the model fails at least seven times in eight before writing a
+single step, so reading the trajectory can add little beyond the problem and the model. This is the
+counterfactual counterpart of the difficulty-controlled result of Section~4, and it explains why text
+detectors gain only late in the chain: the failures they could still catch are the minority whose
+outcome is open, and those commit at a specific step.
 
 \section{Limitations}
 ProcessBench balances answers within each tier, so absolute fatality rates describe the benchmark,
 not deployment. The coded sample is small and was coded by one person; we release it for re-coding.
 Counterfactual continuations are sampled at temperature 0.7 from models whose original traces were
-re-segmented by ProcessBench, so prefixes are near- rather than exactly on-policy. We study
-mathematics only, and small open models only.
+re-segmented by ProcessBench, so prefixes are near- rather than exactly on-policy, and $v_k$
+describes the sampling distribution rather than the decode that produced the trace. Continuations of
+the 7B model are capped at 1,024 tokens, which counts truncated solutions as failures. The decisive
+step requires rollouts at every prefix and is an oracle target; we show where a verifier should point,
+not yet a cheap verifier that points there. Pools of non-capability-limited fatal traces are small
+(about 30 for each 1.5B model), and Qwen2-1.5B's clean traces are few, so its noise floor is high. We
+study mathematics only, and open models of at most 7B parameters.
 
 \section{Conclusion}
 Errors are where reasoning first goes wrong; choke points are where it stops being recoverable. On
 ProcessBench the two differ often enough, and text-based failure detectors confuse them with problem
 difficulty often enough, that both process supervision and early warning should measure the second
-directly. The counterfactual value curve does this at the cost of sampling, and its labels are the
-natural target for cheaper commitment detectors.
+directly. The counterfactual value curve does this at the cost of sampling. It shows that a third of
+failures or more are decided before the first step, that the annotated error is the choke point in
+about half of the rest, and that backtracking to it is worse than starting over, while backtracking
+to the drop in success matches a restart at lower cost. Its labels are the natural training target
+for verifiers that steer search.
 
 \input{refs}
 \end{document}

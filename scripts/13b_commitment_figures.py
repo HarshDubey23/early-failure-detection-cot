@@ -25,7 +25,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.viz import style  # noqa: E402
 
 GROUP_COLOUR = {"fatal": style.PALETTE["error"], "recovered": style.PALETTE["orange"], "clean": style.PALETTE["correct"]}
-CATS = ["capability-limited", "latent-commitment", "commits-at-error", "recoverable-error", "never-commits"]
+CATS = ["capability-limited", "latent-commitment", "commits-at-error", "recoverable-error"]  # never-commits: 0 in all runs
 
 
 def fig18(tables: list, labels: list, out: Path) -> None:
@@ -42,11 +42,12 @@ def fig18(tables: list, labels: list, out: Path) -> None:
             ax.plot(sub.r, sub.mean_v, marker="o", ms=3, color=GROUP_COLOUR[grp], label=name)
             ax.fill_between(sub.r, sub.ci_lo, sub.ci_hi, color=GROUP_COLOUR[grp], alpha=0.15, lw=0)
         ax.axvline(-0.5, color=style.PALETTE["neutral"], ls="--", lw=0.8)
-        ax.set_xlabel("steps relative to the first error (k − e)")
         ax.set_title(label)
         ax.set_ylim(0, 1)
     axes[0][0].set_ylabel("P(correct | first k steps)")
-    axes[0][-1].legend(loc="lower left", frameon=False)
+    axes[0][len(tables) // 2].set_xlabel("steps relative to the annotated first error (k − e)")
+    handles, names = axes[0][0].get_legend_handles_labels()
+    fig.legend(handles, names, loc="upper center", ncol=3, frameon=False, bbox_to_anchor=(0.5, 1.07))
     style.save(fig, "fig18_event_study", out)
     plt.close(fig)
 
@@ -66,7 +67,8 @@ def fig19(tables: list, labels: list, out: Path, delta: float) -> None:
     ax.set_xticks(x)
     ax.set_xticklabels([s.replace("-", "\n", 1) for s in CATS], fontsize=6)
     ax.set_ylabel(f"share of fatal traces (δ = {delta:g})")
-    ax.legend(frameon=False)
+    ax.set_ylim(0, 0.85)
+    ax.legend(frameon=False, ncol=3, loc="upper center", fontsize=6)
     style.save(fig, "fig19_commitment_categories", out)
     plt.close(fig)
 
@@ -89,7 +91,8 @@ def fig20(tables: list, labels: list, out: Path) -> None:
     ax.set_xticks(x)
     ax.set_xticklabels([k[1] for k in keys], fontsize=6)
     ax.set_ylabel("success after resampling (fatal traces)")
-    ax.legend(frameon=False)
+    ax.set_ylim(0, 0.92)
+    ax.legend(frameon=False, ncol=3, loc="upper center", fontsize=6)
     style.save(fig, "fig20_backtracking", out)
     plt.close(fig)
 

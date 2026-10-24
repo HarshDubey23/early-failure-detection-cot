@@ -1,12 +1,19 @@
 \begin{abstract}
-Process supervision assumes that the first incorrect step of a reasoning trace is where it fails, and
-early-warning detectors assume that failure is visible in a partial trace. We test both assumptions
-on 3,400 ProcessBench solutions with expert first-error labels. A detector that reads only the
-question and the generator's identity predicts a wrong answer with AUROC \aucQG; a TF-IDF detector
-reading the first quarter of the reasoning adds nothing beyond it (\dIncA, n.s.) and is at chance
-within a problem. \nonFatalPct\% of annotated first errors are followed by a correct answer
-(\nonFatalOmniPct\% on Omni-MATH), fatality does not depend on where the error occurs, and failure
+Process supervision assumes that the first incorrect step of a reasoning trace is where it fails;
+verifier-guided search backtracks to that step, and early-warning detectors assume failure is visible
+in a partial trace. We test these assumptions on 3,400 ProcessBench solutions with expert first-error
+labels. A detector that reads only the question and the generator's identity predicts a wrong answer
+with AUROC \aucQG; a TF-IDF detector reading the first quarter of the reasoning adds nothing beyond it
+(\dIncA, n.s.) and is at chance within a problem. \nonFatalPct\% of annotated first errors are
+followed by a correct answer, fatality does not depend on where the error occurs, and failure
 detectors rank these non-fatal errors as riskier than fatal ones (AUROC \twOutFR). We then measure
-commitment directly: resampling the generating model from every prefix of its own traces, we locate
-the step after which success becomes unlikely and compare it with the annotated first error.
+commitment counterfactually, scoring \TotalRollouts\ continuations sampled from three open models at
+every prefix of their own traces. \QwenSmallCapPct--\QwenMathCapPct\% of failures are decided before
+the first step (the model almost never solves the problem). When the outcome is still open, the
+annotated error is the largest drop in success probability in \QwenTwoDec--\QwenSmallDec\ of traces
+(position-matched null \QwenMathDecNull--\QwenTwoDecNull). Most strikingly, resampling from just
+before the expert-labelled first error succeeds less often than restarting from scratch in all three
+models (by \QwenMathBtRestErr\ to \QwenTwoBtRestErr), whereas resampling from where success actually
+drops matches restarting with \QwenTwoTokSave--\QwenMathTokSave\% fewer tokens. Verifiers that steer
+search should target drops in success probability, not first errors.
 \end{abstract}

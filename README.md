@@ -1,248 +1,207 @@
-# Where Reasoning Fails First: An Empirical Study of Early Failure Prediction in Chain-of-Thought
+# Errors Are Not Choke Points: Difficulty, Error Onset and Counterfactual Commitment in LLM Reasoning Failures
 
-> **Status: preliminary empirical study.** Not peer-reviewed or submitted. Error-onset and
-> predictability results come from real data (ProcessBench, BIG-Bench Mistake). The
-> intervention policy (E8) has only been evaluated in an offline simulation under assumed
-> parameters. The hidden-state experiment (E4) has not been run. The repository was earlier
-> titled "Detecting and Mitigating Choke Points in LLM Reasoning". It was renamed because the
-> evidence supports detection analysis, not demonstrated mitigation.
+> **Status: preprint draft, not peer-reviewed or submitted.** Every number below is computed by
+> the code in this repository from real data: 3,400 expert-annotated ProcessBench solutions (CPU)
+> and 50,152 model continuations sampled on GPU and committed as raw JSONL. The hidden-state
+> experiment (E4) has not been run, and the intervention policy (E8) has only been replayed in an
+> offline simulation. The repository was first titled "Detecting and Mitigating Choke Points in
+> LLM Reasoning" and later "Where Reasoning Fails First"; the current title follows the evidence.
 
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Tests: pytest](https://img.shields.io/badge/tests-pytest-lightgrey)
 ![CI](https://github.com/HarshDubey23/early-failure-detection-cot/actions/workflows/ci.yml/badge.svg)
 
-When a language model reasons step by step and reaches a wrong answer, the mistake is
-often made before the final step and then carried forward. This repository studies
-where such first errors occur in reasoning trajectories and whether a detector that sees
-only part of a trajectory can predict that the final answer will be wrong. It analyses
-3,400 step-annotated solutions from ProcessBench, trains prefix-conditioned detectors on
-held-out questions, measures detection lead time and calibration, tests transfer to
-BIG-Bench Mistake, and replays a cost-aware selective-intervention policy offline. Every
-number is computed by the pipeline; stages that could not run are reported as `NOT_RUN`.
+Process supervision assumes that the first incorrect step of a reasoning trace is where it
+fails. Verifier-guided search backtracks to that step, and early-warning detectors assume that
+failure is visible in a partial trace. This repository tests those assumptions. It first
+controls failure detectors for problem difficulty. It then measures, by resampling the model
+that wrote each trace, the step after which success actually becomes unlikely, and compares
+that step with the human-annotated first error.
 
-## Update 2026-10-24: difficulty controls and error fatality
+**Paper:** [`paper/main.pdf`](paper/main.pdf) (6 pages; every number in it is generated from the
+result tables by `paper/make_values.py`).
 
-Two controls change how the results below should be read (`make decomposition`; details in
-[`docs/RESULTS_DECOMPOSITION.md`](docs/RESULTS_DECOMPOSITION.md), positioning in
-[`docs/NOVELTY_AUDIT.md`](docs/NOVELTY_AUDIT.md)):
+## Key findings
 
-- **Early prediction is mostly difficulty.** Question text + generator identity alone reach
-  AUROC 0.588 [0.570, 0.607]. Adding the first 25% of the reasoning adds +0.005 (n.s.); the
-  full chain adds +0.031 [0.020, 0.041]. Within a problem, the 25% prefix is at chance.
-- **Errors are not choke points.** 521 of 2,221 first errors (23.5%) still end in a correct
-  answer (34% on Omni-MATH), and fatality is flat in error position. Failure detectors rank
-  these non-fatal errors as riskier than fatal ones (AUROC 0.456).
-- **Counterfactual commitment (GPU, run on Kaggle 2x T4).** 50,152 continuations sampled from
-  Qwen2.5-1.5B, Qwen2-1.5B and Qwen2.5-Math-7B at every prefix of their own ProcessBench traces.
-  33-66% of failures are decided before the first step (the model almost never solves the problem).
-  When the outcome is still open, the annotated first error is the largest drop in success
-  probability in 34-53% of traces (position-matched null 16-21%).
-- **Backtracking to the expert-labelled first error is worse than restarting.** With repeated
-  sample splitting, restarting beats resampling from just before the first error by +0.068 to
-  +0.215 in all three models (all CIs above zero); resampling from just before the largest drop in
-  success matches restarting with 15-29% fewer tokens. Raw rollouts: `results/commitment/`;
-  details: [`docs/COMMITMENT_EXPERIMENT.md`](docs/COMMITMENT_EXPERIMENT.md); paper: `paper/main.pdf`.
-- Fixed: the length-only baseline broke ties arbitrarily (platform-dependent); lexical −
-  length-only at 25% is +0.052 (p = 0.032), not +0.073.
+**1. Early failure prediction is mostly a difficulty signal** (CPU, 3,400 traces, 5 seeds,
+question-level cluster bootstrap).
+- Question text plus generator identity alone predict a wrong answer with AUROC
+  0.588 [0.570, 0.607].
+- Adding the first 25% of the reasoning adds +0.005 (n.s.); the full chain adds
+  +0.031 [0.020, 0.041].
+- Within a problem, the 25% prefix is at chance (0.485).
 
-![Error fatality](results/figures/fig16_error_fatality.png)
+**2. One first error in four is not fatal.**
+- 521 of 2,221 annotated first errors (23.5%) still end in a correct answer (34% on Omni-MATH).
+- Fatality does not depend on where the error occurs.
+- Failure detectors rank these non-fatal errors as riskier than fatal ones (AUROC 0.456).
 
-## Headline result
+**3. Counterfactual commitment** (GPU, Kaggle 2x T4, vLLM). For every prefix of every trace,
+the same model is sampled m times (temperature 0.7) and the success probability
+v_k = P(correct | question, first k steps) is estimated.
 
-From `docs/RESULTS.md` (full run of 2026-09-15; CPU only, so the GPU hidden-state
-experiment E4 did not run):
+| | Qwen2.5-1.5B-Instruct | Qwen2-1.5B-Instruct | Qwen2.5-Math-7B-Instruct |
+|---|---|---|---|
+| traces (clean / fatal / recovered) | 53 / 51 / 12 | 15 / 67 / 6 | 60 / 207 / 47 |
+| continuations per prefix / total scored | 16 / 11,264 | 16 / 7,136 | 12 / 31,752 |
+| fatal traces that are capability-limited (v_0 ≤ 1/8) | 0.333 | 0.522 | 0.657 |
+| first error = largest drop in v (not capability-limited) | 0.529 [0.353, 0.706] | 0.344 [0.188, 0.531] | 0.423 [0.310, 0.535] |
+| position-matched null | 0.171 | 0.214 | 0.159 |
+| success: restart from scratch | 0.481 | 0.621 | 0.470 |
+| success: resample from just before the first error | 0.375 | 0.406 | 0.402 |
+| success: resample from just before the largest drop | 0.493 | 0.601 | 0.511 |
+| **restart − first-error backtracking** | **+0.106 [+0.027, +0.187]** | **+0.215 [+0.095, +0.339]** | **+0.068 [+0.007, +0.133]** |
+| largest-drop − first-error backtracking | +0.117 [+0.059, +0.183] | +0.196 [+0.082, +0.316] | +0.108 [+0.051, +0.165] |
+| largest-drop − restart | +0.011 [−0.035, +0.061] | −0.020 [−0.057, +0.020] | +0.040 [−0.008, +0.089] |
+| continuation tokens: restart / largest drop | 374 / 308 | 203 / 173 | 650 / 463 |
 
-- **Where errors start.** Mean relative onset rho = e/n is **0.500** (95% CI 0.490-0.510).
-  A KS test against Uniform(0,1) rejects (D = 0.119, p = 1.2e-27), but that test would
-  reject even for evenly placed errors because rho is discrete. Against the correct
-  discrete null (error step uniform over each trace's own steps) the onset distribution
-  still differs (p <= 0.001) and errors come **earlier** than that null predicts (0.500 vs
-  0.578); in particular only 4.1% of first errors fall on the final step, versus 15.5%
-  expected. A mean of **4.12** steps remain after the first error.
-- **How early failure is predictable.** Predicting an incorrect final answer, a TF-IDF
-  detector reaches AUROC **0.588** [0.552, 0.626] from 25% of the chain and **0.626**
-  [0.590, 0.661] from the whole chain (question-level bootstrap intervals), against 0.618
-  for surface features and 0.539 for trace length alone. In paired bootstrap tests it beats
-  length-only from 25% onward (+0.073, p = 0.004 at 25%) but never significantly beats the
-  surface detector. Over 5 independent grouped splits its AUROC at 25% averages 0.577
-  (SD 0.015). A length-blind step-wise detector reaches 0.566 after one step.
-- **Timing and transfer.** Step-wise alarms usually precede the first error, but at
-  tau = 0.5 they also fire on 72.3% of error-free traces, so the warning is not specific.
-  Trained on maths, the text detector is at or below chance on all five BIG-Bench Mistake
-  tasks.
+What the table shows:
+- **33–66% of failures are decided before the first step.** The model almost never solves the
+  problem from scratch, so no step is the choke point.
+- **When the outcome is still open, the annotated error is often, but far from always, where
+  it closes.** It is the largest drop in v in 34–53% of traces, against 16–21% expected by
+  chance. For Qwen2-1.5B the interval includes the null.
+- **Backtracking to the expert-labelled first error is worse than restarting from scratch, in
+  all three models.** Even a perfect first-error verifier, used to choose where to resample,
+  loses to a restart.
+- **Resampling from just before the largest drop matches a restart with 15–29% fewer tokens.**
+  Verifiers that steer search should be trained to find drops in success probability, not first
+  errors.
 
-## Architecture
+Backtracking numbers use repeated sample splitting. Half of each prefix's continuations select
+the trace and the target step, the other half score it. Results are averaged over 50 random
+splits, with a trace bootstrap for the intervals. On a planted-effect simulation, where the
+first error is the decisive step by construction, the estimator gives +0.001, so it does not
+create a gap.
 
-![System architecture](docs/diagrams/rendered/architecture.png)
+![Where to backtrack](results/figures/fig20_backtracking.png)
 
-Vector source: `docs/diagrams/architecture.tex` (also Fig. 1 of the paper). Phase I
-evaluates a detector at each step boundary; Phase II intervenes only when the risk
-exceeds a calibrated threshold, escalating from verification to regeneration and
-reverting revisions that do not reduce risk.
+![Event study](results/figures/fig18_event_study.png)
 
-## Pipeline
+Success probability aligned at the annotated first error. Fatal traces collapse exactly at the
+error. Recovered 7B traces become *more* likely to succeed across it. Clean traces, aligned at
+a random step, drift smoothly.
 
-![Experimental pipeline](docs/diagrams/rendered/pipeline.png)
+Details:
+- Difficulty controls and error fatality:
+  [`docs/RESULTS_DECOMPOSITION.md`](docs/RESULTS_DECOMPOSITION.md).
+- Counterfactual experiment, run log and final numbers:
+  [`docs/COMMITMENT_EXPERIMENT.md`](docs/COMMITMENT_EXPERIMENT.md).
+- Positioning against prior work: [`docs/NOVELTY_AUDIT.md`](docs/NOVELTY_AUDIT.md).
 
-Vector source: `docs/diagrams/pipeline.tex`. The ten stages run from download and
-preprocessing through onset analysis, predictability curves, lead-time and calibration
-analysis, transfer tests, intervention simulation, and the final report.
-
-## Worked example
-
-![Worked example: real ProcessBench trace with first error marked](docs/diagrams/rendered/worked_example_processbench.png)
-
-A real ProcessBench trace with its first error marked
-(vector source: `docs/diagrams/worked_example_processbench.tex`,
-render script: `docs/diagrams/render.py`).
-
-## Installation
+## Reproducing the results
 
 ```bash
 python -m pip install -r requirements.txt
 ```
 
-Exact versions are pinned (tested on Python 3.13.3, Windows 11, CPU). A conda
-alternative is `conda env create -f environment.yml`, which also installs Tectonic for
-rendering diagrams and the paper. GPU stages 06-07 additionally need
-`pip install -r requirements-gpu.txt` and a CUDA device.
+Exact versions are pinned (tested on Python 3.13.3, CPU). On Windows use any GNU make
+(`mingw32-make`, Git for Windows, WSL); override the interpreter with `make <target> PY=py`.
 
-On Windows use any GNU make (`mingw32-make`, Git for Windows, WSL). The Makefile calls
-`python`; override with `make <target> PY=py` if needed.
-
-## Quickstart - smoke test (about 1.5 minutes)
-
-```bash
-make smoke
-```
-
-Runs all ten stages on a small seeded synthetic corpus (no network, no GPU) and writes
-everything under `results/smoke/`, including `results/smoke/RESULTS_SMOKE.md`. Those
-numbers describe synthetic data only.
-
-```bash
-make test
-```
-
-47 tests, including the leakage test that checks every split in the code base.
-
-## Full reproduction
-
-```bash
-make all
-```
-
-runs, in order (each stage prints a summary and `make` stops at the first failure):
-
-| Target | Stage | Output |
+| Command | Hardware | What it does |
 |---|---|---|
-| `make data` | 01 download ProcessBench, BIG-Bench Mistake, GSM8K questions; verify every dataset identifier | `data/raw/`, `results/tables/dataset_identifier_verification.json` |
-| `make preprocess` | 02 rules P1-P5, question ids, quality report | `data/processed/*.jsonl` |
-| `make eda` | 03-04 E1 onset + E2 tests | Table I, F1-F5 |
-| `make baselines` | 05 E3 predictability curves | `table2_*`, F6, F7, F7b |
-| `make activations` | 06 E4 generation + hidden states (skips without CUDA) | `data/processed/hidden_states_L*.npy` |
-| `make probes` | 07 E4 layer x depth probes | `table3_*`, F8, F14 |
-| `make analysis` | 08 E5 lead time, E6 calibration, E7 transfer | F9, F10, F13 |
-| `make intervention` | 09 E8 simulated Algorithm 2 | F11, F12 |
-| `make report` | 10 results report + paper values | `docs/RESULTS.md`, `results/paper_values.json` |
+| `make decomposition` | CPU, minutes | difficulty controls, error fatality, three-way AUROC (findings 1-2), Fig. 16-17 |
+| `make commitment-analysis` | CPU, minutes | re-derives every counterfactual number and Fig. 18-20 from the committed raw rollouts in `results/commitment/` |
+| `make choke-paper` | CPU | regenerates `paper/values.tex` from the tables and compiles `paper/main.pdf` (pdflatex) |
+| `make commitment-mock` | CPU | runs stages 12-13 with a fake generator to check the pipeline; writes no results |
+| `make commitment GENERATOR=... TP=... DTYPE=half` | GPU | samples new rollouts for one generator (stage 12) and analyses them (stage 13) |
+| `make test` | CPU | 54 tests, including the leakage checks on every split and a planted-effect test of the commitment pipeline |
 
-A clean full run (all outputs deleted first) took 7.7 minutes on the build machine's CPU.
-`make diagrams` renders the TikZ figures, and `make paper` copies the paper figures into the
-Overleaf package, checks that every `\RES{}` value in `main.tex` exists in
-`results/paper_values.json`, and compiles the paper (both need Tectonic; set
-`TECTONIC=/path/to/tectonic` if it is not on `PATH`).
+To re-run the GPU experiment on a free Kaggle notebook (2x T4):
+
+```bash
+git clone https://github.com/HarshDubey23/early-failure-detection-cot && cd early-failure-detection-cot
+bash scripts/kaggle_commitment.sh setup     # math-verify + ProcessBench from Hugging Face
+bash scripts/kaggle_commitment.sh vllm      # installs vLLM, removes the mismatched torchaudio
+BACKEND=vllm bash scripts/kaggle_commitment.sh run Qwen2.5-1.5B-Instruct 16
+bash scripts/kaggle_full.sh                 # the full three-model run used for the paper (~6 h on 2x T4)
+```
+
+T4s have no bfloat16, so everything runs in float16 with eager execution. Stage 12 appends to its
+JSONL after every batch and resumes from it, so a session that times out can be continued.
 
 ## Repository map
 
 | Path | Contents |
 |---|---|
-| `configs/` | `default.yaml` (full run), `quick.yaml` (smoke) - every hyperparameter, all keys required |
-| `src/config.py` | typed, validated config loader |
-| `src/data/` | loaders with a uniform `Trace` schema, identifier verification, P1-P6, segmentation, synthetic smoke data |
-| `src/features/` | surface, lexical (TF-IDF), uncertainty, hidden-state extraction |
-| `src/models/` | linear probe + layer x depth sweep, MLP and GRU probes, baselines |
-| `src/analysis/` | onset (E1), statistics (E2), predictability (E3), lead time (E5), calibration (E6), transfer (E7) |
-| `src/intervention/` | Algorithm 2 policy and offline simulator (E8) |
-| `src/viz/` | one style module, one function per figure |
-| `src/reporting/` | builds `RESULTS.md` and the paper value map |
-| `scripts/01-10` | thin command-line stages |
-| `tests/` | leakage, loaders, preprocessing, metrics, reproducibility |
-| `results/tables/`, `results/figures/` | CSV + LaTeX tables; PNG (300 dpi) + PDF figures; `results/manifest.json` |
-| `docs/` | METHODOLOGY, DESIGN_DECISIONS, RESULTS, LEARNING_NOTES, BENCHMARKS, diagrams |
+| `paper/` | `main.tex`, `counterfactual.tex`, `abstract.tex`, `refs.tex`, `make_values.py` (all numbers), `main.pdf` |
+| `scripts/11_*`, `11b_*` | E9: difficulty controls and error-fatality decomposition (CPU) |
+| `scripts/12_*`, `12a_*` | E10: counterfactual rollouts (vLLM / transformers / mock backends) and ProcessBench preparation |
+| `scripts/13_*`, `13b_*` | E10: commitment analysis (categories, event study, sample-split backtracking) and figures |
+| `scripts/kaggle_*.sh` | Kaggle drivers for the GPU runs |
+| `results/commitment/` | raw rollouts (`<model>_s<shard>.jsonl`: every continuation's answer and correctness), run logs, `tables_<model>/` |
+| `src/analysis/decomposition.py`, `commitment.py` | outcome groups, grouped cross-fitting, concordance; value curves, decisive step, point of no return |
+| `configs/` | `default.yaml` (full run), `quick.yaml` (smoke) |
+| `src/data/`, `src/features/`, `src/models/` | loaders with a uniform `Trace` schema, preprocessing, features, detectors and probes |
+| `src/analysis/` (other) | onset (E1), statistics (E2), predictability (E3), lead time (E5), calibration (E6), transfer (E7) |
+| `src/intervention/` | selective-intervention policy and offline simulator (E8) |
+| `scripts/01-10` | the original ten-stage pipeline |
+| `tests/` | leakage, loaders, preprocessing, metrics, reproducibility, commitment pipeline |
+| `results/tables/`, `results/figures/` | CSV + LaTeX tables; PNG (300 dpi) + PDF figures |
+| `docs/` | METHODOLOGY, DESIGN_DECISIONS, RESULTS, RESULTS_DECOMPOSITION, COMMITMENT_EXPERIMENT, NOVELTY_AUDIT, BENCHMARKS, diagrams |
 | `notebooks/` | `00_walkthrough.ipynb` (narrated tour of saved results), `01_original_prototype.ipynb` |
 
-## Results summary
+## Original study (E1-E8)
+
+The first version of this project studied where first errors occur and whether a partial trace
+predicts a wrong answer. Those results are kept here as they were computed (full CPU run of
+2026-09-15, `make all`; every value with its interval and source file is in
+[`docs/RESULTS.md`](docs/RESULTS.md)). The difficulty controls above change how they should be
+read: the 25% prefix AUROC of 0.588 equals what the question and generator alone achieve.
 
 | Experiment | Main quantity | Value |
 |---|---|---|
 | E1 | traces / with process error / with incorrect answer | 3,400 / 65.3% / 50.0% |
-| E1 | mean rho [95% CI]; mean steps after first error | 0.500 [0.490, 0.510]; 4.12 |
-| E2 | KS vs Uniform(0,1) | D = 0.119, p = 1.2e-27 |
-| E2 | discrete null (errors uniform over steps) | D = 0.149 (null 95th pct 0.026), p <= 0.001; mean rho 0.500 vs 0.578 |
-| E2 | Kruskal-Wallis across tiers | H = 14.50, p = 0.002, eta^2 = 0.005 |
-| E3 | AUROC at 25% / 100%, lexical | 0.588 / 0.626 |
-| E3 | AUROC at 100%: surface / length-only / MLP / GRU / majority | 0.618 / 0.539 / 0.626 / 0.558 / 0.500 |
-| E3 | paired lexical - length-only / lexical - surface at 25% | +0.073 (p = 0.004) / +0.039 (p = 0.068) |
-| E3 | lexical AUROC at 25% over 5 grouped splits | mean 0.577, SD 0.015, range 0.554-0.590 |
-| E5 | length-blind AUROC after 1 / 6 observed steps | 0.566 / 0.613 |
-| E4 | hidden-state probes | NOT_RUN (no GPU) |
-| E5 | tau = 0.5: alarm rate erroneous / error-free; P(Delta > 0) | 0.908 / 0.723; 0.634 |
+| E1 | mean relative onset rho = e/n [95% CI]; mean steps after first error | 0.500 [0.490, 0.510]; 4.12 |
+| E2 | discrete null (error uniform over each trace's steps) | p <= 0.001; mean rho 0.500 vs 0.578 (errors come earlier) |
+| E2 | first errors on the final step, observed vs expected | 4.1% vs 15.5% |
+| E3 | lexical (TF-IDF) AUROC at 25% / 100% of the chain | 0.588 / 0.626 |
+| E3 | lexical − length-only at 25% (tie handling fixed) | +0.052 (p = 0.032); earlier reported as +0.073 |
+| E3 | lexical AUROC at 25% over 5 grouped splits | mean 0.577, SD 0.015 |
+| E4 | hidden-state probes | NOT_RUN (no GPU at the time) |
+| E5 | tau = 0.5 alarm rate on erroneous / error-free traces | 0.908 / 0.723 |
 | E6 | ECE lexical / surface / MLP / GRU | 0.025 / 0.021 / 0.046 / 0.164 |
-| E7 | lexical AUROC, ProcessBench test -> BBM tasks | 0.626 -> 0.172 to 0.502 |
-| E8 | intervention | simulated under assumed parameters; see `RESULTS.md` |
+| E7 | lexical AUROC, ProcessBench -> BIG-Bench Mistake tasks | 0.626 -> 0.172 to 0.502 |
+| E8 | intervention | simulated under assumed parameters only |
 
-Every value, with its confidence interval and source file, is in `docs/RESULTS.md`.
+```bash
+make smoke   # all ten stages on seeded synthetic data (~1.5 min, no network, no GPU)
+make all     # full original pipeline on real data (~8 min on CPU)
+```
 
-## Key figures
+![System architecture](docs/diagrams/rendered/architecture.png)
 
-![Headline: relative error position](results/figures/fig4_relative_error_position_HEADLINE.png)
+## Datasets, models and licences
 
-First errors come earlier than the discrete null predicts and rarely fall on the
-final step (F4, headline result).
-
-![Predictability vs prefix](results/figures/fig7_auroc_vs_prefix_KEY.png)
-
-Failure becomes predictable from a fraction of the chain (F7, key result).
-
-![Detection lead time](results/figures/fig9_lead_time.png)
-
-Step-wise alarms usually precede the first error (F9).
-
-## Datasets and licences
-
-| Dataset | Source | Licence (as declared) | Role |
+| Resource | Source | Licence (as declared) | Role |
 |---|---|---|---|
-| ProcessBench | HF `Qwen/ProcessBench` (Zheng et al., 2024) | Apache-2.0 | primary |
+| ProcessBench | HF `Qwen/ProcessBench` (Zheng et al., ACL 2025) | Apache-2.0 | primary data |
 | BIG-Bench Mistake | GitHub `WHGTyen/BIG-Bench-Mistake` (Tyen et al., 2024) | Apache-2.0 | transfer |
-| GSM8K | HF `openai/gsm8k` (Cobbe et al., 2021) | MIT | GPU generation (not run) |
-| MATH-500 / MATH | HF `HuggingFaceH4/MATH-500`; `hendrycks/competition_math` is disabled on the Hub | see card | loader only |
-| StrategyQA | HF `wics/strategy-qa` (Geva et al., 2021) | other | loader only |
-| PRM800K | GitHub `openai/prm800k` (Lightman et al., 2023) | MIT | loader only |
+| GSM8K | HF `openai/gsm8k` | MIT | gold answers for rollouts |
+| MATH-500 / MATH | HF `HuggingFaceH4/MATH-500`, `EleutherAI/hendrycks_math` | see card | gold answers for rollouts |
+| OlympiadBench, Omni-MATH | HF `Hothan/OlympiadBench`, `KbsdJames/Omni-MATH` | see card | gold answers for rollouts |
+| Qwen2.5-1.5B-Instruct, Qwen2-1.5B-Instruct, Qwen2.5-Math-7B-Instruct | HF `Qwen/...` | see model card | generators resampled in E10 |
 
-Raw and processed datasets are not committed; `make data preprocess` recreates them.
-Activation tensors are never committed; stage 06 writes SHA-256 checksums instead.
-Details and verification status: `docs/BENCHMARKS.md`.
+Raw and processed datasets are not committed (`make data preprocess` recreates them); model
+rollouts are committed because they are this project's own measurements.
 
 ## Citation
 
 ```bibtex
-@misc{chokepoints2026,
-  title        = {Where Reasoning Fails First: An Empirical Study of Early Failure Prediction in Chain-of-Thought},
+@misc{dubey2026chokepoints,
+  title        = {Errors Are Not Choke Points: Difficulty, Error Onset and Counterfactual
+                  Commitment in {LLM} Reasoning Failures},
   author       = {Dubey, Harsh and Saini, Harshit and Jain, Prashant and Kumar, Himanshu and
                   Kaushal, Gaurav and Chaudhary, Rohit},
   year         = {2026},
-  howpublished = {Code and results repository},
+  howpublished = {\url{https://github.com/HarshDubey23/early-failure-detection-cot}},
   note         = {Dept. of CSE (AI\&ML), KIET Group of Institutions, Ghaziabad, India}
 }
 ```
 
-The datasets and prior work used here should be cited from the paper's bibliography (30
-references), including Zheng et al. (2024) ProcessBench and Tyen et al. (2024) BIG-Bench
-Mistake.
-
 ## Acknowledgements
 
-Supervised by Dr. Rohit Chaudhary (KIET Group of Institutions). Built from the MSE-1 Colab prototype
-(`notebooks/01_original_prototype.ipynb`) and the IEEE paper skeleton. Thanks to the
-authors of ProcessBench and BIG-Bench Mistake for releasing step-annotated reasoning traces.
+Supervised by Dr. Rohit Chaudhary (KIET Group of Institutions). GPU runs used free Kaggle
+notebooks. Thanks to the authors of ProcessBench and BIG-Bench Mistake for releasing
+step-annotated reasoning traces, and to the Qwen team for open weights.

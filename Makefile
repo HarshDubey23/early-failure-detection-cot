@@ -12,7 +12,7 @@ TECTONIC ?= tectonic
 
 .PHONY: setup smoke data preprocess eda baselines activations probes analysis \
         intervention report all test lint diagrams paper guide \
-        decomposition commitment-mock commitment
+        decomposition commitment-mock commitment commitment-analysis choke-paper
 
 # Counterfactual commitment (stages 12-13). GPU for 12; override on the command line.
 GENERATOR ?= Qwen2.5-1.5B-Instruct
@@ -81,6 +81,20 @@ commitment:  # E10 counterfactual rollouts (GPU, vLLM) + analysis; see docs/COMM
 	    --m $(M) --tp $(TP) --dtype $(DTYPE) --out $(ROLLOUTS) $(EXTRA)
 	$(PY) scripts/13_commitment_analysis.py --rollouts $(ROLLOUTS) \
 	    --out results/commitment/tables_$(GENERATOR)
+
+# Re-derive every counterfactual number and figure from the committed raw rollouts (CPU, no GPU).
+COMMIT_GENS = Qwen2.5-1.5B-Instruct Qwen2-1.5B-Instruct Qwen2.5-Math-7B-Instruct
+commitment-analysis:
+	for g in $(COMMIT_GENS); do \
+	  $(PY) scripts/13_commitment_analysis.py --rollouts results/commitment/$${g}_s*.jsonl \
+	      --out results/commitment/tables_$${g} || exit 1; \
+	done
+	$(PY) scripts/13b_commitment_figures.py --tables $(addprefix results/commitment/tables_,$(COMMIT_GENS)) \
+	    --labels Qwen2.5-1.5B Qwen2-1.5B Qwen2.5-Math-7B --out results/figures --delta 0.125
+
+choke-paper:  # paper/main.pdf: regenerate every number from the tables, then compile (pdflatex)
+	$(PY) paper/make_values.py
+	cd paper && pdflatex -interaction=nonstopmode main.tex > /dev/null && pdflatex -interaction=nonstopmode main.tex > /dev/null
 
 all: data preprocess eda baselines activations probes analysis intervention report
 

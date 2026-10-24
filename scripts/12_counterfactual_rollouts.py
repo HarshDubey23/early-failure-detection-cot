@@ -179,6 +179,7 @@ class VLLMBackend:
         from vllm import LLM
 
         self.tok = AutoTokenizer.from_pretrained(model)
+        self.max_model_len = max_model_len
         # enforce_eager / no custom all-reduce: compatibility settings for T4 (SM75) GPUs.
         self.llm = LLM(model=model, tensor_parallel_size=tp, dtype=dtype, seed=seed,
                        max_model_len=max_model_len, gpu_memory_utilization=gpu_mem,
@@ -190,10 +191,22 @@ class VLLMBackend:
     def generate(self, prompts: list, m: int, temperature: float, top_p: float, max_tokens: int, seed: int):
         from vllm import SamplingParams
 
-        params = SamplingParams(n=m, temperature=temperature, top_p=top_p, top_k=-1, repetition_penalty=1.0,
-                                max_tokens=max_tokens, seed=seed)
-        outs = self.llm.generate(prompts, params, use_tqdm=True)
-        return [[(c.text, len(c.token_ids)) for c in o.outputs] for o in outs]
+        # Fit every request inside the context window: shorten max_tokens when the prefix is long,
+        # and skip (return None for) prompts that leave fewer than 256 tokens to generate.
+        keep, params = [], []
+        for i, p in enumerate(prompts):
+            room = self.max_model_len - len(self.tok(p, add_special_tokens=False)["input_ids"])
+            if room >= 256:
+                keep.append(i)
+                params.append(SamplingParams(n=m, temperature=temperature, top_p=top_p, top_k=-1,
+                                             repetition_penalty=1.0, max_tokens=min(max_tokens, room),
+                                             seed=seed + i))
+        results = [None] * len(prompts)
+        if keep:
+            outs = self.llm.generate([prompts[i] for i in keep], params, use_tqdm=True)
+            for i, o in zip(keep, outs):
+                results[i] = [(c.text, len(c.token_ids)) for c in o.outputs]
+        return results
 
 
 class MockBackend:
@@ -334,6 +347,13 @@ def main() -> None:
                                        args.seed + start)
             for (t, k), samples in zip(batch, results):
                 g, src = gold[norm_problem(t["question"])]
+                if samples is None:  # prompt too long for the context window: recorded, excluded later
+                    fh.write(json.dumps({"trace_id": t["trace_id"], "generator": t["generator"], "subset": t["subset"],
+                                         "k": k, "n_steps": len(t["steps"]), "skipped": "context",
+                                         "first_error_idx": t["first_error_idx"], "final_correct": t["final_correct"],
+                                         "m": 0, "n_correct": 0, "correct": [], "new_tokens": [], "answers": [],
+                                         "model": model, "backend": args.backend}) + "\n")
+                    continue
                 answers = [last_boxed(text) for text, _ in samples]
                 correct = [answers_match(a, g) for a in answers]
                 fh.write(json.dumps({

@@ -25,6 +25,8 @@ part() {  # part NAME MAX_SECONDS COMMAND...
   log "START $name (budget ${b}s)"
   timeout --kill-after=120 "$b" bash -c "$*" >> "$OUT/$name.out" 2>&1
   log "END $name exit=$? ($(( ($(date +%s) - START) / 60 )) min elapsed)"
+  tail -n "${TAIL:-12}" "$OUT/$name.out" | sed "s/^/    [$name] /" | tee -a "$OUT/run_c.log"
+  for f in "$OUT"/*.log; do [ "$f" = "$OUT/run_c.log" ] || echo "    $(basename "$f"): $(tail -n 1 "$f")"; done | tee -a "$OUT/run_c.log"
   pack
 }
 

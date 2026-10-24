@@ -20,14 +20,15 @@ say "run Qwen2-1.5B-Instruct"
 BACKEND=vllm bash scripts/kaggle_commitment.sh run Qwen2-1.5B-Instruct 16 2>&1 | grep "^\[" | tee -a "$LOG"
 
 # 3) Qwen2.5-Math-7B-Instruct over both GPUs, m = 12, clean traces capped at 60, at most 8.5 hours.
+#    Called directly (not through the wrapper) so `timeout` stops the generator itself; the
+#    analysis then uses every trace whose prefixes all finished.
 say "run Qwen2.5-Math-7B-Instruct"
-BACKEND=vllm TP=2 MAXTOK=1024 timeout 30600 bash scripts/kaggle_commitment.sh run Qwen2.5-Math-7B-Instruct 12 \
-  --max-clean 60 2>&1 | grep "^\[" | tee -a "$LOG"
-if [ ! -d results/commitment/tables_Qwen2.5-Math-7B-Instruct ]; then  # timed out: analyse completed traces
-  say "7B hit the time limit; analysing completed traces"
-  python scripts/13_commitment_analysis.py --rollouts results/commitment/Qwen2.5-Math-7B-Instruct_s*.jsonl \
-    --out results/commitment/tables_Qwen2.5-Math-7B-Instruct 2>&1 | tee -a "$LOG"
-fi
+timeout 30600 python scripts/12_counterfactual_rollouts.py --generator Qwen2.5-Math-7B-Instruct \
+  --backend vllm --tp 2 --dtype half --m 12 --max-tokens 1024 --max-clean 60 \
+  --out results/commitment/Qwen2.5-Math-7B-Instruct_s0.jsonl > results/commitment/Qwen2.5-Math-7B-Instruct_s0.stdout 2>&1
+say "7B generation exit code $? (124 = time limit reached)"
+python scripts/13_commitment_analysis.py --rollouts results/commitment/Qwen2.5-Math-7B-Instruct_s0.jsonl \
+  --out results/commitment/tables_Qwen2.5-Math-7B-Instruct 2>&1 | grep "^\[\|traces" | tee -a "$LOG"
 
 tar czf /kaggle/working/commitment_results.tar.gz results/commitment
 say "done; archive: /kaggle/working/commitment_results.tar.gz"

@@ -15,6 +15,9 @@ M=${3:-16}
 shift $(( $# < 3 ? $# : 3 ))
 EXTRA=("$@")
 OUT=results/commitment
+BACKEND=${BACKEND:-hf}     # hf (transformers) or vllm
+TP=${TP:-1}                # vllm tensor parallel size; TP>1 runs one process over all GPUs
+MAXTOK=${MAXTOK:-1536}
 mkdir -p "$OUT"
 
 case "$MODE" in
@@ -24,9 +27,14 @@ case "$MODE" in
     nvidia-smi --query-gpu=index,name,memory.total --format=csv
     python -c "import torch, transformers; print('torch', torch.__version__, 'transformers', transformers.__version__, 'cuda', torch.cuda.is_available())"
     ;;
+  vllm)
+    pip install -q vllm 2>&1 | tail -n 3
+    python -c "import vllm, torch, transformers; print('vllm', vllm.__version__, 'torch', torch.__version__, 'transformers', transformers.__version__)"
+    ;;
   smoke)
-    python scripts/12_counterfactual_rollouts.py --generator "$GEN" --backend hf --dtype half \
-      --m 4 --max-tokens 768 --max-per-group 1 --out "$OUT/smoke_${GEN}.jsonl"
+    rm -f "$OUT/smoke_${GEN}.jsonl"
+    python scripts/12_counterfactual_rollouts.py --generator "$GEN" --backend "$BACKEND" --dtype half --tp "$TP" \
+      --m 4 --max-tokens 768 --max-per-group 1 --out "$OUT/smoke_${GEN}.jsonl" 2>&1 | grep -E "prefixes|selected|done|Error|error" | tail -n 8
     python - "$OUT/smoke_${GEN}.jsonl" <<'PY'
 import json, sys
 for line in open(sys.argv[1]):
@@ -38,11 +46,13 @@ PY
     ;;
   run)
     NG=$(nvidia-smi -L | wc -l)
-    echo "starting $NG shard(s) for $GEN, m=$M ${EXTRA[*]:-}"
+    if [ "$TP" -gt 1 ]; then NG=1; fi
+    echo "starting $NG shard(s) for $GEN, backend=$BACKEND tp=$TP m=$M ${EXTRA[*]:-}"
     pids=()
     for i in $(seq 0 $((NG - 1))); do
-      CUDA_VISIBLE_DEVICES=$i python scripts/12_counterfactual_rollouts.py --generator "$GEN" \
-        --backend hf --dtype half --m "$M" --shard "$i" --num-shards "$NG" \
+      if [ "$TP" -gt 1 ]; then DEV=$(seq -s, 0 $((TP - 1))); else DEV=$i; fi
+      CUDA_VISIBLE_DEVICES=$DEV python scripts/12_counterfactual_rollouts.py --generator "$GEN" \
+        --backend "$BACKEND" --tp "$TP" --dtype half --m "$M" --max-tokens "$MAXTOK" --shard "$i" --num-shards "$NG" \
         --out "$OUT/${GEN}_s${i}.jsonl" "${EXTRA[@]}" > "$OUT/${GEN}_s${i}.stdout" 2>&1 &
       pids+=($!)
     done

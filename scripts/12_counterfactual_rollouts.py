@@ -141,7 +141,7 @@ class HFBackend:
         if self.tok.pad_token is None:
             self.tok.pad_token = self.tok.eos_token
         torch_dtype = torch.bfloat16 if dtype == "bfloat16" else torch.float16
-        self.model = AutoModelForCausalLM.from_pretrained(model, torch_dtype=torch_dtype).to("cuda").eval()
+        self.model = AutoModelForCausalLM.from_pretrained(model, dtype=torch_dtype).to("cuda").eval()
         eos = self.model.generation_config.eos_token_id
         self.eos = set(eos if isinstance(eos, list) else [eos]) | {self.tok.eos_token_id, self.tok.pad_token_id}
         self.max_seqs = max_seqs
@@ -179,8 +179,10 @@ class VLLMBackend:
         from vllm import LLM
 
         self.tok = AutoTokenizer.from_pretrained(model)
+        # enforce_eager / no custom all-reduce: compatibility settings for T4 (SM75) GPUs.
         self.llm = LLM(model=model, tensor_parallel_size=tp, dtype=dtype, seed=seed,
-                       max_model_len=max_model_len, gpu_memory_utilization=gpu_mem)
+                       max_model_len=max_model_len, gpu_memory_utilization=gpu_mem,
+                       enforce_eager=True, disable_custom_all_reduce=True)
 
     def prompt(self, question: str, prefix_steps: list) -> str:
         return chat_prompt(self.tok, question, prefix_steps)

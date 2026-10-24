@@ -11,6 +11,7 @@ traces: 88 ({'fatal': 67, 'clean': 15, 'recovered': 6})
 [recovered] mean drop in success prob at the first error: +0.208 [+0.010, +0.427]
 [clean] noise floor, mean of the largest per-trace drop: +0.208 [+0.087, +0.354]
 [fatal, not capability-limited] position-matched null: 0.214; first error at the last step: 0.156; decisive share without those (n=27): 0.296 [0.148, 0.481]
+[fatal, not capability-limited] decisive share minus position-matched null: +0.130 [-0.030, +0.307], bootstrap p = 0.1080
 [backtrack, fatal, v0_A > delta, mean pool 28.5, 50 splits] bt_restart               success 0.621 [0.511, 0.722]
 [backtrack, fatal, v0_A > delta, mean pool 28.5, 50 splits] bt_before_error          success 0.406 [0.281, 0.533]
 [backtrack, fatal, v0_A > delta, mean pool 28.5, 50 splits] bt_before_decisive       success 0.601 [0.502, 0.695]
@@ -21,6 +22,8 @@ traces: 88 ({'fatal': 67, 'clean': 15, 'recovered': 6})
 [backtrack] mean continuation tokens tok_restart          203
 [backtrack] mean continuation tokens tok_before_error     172
 [backtrack] mean continuation tokens tok_before_decisive  173
+[backtrack] TOST decisive vs restart, margin 0.05: 90% CI [-0.052, +0.015] -> inconclusive
+[backtrack] bootstrap p: dec_minus_err 0.0000, restart_minus_err 0.0000, dec_minus_restart 0.3760
 [backtrack, all fatal, n=67] decisive-step minus first-error: +0.096 [+0.045, +0.154]
 [event study, fatal] v at r=-1..+1 relative to the error: r=-1: 0.193, r=0: 0.053, r=1: 0.024
 [event study, recovered] v at r=-1..+1 relative to the error: r=-1: 0.354, r=0: 0.146, r=1: 0.427

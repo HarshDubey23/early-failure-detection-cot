@@ -216,7 +216,16 @@ def main() -> None:
     lines.append(f"[fatal, not capability-limited] position-matched null: {np.mean(null):.3f}; "
                  f"first error at the last step: {float((not_limited.e == not_limited.n).mean()):.3f}; "
                  f"decisive share without those (n={len(not_last)}): {share_nl[0]:.3f} [{share_nl[1]:.3f}, {share_nl[2]:.3f}]")
+    diff_c3 = (not_limited.decisive_step == not_limited.e).to_numpy().astype(float) - np.asarray(null, dtype=float)
+    c3 = bootstrap_share(diff_c3, seed=args.seed) if len(not_limited) > 1 else (float("nan"),) * 3
+    c3_boot = np.random.default_rng(args.seed)
+    c3_b = np.array([diff_c3[c3_boot.integers(0, len(diff_c3), len(diff_c3))].mean() for _ in range(2000)]) \
+        if len(not_limited) > 1 else np.array([np.nan])
+    c3_p = float(min(1.0, 2 * min((c3_b <= 0).mean(), (c3_b >= 0).mean())))
+    lines.append(f"[fatal, not capability-limited] decisive share minus position-matched null: "
+                 f"{c3[0]:+.3f} [{c3[1]:+.3f}, {c3[2]:+.3f}], bootstrap p = {c3_p:.4f}")
     summary["first_error_is_decisive"] = {"share": share, "chance": chance, "n": int(len(not_limited)),
+                                          "minus_null": c3, "minus_null_p": c3_p,
                                           "position_matched_null": float(np.mean(null)),
                                           "share_error_at_last_step": float((not_limited.e == not_limited.n).mean()),
                                           "share_excluding_last_step": share_nl, "n_excluding_last_step": int(len(not_last))}
@@ -249,11 +258,22 @@ def main() -> None:
             return float(np.mean(num[den > 0] / den[den > 0]))
 
         boot_rng = np.random.default_rng(args.seed + 2)
-        boot_idx = [boot_rng.integers(0, len(ids), len(ids)) for _ in range(2000)]
+        gens = np.array([curves[t]["meta"]["generator"] for t in ids])
+        if len(set(gens)) == 1:
+            boot_idx = [boot_rng.integers(0, len(ids), len(ids)) for _ in range(2000)]
+        else:  # pooled over generators: resample traces within each generator (stratified bootstrap)
+            groups = [np.nonzero(gens == g)[0] for g in sorted(set(gens))]
+            boot_idx = [np.concatenate([gi[boot_rng.integers(0, len(gi), len(gi))] for gi in groups])
+                        for _ in range(2000)]
 
-        def est(x):
+        extra: dict = {}
+
+        def est(x, name=None):
             point = split_mean(x, sel)
-            boots = [split_mean(x[i], sel[i]) for i in boot_idx]
+            boots = np.array([split_mean(x[i], sel[i]) for i in boot_idx])
+            if name:  # 90% interval (TOST at +-0.05) and two-sided bootstrap p-value against 0
+                extra[name] = {"ci90": [float(np.quantile(boots, 0.05)), float(np.quantile(boots, 0.95))],
+                               "p": float(min(1.0, 2 * min((boots <= 0).mean(), (boots >= 0).mean())))}
             return point, float(np.quantile(boots, 0.025)), float(np.quantile(boots, 0.975))
 
         n_pool = float(sel.sum(axis=0).mean())
@@ -262,7 +282,8 @@ def main() -> None:
             bt[col] = est(pol[col])
             lines.append(f"[backtrack, fatal, v0_A > delta, mean pool {n_pool:.1f}, {args.n_splits} splits] {col:<24} "
                          f"success {bt[col][0]:.3f} [{bt[col][1]:.3f}, {bt[col][2]:.3f}]")
-        d, r, dr = est(pol["dec_minus_err"]), est(pol["restart_minus_err"]), est(pol["dec_minus_restart"])
+        d, r = est(pol["dec_minus_err"], "dec_minus_err"), est(pol["restart_minus_err"], "restart_minus_err")
+        dr = est(pol["dec_minus_restart"], "dec_minus_restart")
         lines.append(f"[backtrack] decisive-step minus first-error: {d[0]:+.3f} [{d[1]:+.3f}, {d[2]:+.3f}]")
         lines.append(f"[backtrack] restart minus first-error: {r[0]:+.3f} [{r[1]:+.3f}, {r[2]:+.3f}]")
         lines.append(f"[backtrack] decisive-step minus restart: {dr[0]:+.3f} [{dr[1]:+.3f}, {dr[2]:+.3f}]")
@@ -276,6 +297,12 @@ def main() -> None:
         summary["backtrack_restart_minus_error"] = r
         summary["backtrack_decisive_minus_restart"] = dr
         summary["backtrack_tokens"] = tok
+        summary["backtrack_tests"] = extra
+        lo, hi = extra["dec_minus_restart"]["ci90"]
+        tost = "equivalent" if (lo > -0.05 and hi < 0.05) else ("different" if (lo > 0.05 or hi < -0.05) else "inconclusive")
+        summary["backtrack_tost_0.05"] = tost
+        lines.append(f"[backtrack] TOST decisive vs restart, margin 0.05: 90% CI [{lo:+.3f}, {hi:+.3f}] -> {tost}")
+        lines.append("[backtrack] bootstrap p: " + ", ".join(f"{k} {v['p']:.4f}" for k, v in extra.items()))
         # Robustness: all fatal traces, no selection at all.
         ones = np.ones_like(sel)
         d_all = (split_mean(pol["dec_minus_err"], ones),

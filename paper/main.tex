@@ -46,8 +46,8 @@ only the question and the generator's identity reaches AUROC \aucQG; reading the
 the reasoning on top of that adds \dIncA\ (n.s.), and within a problem the 25\% prefix is at chance
 (\wpPA). Reasoning text adds \dIncB--\dIncC\ AUROC only after half the chain.
 \item \textbf{Errors are not choke points, observationally.} \nonFatalPct\% of first errors are
-followed by a correct answer (\nonFatalOmniPct\% on Omni-MATH), fatality does not depend on where
-the error occurs, and a coded sample shows these are rarely repairs.
+followed by a correct answer (\nonFatalOmniPct\% on Omni-MATH), and fatality does not depend on where
+the error occurs.
 \item \textbf{Failure detectors track error presence, not commitment.} They rank non-fatal errors as
 riskier than fatal ones (AUROC \twOutFR), and once an error has occurred its fatality is not
 predictable from the text.
@@ -163,13 +163,11 @@ are followed by a correct answer (Fig.~\ref{fig:fatality}). Fatality falls with 
 step). Fatal and recovered errors occur at the same relative position (Mann--Whitney $p=\mwRhoP$,
 $r=\mwRhoR$).
 
-We read and coded a seeded sample of \codeN\ recovered traces. In \codeFlawed\ the reasoning stays
-wrong and the correct answer appears anyway; \codeLowEnt\ have low-entropy or qualitative answers
-(yes/no, true/false); in \codeNotLoad\ the error does not bear on the answer; only \codeRepair\
-contain a repair; \codeQuest\ flagged step looked correct to the coder. Explicit re-checking
-language after the error is barely more frequent in recovered than in fatal traces (\markRec\% vs
-\markFat\%, $p=\markP$). Non-fatal errors are thus mostly cases where the written reasoning does not
-determine the answer, consistent with~\cite{zhang2025lessons,li2026performative}.
+Explicit re-checking language after the error is barely more frequent in recovered than in fatal
+traces (\markRec\% vs \markFat\%, $p=\markP$), so self-correction does not explain most
+recoveries. Human coding of a stratified sample of recovered traces by two independent coders is in
+progress (protocol released); Section~\ref{sec:counterfactual} measures the same question without
+coders, by forcing the model to answer at every step.
 
 \begin{figure}[t]\centering
 \includegraphics[width=\columnwidth]{fig16_error_fatality.pdf}
@@ -223,7 +221,7 @@ outcome is open, and those commit at a specific step.
 
 \section{Limitations}
 ProcessBench balances answers within each tier, so absolute fatality rates describe the benchmark,
-not deployment. The coded sample is small and was coded by one person; we release it for re-coding.
+not deployment. Human coding of recovered traces is not yet complete.
 Counterfactual continuations are sampled at temperature 0.7 from models whose original traces were
 re-segmented by ProcessBench, so prefixes are near- rather than exactly on-policy, and $v_k$
 describes the sampling distribution rather than the decode that produced the trace. Continuations of

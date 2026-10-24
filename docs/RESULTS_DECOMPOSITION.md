@@ -36,23 +36,16 @@ error-free with a wrong answer.
 - Caveat: ProcessBench balances correct and incorrect answers within each tier, so tier-level
   fatality reflects the benchmark's construction as well as the models.
 
-**What the 521 "recovered" traces are.** A seeded sample of 40 was read and coded by one
-coder (`decomp_recovered_coding.csv`, with a note per trace; needs a second coder before
-publication):
-
-| Category | n / 40 |
-|---|---:|
-| Flawed reasoning, correct answer anyway (no visible repair) | 24 |
-| Low-entropy or qualitative answer matched (yes/no, true/false, "even", a description) | 6 |
-| Error not load-bearing for the answer (side remark, rigour gap) | 5 |
-| Genuine repair: silent (2) or explicit self-correction (2) | 4 |
-| Flagged step looks correct to this coder | 1 |
+**What the 521 "recovered" traces are.** Human coding of a seeded, tier-stratified sample of 80
+recovered traces (two independent coders, 40 items overlapping) is in progress; the protocol and
+blinded sheets are in [`CODING_PROTOCOL.md`](CODING_PROTOCOL.md) and `results/coding/`. No
+coding result is reported until both sheets are complete. A coder-independent measurement (the
+forced-answer probes of Run C) addresses the same question.
 
 Explicit re-checking language after the first error is only slightly more common in recovered
-than in fatal traces (18.6% vs 15.5%; Fisher OR 1.25, p = 0.09). So "recovery" is rarely
-recovery: in most of these traces the written reasoning does not determine the answer. This is
-consistent with the flawed-reasoning-with-correct-answer rates that Zhang et al. (2025) report
-for the same four sources (5.1% GSM8K to 43.4% Omni-MATH).
+than in fatal traces (18.6% vs 15.5%; Fisher OR 1.25, p = 0.09), so explicit self-correction does
+not explain most recoveries. Zhang et al. (2025) report flawed-reasoning-with-correct-answer
+rates for the same four sources (5.1% GSM8K to 43.4% Omni-MATH).
 
 ## B. Early failure prediction is a difficulty signal
 

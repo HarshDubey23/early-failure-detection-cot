@@ -80,12 +80,6 @@ put("fatPredMaxInc", d4i.difference.abs().max(), "{:.3f}")
 e5 = pd.read_csv(T / "decomp_E_correction_markers.csv").set_index("group")
 put("markRec", pct(e5.loc["recovered", "rate"]), "{}"); put("markFat", pct(e5.loc["fatal", "rate"]), "{}")
 put("markP", s["E"]["fisher_p"], "{:.2f}")
-coding = pd.read_csv(T / "decomp_recovered_coding.csv").category.value_counts()
-put("codeN", int(coding.sum()), "{}")
-for cat, name in [("flawed_reasoning_correct_answer", "Flawed"), ("low_entropy_or_qualitative_answer", "LowEnt"),
-                  ("error_not_load_bearing", "NotLoad"), ("annotation_questionable", "Quest")]:
-    put(f"code{name}", int(coding.get(cat, 0)), "{}")
-put("codeRepair", int(coding.get("silent_repair", 0) + coding.get("explicit_self_correction", 0)), "{}")
 lt = pd.read_csv(T / "table2d_length_only_tie_fix.csv").set_index("fraction")
 put("lenFixA", lt.loc[0.25, "lexical_minus_length_fixed"], "{:+.3f}"); put("lenFixAP", lt.loc[0.25, "p_value"], "{:.3f}")
 

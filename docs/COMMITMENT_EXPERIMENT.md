@@ -212,3 +212,16 @@ Reading:
   is non-increasing for fixed k or stopping times, so restart is a strong baseline for any target not
   chosen with information about where success is lost (the step before the error is not a stopping
   time, so this is an explanation, not a proof of the result).
+
+## Run C (confirmatory and robustness run, preregistered)
+
+Plan: [`PREREGISTRATION_RUN_C.md`](PREREGISTRATION_RUN_C.md), committed in `459ff22` before any Run C
+data existed. Driver: `scripts/kaggle_run_c.sh` (Kaggle, 2x T4).
+
+- Smoke test 1 (Kaggle version 2): step signals and PRM scoring worked; vLLM jobs after the first
+  failed because `os._exit` left vLLM engine processes holding GPU memory. Fixed in `f47b3f9`.
+- Smoke test 2 (version 3): skipped the setup step by mistake (no data, no vLLM); no result.
+- Smoke test 3 (version 4): every part finished (probes for all four generators, three replicate
+  batches for both 1.5B models, Llama-3.1-8B rollouts).
+- Full run (version 5, Kaggle script version 361921902) started from `17c83cc` on 2026-10-24 at
+  about 19:55 UTC.

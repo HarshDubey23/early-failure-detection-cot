@@ -32,13 +32,15 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.analysis import commitment as cm  # noqa: E402
 
 
-def load_curves(paths: list) -> dict:
+def load_curves(paths: list, batches: list | None = None) -> dict:
     """{trace_id: dict(meta, rows sorted by k)}; appends the observed outcome as k = n.
 
-    Accepts several JSONL files (e.g. one per GPU shard); duplicate (trace, k) rows keep the first.
+    Accepts several JSONL files (GPU shards and/or independent sampling batches). Rows are keyed by
+    (trace, k, batch): shards of one batch never overlap; rows of different batches for the same
+    prefix are concatenated, and every continuation keeps its batch label. A duplicated
+    (trace, k, batch) row (a resumed run) keeps the first copy. `batches` restricts to those labels.
     """
-    by_trace: dict = defaultdict(list)
-    seen = set()
+    by_key: dict = {}
     for path in paths:
         for line in open(path, encoding="utf-8"):
             try:
@@ -47,22 +49,37 @@ def load_curves(paths: list) -> dict:
                 continue
             if row.get("skipped") or row.get("m", 0) == 0:
                 continue  # prefix could not be rolled out; the trace becomes incomplete and is dropped
-            if (row["trace_id"], row["k"]) in seen:
+            batch = row.get("batch_id") or f"seed{row.get('seed', 'na')}"
+            if batches is not None and batch not in batches:
                 continue
-            seen.add((row["trace_id"], row["k"]))
-            by_trace[row["trace_id"]].append(row)
+            by_key.setdefault((row["trace_id"], row["k"], batch), row)
+    by_trace: dict = defaultdict(lambda: defaultdict(dict))
+    for (tid, k, batch), row in by_key.items():
+        by_trace[tid][batch][k] = row
     curves = {}
-    for tid, rows in by_trace.items():
-        rows = sorted(rows, key=lambda r: r["k"])
-        n = rows[0]["n_steps"]
-        ks = [r["k"] for r in rows]
-        if ks != list(range(n)):  # incomplete trace (interrupted run): skip
+    for tid, per_batch in by_trace.items():
+        complete = {b: rows for b, rows in per_batch.items()
+                    if sorted(rows) == list(range(next(iter(rows.values()))["n_steps"]))}
+        if not complete:  # incomplete trace (interrupted run): skip
             continue
-        correct = [np.asarray(r["correct"], dtype=bool) for r in rows]
-        tokens = np.array([np.mean(r["new_tokens"]) for r in rows] + [0.0])
-        observed = bool(rows[0]["final_correct"])
-        curves[tid] = {"meta": rows[0], "correct": correct, "observed": observed, "tokens": tokens,
-                       "backend": rows[0].get("backend", "?")}
+        names = sorted(complete)
+        first = complete[names[0]]
+        n = first[0]["n_steps"]
+        correct, labels, tokens = [], [], []
+        for k in range(n):
+            c, lab, tk = [], [], []
+            for b in names:
+                r = complete[b][k]
+                c += list(r["correct"])
+                lab += [b] * len(r["correct"])
+                tk += list(r["new_tokens"])
+            correct.append(np.asarray(c, dtype=bool))
+            labels.append(np.asarray(lab))
+            tokens.append(np.mean(tk))
+        curves[tid] = {"meta": first[0], "correct": correct, "batch": labels,
+                       "observed": bool(first[0]["final_correct"]),
+                       "tokens": np.array(tokens + [0.0]), "backend": first[0].get("backend", "?"),
+                       "batches": names}
     return curves
 
 
@@ -95,13 +112,14 @@ def main() -> None:
     ap.add_argument("--deltas", type=float, nargs="*", default=[0.0625, 0.125, 0.25])
     ap.add_argument("--primary-delta", type=float, default=0.125)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--batches", nargs="*", default=None, help="use only these batch labels (default: all)")
     ap.add_argument("--n-splits", type=int, default=50,
                     help="random A/B splits of the m continuations; backtracking numbers average over them")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    curves = load_curves([Path(p) for p in args.rollouts])
+    curves = load_curves([Path(p) for p in args.rollouts], args.batches)
     backends = {c["backend"] for c in curves.values()}
     if "mock" in backends:
         print("WARNING: rollouts come from the MOCK backend; numbers are not results.")

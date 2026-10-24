@@ -32,12 +32,20 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.analysis import commitment as cm  # noqa: E402
 
 
-def load_curves(path: Path) -> dict:
-    """{trace_id: dict(meta, rows sorted by k)}; appends the observed outcome as k = n."""
+def load_curves(paths: list) -> dict:
+    """{trace_id: dict(meta, rows sorted by k)}; appends the observed outcome as k = n.
+
+    Accepts several JSONL files (e.g. one per GPU shard); duplicate (trace, k) rows keep the first.
+    """
     by_trace: dict = defaultdict(list)
-    for line in open(path, encoding="utf-8"):
-        row = json.loads(line)
-        by_trace[row["trace_id"]].append(row)
+    seen = set()
+    for path in paths:
+        for line in open(path, encoding="utf-8"):
+            row = json.loads(line)
+            if (row["trace_id"], row["k"]) in seen:
+                continue
+            seen.add((row["trace_id"], row["k"]))
+            by_trace[row["trace_id"]].append(row)
     curves = {}
     for tid, rows in by_trace.items():
         rows = sorted(rows, key=lambda r: r["k"])
@@ -77,7 +85,7 @@ def bootstrap_share(flags: np.ndarray, n_boot: int = 2000, seed: int = 0) -> tup
 
 def main() -> None:
     ap = argparse.ArgumentParser(description="13: commitment analysis")
-    ap.add_argument("--rollouts", required=True)
+    ap.add_argument("--rollouts", required=True, nargs="+")
     ap.add_argument("--out", required=True)
     ap.add_argument("--deltas", type=float, nargs="*", default=[0.0625, 0.125, 0.25])
     ap.add_argument("--primary-delta", type=float, default=0.125)
@@ -86,7 +94,7 @@ def main() -> None:
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    curves = load_curves(Path(args.rollouts))
+    curves = load_curves([Path(p) for p in args.rollouts])
     backends = {c["backend"] for c in curves.values()}
     if "mock" in backends:
         print("WARNING: rollouts come from the MOCK backend; numbers are not results.")

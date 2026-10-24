@@ -118,6 +118,61 @@ def gold_from_correct_traces(traces: list) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def chat_prompt(tok, question: str, prefix_steps: list) -> str:
+    """Chat-formatted prompt followed by the first k steps of the trace (assistant prefill)."""
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": question}]
+    head = tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+    return head + ("\n\n".join(prefix_steps) + "\n\n" if prefix_steps else "")
+
+
+class HFBackend:
+    """Plain transformers sampling: slower than vLLM but runs on any CUDA GPU (e.g. a T4).
+
+    One process per GPU; split the work with --shard / --num-shards.
+    """
+
+    def __init__(self, model: str, dtype: str, seed: int, max_seqs: int):
+        import torch
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+
+        self.torch = torch
+        self.tok = AutoTokenizer.from_pretrained(model)
+        self.tok.padding_side = "left"
+        if self.tok.pad_token is None:
+            self.tok.pad_token = self.tok.eos_token
+        torch_dtype = torch.bfloat16 if dtype == "bfloat16" else torch.float16
+        self.model = AutoModelForCausalLM.from_pretrained(model, torch_dtype=torch_dtype).to("cuda").eval()
+        eos = self.model.generation_config.eos_token_id
+        self.eos = set(eos if isinstance(eos, list) else [eos]) | {self.tok.eos_token_id, self.tok.pad_token_id}
+        self.max_seqs = max_seqs
+        torch.manual_seed(seed)
+
+    def prompt(self, question: str, prefix_steps: list) -> str:
+        return chat_prompt(self.tok, question, prefix_steps)
+
+    def generate(self, prompts: list, m: int, temperature: float, top_p: float, max_tokens: int, seed: int):
+        torch = self.torch
+        torch.manual_seed(seed)
+        per_call = max(1, self.max_seqs // m)
+        results = []
+        for i in range(0, len(prompts), per_call):
+            chunk = prompts[i: i + per_call]
+            enc = self.tok(chunk, return_tensors="pt", padding=True, add_special_tokens=False).to("cuda")
+            with torch.no_grad():
+                out = self.model.generate(**enc, do_sample=True, temperature=temperature, top_p=top_p,
+                                          top_k=0, repetition_penalty=1.0,  # override model defaults
+                                          max_new_tokens=max_tokens, num_return_sequences=m,
+                                          pad_token_id=self.tok.pad_token_id)
+            gen = out[:, enc["input_ids"].shape[1]:].tolist()
+            for j in range(len(chunk)):
+                samples = []
+                for ids in gen[j * m: (j + 1) * m]:
+                    n = next((t + 1 for t, tid in enumerate(ids) if tid in self.eos), len(ids))
+                    samples.append((self.tok.decode(ids[:n], skip_special_tokens=True), n))
+                results.append(samples)
+        return results
+
+
 class VLLMBackend:
     def __init__(self, model: str, tp: int, dtype: str, max_model_len: int, seed: int, gpu_mem: float):
         from transformers import AutoTokenizer
@@ -128,14 +183,13 @@ class VLLMBackend:
                        max_model_len=max_model_len, gpu_memory_utilization=gpu_mem)
 
     def prompt(self, question: str, prefix_steps: list) -> str:
-        messages = [{"role": "system", "content": SYSTEM_PROMPT}, {"role": "user", "content": question}]
-        head = self.tok.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-        return head + ("\n\n".join(prefix_steps) + "\n\n" if prefix_steps else "")
+        return chat_prompt(self.tok, question, prefix_steps)
 
     def generate(self, prompts: list, m: int, temperature: float, top_p: float, max_tokens: int, seed: int):
         from vllm import SamplingParams
 
-        params = SamplingParams(n=m, temperature=temperature, top_p=top_p, max_tokens=max_tokens, seed=seed)
+        params = SamplingParams(n=m, temperature=temperature, top_p=top_p, top_k=-1, repetition_penalty=1.0,
+                                max_tokens=max_tokens, seed=seed)
         outs = self.llm.generate(prompts, params, use_tqdm=True)
         return [[(c.text, len(c.token_ids)) for c in o.outputs] for o in outs]
 
@@ -188,7 +242,10 @@ def main() -> None:
     ap.add_argument("--gpu-mem", type=float, default=0.90)
     ap.add_argument("--batch", type=int, default=128, help="prompts per generate() call")
     ap.add_argument("--seed", type=int, default=42)
-    ap.add_argument("--backend", choices=["vllm", "mock"], default="vllm")
+    ap.add_argument("--backend", choices=["vllm", "hf", "mock"], default="vllm")
+    ap.add_argument("--hf-max-seqs", type=int, default=128, help="hf backend: sequences per generate() call")
+    ap.add_argument("--shard", type=int, default=0)
+    ap.add_argument("--num-shards", type=int, default=1)
     ap.add_argument("--no-source-gold", action="store_true")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
@@ -242,6 +299,10 @@ def main() -> None:
             row = json.loads(line)
             done.add((row["trace_id"], row["k"]))
     jobs = []  # (trace, k)
+    if args.num_shards > 1:  # deterministic split by trace id, one process per GPU
+        selected = [t for t in selected
+                    if int(hashlib.md5(t["trace_id"].encode()).hexdigest(), 16) % args.num_shards == args.shard]
+        log(f"shard {args.shard}/{args.num_shards}: {len(selected)} traces")
     for t in selected:
         for k in range(len(t["steps"])):  # k = n is the observed trace itself
             if (t["trace_id"], k) not in done:
@@ -251,6 +312,9 @@ def main() -> None:
     if args.backend == "vllm":
         model = args.model or f"Qwen/{args.generator}"
         backend = VLLMBackend(model, args.tp, args.dtype, args.max_model_len, args.seed, args.gpu_mem)
+    elif args.backend == "hf":
+        model = args.model or f"Qwen/{args.generator}"
+        backend = HFBackend(model, args.dtype, args.seed, args.hf_max_seqs)
     else:
         meta = {}
         backend = MockBackend(gold, meta)

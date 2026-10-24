@@ -95,6 +95,8 @@ def main() -> None:
     ap.add_argument("--deltas", type=float, nargs="*", default=[0.0625, 0.125, 0.25])
     ap.add_argument("--primary-delta", type=float, default=0.125)
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--n-splits", type=int, default=50,
+                    help="random A/B splits of the m continuations; backtracking numbers average over them")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
@@ -103,7 +105,9 @@ def main() -> None:
     backends = {c["backend"] for c in curves.values()}
     if "mock" in backends:
         print("WARNING: rollouts come from the MOCK backend; numbers are not results.")
-    rng = np.random.default_rng(args.seed)
+    rng = np.random.default_rng(args.seed)           # event-study placebo anchors
+    split_rng = np.random.default_rng(args.seed + 1)  # A/B splits
+    splits: dict = {}
     per_trace = []
     for tid, c in curves.items():
         meta = c["meta"]
@@ -113,12 +117,7 @@ def main() -> None:
         e = meta["first_error_idx"]
         e = None if e is None or (isinstance(e, float) and np.isnan(e)) else int(e)
         drops = v[:-1] - v[1:]  # drops[k-1] = drop caused by step k
-        # Sample splitting: half A picks the decisive step, half B evaluates resampling from it.
         m = len(c["correct"][0])
-        perm = rng.permutation(m)
-        a_idx, b_idx = np.sort(perm[: m // 2]), np.sort(perm[m // 2:])
-        v_a, v_b = v_from(c["correct"], c["observed"], a_idx), v_from(c["correct"], c["observed"], b_idx)
-        d_a = cm.decisive_step(v_a)
         row = {"trace_id": tid, "group": grp, "subset": meta["subset"], "n": n, "e": e, "m": m,
                "v0": v[0], "decisive_step": cm.decisive_step(v), "max_drop": float(np.max(drops)),
                "observed_correct": c["observed"]}
@@ -130,11 +129,25 @@ def main() -> None:
             if grp == "fatal":
                 row[f"category@{delta}"] = cm.classify_failing_trace(v, e, delta)
         if grp == "fatal":
-            row.update({"v0_a": v_a[0], "bt_restart": v_b[0], "bt_before_error": v_b[e - 1],
-                        "bt_before_decisive": v_b[(d_a or 1) - 1],
+            # Repeated sample splitting: in each split, half A selects the trace (v0_A > delta) and
+            # picks the decisive step; half B scores every backtracking policy. Nothing is chosen
+            # and scored on the same continuations. Averaging over splits removes split luck.
+            sp = {k: np.empty(args.n_splits) for k in ("sel", "restart", "err", "dec", "tok_dec")}
+            for s_i in range(args.n_splits):
+                perm = split_rng.permutation(m)
+                a_idx, b_idx = np.sort(perm[: m // 2]), np.sort(perm[m // 2:])
+                v_a = v_from(c["correct"], c["observed"], a_idx)
+                v_b = v_from(c["correct"], c["observed"], b_idx)
+                d_a = cm.decisive_step(v_a) or 1
+                sp["sel"][s_i] = v_a[0] > args.primary_delta
+                sp["restart"][s_i], sp["err"][s_i], sp["dec"][s_i] = v_b[0], v_b[e - 1], v_b[d_a - 1]
+                sp["tok_dec"][s_i] = c["tokens"][d_a - 1]
+            splits[tid] = sp
+            row.update({"bt_select_rate": sp["sel"].mean(), "bt_restart": sp["restart"].mean(),
+                        "bt_before_error": sp["err"].mean(), "bt_before_decisive": sp["dec"].mean(),
                         "bt_best_prefix_oracle": float(np.max(v[:-1])),
                         "tok_restart": c["tokens"][0], "tok_before_error": c["tokens"][e - 1],
-                        "tok_before_decisive": c["tokens"][(d_a or 1) - 1]})
+                        "tok_before_decisive": sp["tok_dec"].mean()})
         per_trace.append(row)
     df = pd.DataFrame(per_trace)
     df.to_csv(out / "per_trace.csv", index=False)
@@ -174,31 +187,83 @@ def main() -> None:
         floor = bootstrap_share(clean.max_drop.to_numpy(), seed=args.seed)
         lines.append(f"[clean] noise floor, mean of the largest per-trace drop: {floor[0]:+.3f} "
                      f"[{floor[1]:+.3f}, {floor[2]:+.3f}]")
-    summary["first_error_is_decisive"] = {"share": share, "chance": chance, "n": int(len(not_limited))}
+    # Robustness of the chance rate: (a) a position-matched null that gives each trace the relative
+    # error positions of the other traces (keeps any tendency of errors to sit late); (b) dropping
+    # traces whose first error is the last step, where v_n is the observed outcome.
+    rel, nn, dd = (not_limited.e / not_limited.n).to_numpy(), not_limited.n.to_numpy(), not_limited.decisive_step.to_numpy()
+    null = [np.mean(np.clip(np.ceil(np.delete(rel, i) * nn[i]).astype(int), 1, nn[i]) == dd[i])
+            for i in range(len(not_limited))] if len(not_limited) > 1 else [float("nan")]
+    not_last = not_limited[not_limited.e < not_limited.n]
+    share_nl = bootstrap_share((not_last.decisive_step == not_last.e).to_numpy(), seed=args.seed)
+    lines.append(f"[fatal, not capability-limited] position-matched null: {np.mean(null):.3f}; "
+                 f"first error at the last step: {float((not_limited.e == not_limited.n).mean()):.3f}; "
+                 f"decisive share without those (n={len(not_last)}): {share_nl[0]:.3f} [{share_nl[1]:.3f}, {share_nl[2]:.3f}]")
+    summary["first_error_is_decisive"] = {"share": share, "chance": chance, "n": int(len(not_limited)),
+                                          "position_matched_null": float(np.mean(null)),
+                                          "share_error_at_last_step": float((not_limited.e == not_limited.n).mean()),
+                                          "share_excluding_last_step": share_nl, "n_excluding_last_step": int(len(not_last))}
 
-    # 4. Backtracking (sample-split): where to resample from? Traces are selected as "not
-    #    capability-limited" on half A only (v0_a > delta) and every policy is scored on half B, so
-    #    neither the selection nor the choice of the decisive step reuses the evaluation samples.
-    bt_pool = fatal[fatal.v0_a > args.primary_delta] if "v0_a" in fatal else fatal.iloc[0:0]
-    if len(bt_pool):
+    # 4. Backtracking (repeated sample splitting): where to resample from? In every split a trace
+    #    enters the pool only if half A says it is not capability-limited, the decisive step comes
+    #    from half A, and all policies are scored on half B. The statistic is the split-averaged
+    #    pool mean; its CI resamples traces (each with all its splits) with replacement.
+    if splits:
+        ids = [t for t in fatal.trace_id if t in splits]
+        sel = np.stack([splits[t]["sel"] for t in ids])           # (traces, splits)
+        pol = {"bt_restart": np.stack([splits[t]["restart"] for t in ids]),
+               "bt_before_error": np.stack([splits[t]["err"] for t in ids]),
+               "bt_before_decisive": np.stack([splits[t]["dec"] for t in ids]),
+               "bt_best_prefix_oracle": np.repeat(
+                   fatal.set_index("trace_id").loc[ids, "bt_best_prefix_oracle"].to_numpy()[:, None],
+                   args.n_splits, axis=1),
+               "tok_restart": np.repeat(fatal.set_index("trace_id").loc[ids, "tok_restart"].to_numpy()[:, None],
+                                        args.n_splits, axis=1),
+               "tok_before_error": np.repeat(
+                   fatal.set_index("trace_id").loc[ids, "tok_before_error"].to_numpy()[:, None],
+                   args.n_splits, axis=1),
+               "tok_before_decisive": np.stack([splits[t]["tok_dec"] for t in ids])}
+        pol["dec_minus_err"] = pol["bt_before_decisive"] - pol["bt_before_error"]
+        pol["restart_minus_err"] = pol["bt_restart"] - pol["bt_before_error"]
+        pol["dec_minus_restart"] = pol["bt_before_decisive"] - pol["bt_restart"]
+
+        def split_mean(x, w):
+            num, den = (x * w).sum(axis=0), w.sum(axis=0)
+            return float(np.mean(num[den > 0] / den[den > 0]))
+
+        boot_rng = np.random.default_rng(args.seed + 2)
+        boot_idx = [boot_rng.integers(0, len(ids), len(ids)) for _ in range(2000)]
+
+        def est(x):
+            point = split_mean(x, sel)
+            boots = [split_mean(x[i], sel[i]) for i in boot_idx]
+            return point, float(np.quantile(boots, 0.025)), float(np.quantile(boots, 0.975))
+
+        n_pool = float(sel.sum(axis=0).mean())
         bt = {}
         for col in ["bt_restart", "bt_before_error", "bt_before_decisive", "bt_best_prefix_oracle"]:
-            bt[col] = bootstrap_share(bt_pool[col].to_numpy(), seed=args.seed)
-            lines.append(f"[backtrack, fatal, v0 (half A) > delta, n={len(bt_pool)}] {col:<24} success "
-                         f"{bt[col][0]:.3f} [{bt[col][1]:.3f}, {bt[col][2]:.3f}]")
-        d = bootstrap_share((bt_pool.bt_before_decisive - bt_pool.bt_before_error).to_numpy(), seed=args.seed)
-        r = bootstrap_share((bt_pool.bt_restart - bt_pool.bt_before_error).to_numpy(), seed=args.seed)
+            bt[col] = est(pol[col])
+            lines.append(f"[backtrack, fatal, v0_A > delta, mean pool {n_pool:.1f}, {args.n_splits} splits] {col:<24} "
+                         f"success {bt[col][0]:.3f} [{bt[col][1]:.3f}, {bt[col][2]:.3f}]")
+        d, r, dr = est(pol["dec_minus_err"]), est(pol["restart_minus_err"]), est(pol["dec_minus_restart"])
         lines.append(f"[backtrack] decisive-step minus first-error: {d[0]:+.3f} [{d[1]:+.3f}, {d[2]:+.3f}]")
         lines.append(f"[backtrack] restart minus first-error: {r[0]:+.3f} [{r[1]:+.3f}, {r[2]:+.3f}]")
-        for col in ["tok_restart", "tok_before_error", "tok_before_decisive"]:
-            lines.append(f"[backtrack] mean continuation tokens {col:<20} {bt_pool[col].mean():.0f}")
+        lines.append(f"[backtrack] decisive-step minus restart: {dr[0]:+.3f} [{dr[1]:+.3f}, {dr[2]:+.3f}]")
+        tok = {col: split_mean(pol[col], sel) for col in ["tok_restart", "tok_before_error", "tok_before_decisive"]}
+        for col, val in tok.items():
+            lines.append(f"[backtrack] mean continuation tokens {col:<20} {val:.0f}")
         summary["backtrack"] = bt
-        summary["backtrack_n"] = int(len(bt_pool))
+        summary["backtrack_n"] = n_pool
+        summary["backtrack_n_splits"] = args.n_splits
         summary["backtrack_decisive_minus_error"] = d
         summary["backtrack_restart_minus_error"] = r
+        summary["backtrack_decisive_minus_restart"] = dr
+        summary["backtrack_tokens"] = tok
         # Robustness: all fatal traces, no selection at all.
-        d_all = bootstrap_share((fatal.bt_before_decisive - fatal.bt_before_error).to_numpy(), seed=args.seed)
-        lines.append(f"[backtrack, all fatal, n={len(fatal)}] decisive-step minus first-error: "
+        ones = np.ones_like(sel)
+        d_all = (split_mean(pol["dec_minus_err"], ones),
+                 *np.quantile([split_mean(pol["dec_minus_err"][i], ones) for i in boot_idx], [0.025, 0.975]))
+        d_all = tuple(float(x) for x in d_all)
+        lines.append(f"[backtrack, all fatal, n={len(ids)}] decisive-step minus first-error: "
                      f"{d_all[0]:+.3f} [{d_all[1]:+.3f}, {d_all[2]:+.3f}]")
         summary["backtrack_all_fatal_decisive_minus_error"] = d_all
 

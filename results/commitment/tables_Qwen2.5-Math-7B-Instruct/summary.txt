@@ -1,0 +1,27 @@
+rollouts: ['results/commitment/Qwen2.5-Math-7B-Instruct_s0.jsonl']
+backend(s): ['vllm']
+traces: 314 ({'fatal': 207, 'clean': 60, 'recovered': 47})
+[fatal, delta=0.125] capability-limited   0.657 [0.594, 0.725]
+[fatal, delta=0.125] latent-commitment    0.063 [0.034, 0.097]
+[fatal, delta=0.125] commits-at-error     0.179 [0.126, 0.232]
+[fatal, delta=0.125] recoverable-error    0.101 [0.063, 0.140]
+[fatal, delta=0.125] never-commits        0.000 [0.000, 0.000]
+[fatal, not capability-limited, n=71] first error is the decisive step: 0.423 [0.310, 0.535] (chance if uniform: 0.153)
+[fatal] mean drop in success prob at the first error: +0.109 [+0.076, +0.145]
+[recovered] mean drop in success prob at the first error: -0.215 [-0.298, -0.137]
+[clean] noise floor, mean of the largest per-trace drop: +0.078 [+0.047, +0.110]
+[fatal, not capability-limited] position-matched null: 0.159; first error at the last step: 0.056; decisive share without those (n=67): 0.418 [0.299, 0.537]
+[backtrack, fatal, v0_A > delta, mean pool 75.9, 50 splits] bt_restart               success 0.470 [0.400, 0.538]
+[backtrack, fatal, v0_A > delta, mean pool 75.9, 50 splits] bt_before_error          success 0.402 [0.336, 0.471]
+[backtrack, fatal, v0_A > delta, mean pool 75.9, 50 splits] bt_before_decisive       success 0.511 [0.442, 0.573]
+[backtrack, fatal, v0_A > delta, mean pool 75.9, 50 splits] bt_best_prefix_oracle    success 0.622 [0.559, 0.682]
+[backtrack] decisive-step minus first-error: +0.108 [+0.051, +0.165]
+[backtrack] restart minus first-error: +0.068 [+0.007, +0.133]
+[backtrack] decisive-step minus restart: +0.040 [-0.008, +0.089]
+[backtrack] mean continuation tokens tok_restart          650
+[backtrack] mean continuation tokens tok_before_error     477
+[backtrack] mean continuation tokens tok_before_decisive  463
+[backtrack, all fatal, n=207] decisive-step minus first-error: +0.055 [+0.030, +0.082]
+[event study, fatal] v at r=-1..+1 relative to the error: r=-1: 0.175, r=0: 0.066, r=1: 0.044
+[event study, recovered] v at r=-1..+1 relative to the error: r=-1: 0.374, r=0: 0.589, r=1: 0.670
+[event study, clean] v at r=-1..+1 relative to the error: r=-1: 0.867, r=0: 0.922, r=1: 0.952

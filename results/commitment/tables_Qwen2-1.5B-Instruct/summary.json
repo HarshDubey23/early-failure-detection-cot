@@ -1,0 +1,77 @@
+{
+  "n_traces": 88,
+  "groups": {
+    "fatal": 67,
+    "clean": 15,
+    "recovered": 6
+  },
+  "backend": [
+    "vllm"
+  ],
+  "first_error_is_decisive": {
+    "share": [
+      0.34375,
+      0.1875,
+      0.53125
+    ],
+    "chance": 0.23763753607503607,
+    "n": 32,
+    "position_matched_null": 0.21370967741935482,
+    "share_error_at_last_step": 0.15625,
+    "share_excluding_last_step": [
+      0.2962962962962963,
+      0.14814814814814814,
+      0.48148148148148145
+    ],
+    "n_excluding_last_step": 27
+  },
+  "backtrack": {
+    "bt_restart": [
+      0.6209847579337916,
+      0.5112554217696201,
+      0.7218350692275771
+    ],
+    "bt_before_error": [
+      0.40583225064264417,
+      0.28056461064458355,
+      0.5330575345233965
+    ],
+    "bt_before_decisive": [
+      0.6013874609142094,
+      0.5018583696974092,
+      0.6950164433006988
+    ],
+    "bt_best_prefix_oracle": [
+      0.6878255252856077,
+      0.5885977055328145,
+      0.7760761872256181
+    ]
+  },
+  "backtrack_n": 28.48,
+  "backtrack_n_splits": 50,
+  "backtrack_decisive_minus_error": [
+    0.19555521027156528,
+    0.08227613389388905,
+    0.3161326499176391
+  ],
+  "backtrack_restart_minus_error": [
+    0.21515250729114746,
+    0.09521151069784804,
+    0.33855127588120565
+  ],
+  "backtrack_decisive_minus_restart": [
+    -0.019597297019582197,
+    -0.05743217772557764,
+    0.02045514142328127
+  ],
+  "backtrack_tokens": {
+    "tok_restart": 202.77465006749648,
+    "tok_before_error": 171.5951627017678,
+    "tok_before_decisive": 172.73047668112054
+  },
+  "backtrack_all_fatal_decisive_minus_error": [
+    0.09615671641791046,
+    0.045372201492537324,
+    0.1543320895522388
+  ]
+}

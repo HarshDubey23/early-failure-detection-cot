@@ -1,0 +1,7 @@
+2026-10-24 08:13:06 generator=Qwen2-1.5B-Instruct: selected 88 traces with gold (0 skipped for missing gold); gold sources: ['HuggingFaceH4/MATH-500', 'gsm8k', 'hendrycks_math', 'olympiadbench', 'omnimath', 'processbench-correct-trace']
+2026-10-24 08:13:06 shard 1/2: 51 traces
+2026-10-24 08:13:06 261 prefixes to roll out (0 already done), m=16
+2026-10-24 08:18:38   128/261 prefixes, 270s
+2026-10-24 08:25:15   256/261 prefixes, 667s
+2026-10-24 08:25:21   261/261 prefixes, 673s
+2026-10-24 08:25:21 done

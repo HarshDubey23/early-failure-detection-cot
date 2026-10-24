@@ -18,7 +18,6 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
-import os
 import random
 import sys
 import time
@@ -139,7 +138,7 @@ def main() -> None:
             fh.flush()
             log(f"  {min(start + 256, len(jobs))}/{len(jobs)} prefixes, {time.time() - t0:.0f}s")
     log("done")
-    os._exit(0)  # vLLM worker processes can keep the interpreter alive after the run
+    s12.hard_exit(0)  # vLLM worker processes can keep the interpreter alive after the run
 
 
 if __name__ == "__main__":

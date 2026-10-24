@@ -48,6 +48,18 @@ MODEL_IDS = {  # ProcessBench generator -> open weights used for on-policy conti
 }
 
 
+def hard_exit(code: int = 0) -> None:
+    """Exit without waiting for vLLM's worker processes, after killing them so they free the GPU."""
+    try:
+        import psutil
+
+        for child in psutil.Process().children(recursive=True):
+            child.kill()
+    except Exception:  # noqa: BLE001
+        pass
+    os._exit(code)
+
+
 def default_model(generator: str) -> str:
     return MODEL_IDS.get(generator, f"Qwen/{generator}")
 
@@ -404,7 +416,7 @@ def main() -> None:
             log(f"  {min(start + args.batch, len(jobs))}/{len(jobs)} prefixes, {time.time() - t0:.0f}s")
     log("done")
     if args.backend == "vllm":
-        os._exit(0)  # vLLM workers kept the 7B process alive for hours after "done" in Run B
+        hard_exit(0)  # vLLM workers kept the 7B process alive for hours after "done" in Run B
 
 
 if __name__ == "__main__":

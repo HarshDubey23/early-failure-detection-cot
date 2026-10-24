@@ -18,8 +18,20 @@ export TOKENIZERS_PARALLELISM=false
 log()  { echo "[$(date '+%F %T')] $*" | tee -a "$OUT/run_c.log"; }
 left() { echo $(( LIMIT - ($(date +%s) - START) )); }
 pack() { tar -czf "$ARCHIVE" "$OUT" 2>/dev/null; log "packed $(du -h "$ARCHIVE" | cut -f1); disk free: $(df -h --output=avail / | tail -1)"; }
+gpu_clean() {  # kill anything still holding GPU memory (e.g. orphaned vLLM engine processes)
+  for p in $(nvidia-smi --query-compute-apps=pid --format=csv,noheader 2>/dev/null); do kill -9 "$p" 2>/dev/null || true; done
+  sleep 5
+  log "GPU memory in use: $(nvidia-smi --query-gpu=memory.used --format=csv,noheader | tr '\n' ' ')"
+}
+want() {  # PARTS="probes rep llama" runs only parts whose name starts with one of the words
+  [ -z "${PARTS:-}" ] && return 0
+  for w in $PARTS; do case "$1" in "$w"*) return 0;; esac; done
+  return 1
+}
 part() {  # part NAME MAX_SECONDS COMMAND...
   local name=$1 budget=$2; shift 2
+  if ! want "$name"; then log "SKIP $name (not in PARTS)"; return; fi
+  gpu_clean
   local b=$(( $(left) - 600 )); [ "$b" -gt "$budget" ] && b=$budget
   if [ "$b" -lt 300 ]; then log "SKIP $name: no time left"; return; fi
   log "START $name (budget ${b}s)"

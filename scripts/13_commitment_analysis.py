@@ -186,6 +186,47 @@ def main() -> None:
         summary["backtrack"] = bt
         summary["backtrack_decisive_minus_error"] = d
 
+    # 5. Event study: success probability aligned at the annotated first error (r = k - e).
+    #    r = -1 is "just before the error", r = 0 "just after it". Clean traces are aligned at a
+    #    uniformly drawn step as a placebo, so a drop that is only an artefact of time shows there too.
+    ev = []
+    for tid, c in curves.items():
+        meta = c["meta"]
+        grp = group_of(meta)
+        v = v_from(c["correct"], c["observed"])
+        n = meta["n_steps"]
+        e = meta["first_error_idx"]
+        e = None if e is None or (isinstance(e, float) and np.isnan(e)) else int(e)
+        anchor = e if e is not None else int(rng.integers(1, n + 1))
+        for r in range(-3, 4):
+            k = anchor + r
+            if 0 <= k <= n:
+                ev.append({"trace_id": tid, "group": grp, "subset": meta["subset"], "r": r, "v": v[k]})
+    ev = pd.DataFrame(ev)
+    ev_rows = []
+    for (grp, r), sub in ev.groupby(["group", "r"]):
+        mean, lo, hi = bootstrap_share(sub.v.to_numpy(), seed=args.seed)
+        ev_rows.append({"group": grp, "r": r, "mean_v": mean, "ci_lo": lo, "ci_hi": hi, "n": len(sub)})
+    ev_table = pd.DataFrame(ev_rows)
+    ev_table.to_csv(out / "event_study.csv", index=False)
+    for grp in ["fatal", "recovered", "clean"]:
+        sub = ev_table[ev_table.group == grp].set_index("r")
+        if len(sub):
+            lines.append(f"[event study, {grp}] v at r=-1..+1 relative to the error: "
+                         + ", ".join(f"r={r}: {sub.loc[r, 'mean_v']:.3f}" for r in (-1, 0, 1) if r in sub.index))
+
+    # 6. Per-tier view of the headline quantities.
+    tier_rows = []
+    for tier, sub in df.groupby("subset"):
+        f = sub[sub.group == "fatal"]
+        nl = f[f.v0 > args.primary_delta]
+        tier_rows.append({"tier": tier, "n_traces": len(sub), "n_fatal": len(f),
+                          "mean_v0_fatal": float(f.v0.mean()) if len(f) else np.nan,
+                          "capability_limited_share": float((f.v0 <= args.primary_delta).mean()) if len(f) else np.nan,
+                          "first_error_decisive_share": float((nl.decisive_step == nl.e).mean()) if len(nl) else np.nan,
+                          "mean_drop_at_error_fatal": float(f.drop_at_error.mean()) if len(f) else np.nan})
+    pd.DataFrame(tier_rows).to_csv(out / "per_tier.csv", index=False)
+
     (out / "summary.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
     (out / "summary.json").write_text(json.dumps(summary, indent=2, default=float), encoding="utf-8")
     print("\n".join(lines))

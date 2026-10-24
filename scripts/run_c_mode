@@ -1,0 +1,3 @@
+# read by scripts/kaggle_run_c.sh
+SMOKE=1
+PARTS="setup probes rep llama"

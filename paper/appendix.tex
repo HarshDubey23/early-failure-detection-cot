@@ -1,0 +1,25 @@
+\appendix
+\section{Why restarting is a strong baseline}\label{app:prop}
+Let a trace $s_1,\dots,s_n$ be sampled from policy $M$ for question $q$, let $S$ be the event that
+its final answer is correct, $\mathcal{F}_k=\sigma(s_{1:k})$, and $v_k=P_M(S\mid q,\mathcal{F}_k)$.
+Resampling a fresh continuation of $s_{1:k}$ from $M$ succeeds with probability $v_k$.
+
+\textbf{Proposition.} For every stopping time $\tau\le n$ of $(\mathcal{F}_k)$,
+$\mathbb{E}[v_\tau\mid \neg S]\le v_0$ (whenever $v_0<1$).
+
+\emph{Proof.} $(v_k)$ is a bounded martingale and $g(x)=x(1-x)$ is concave, so $g(v_k)$ is a
+bounded supermartingale; by optional stopping $\mathbb{E}[g(v_\tau)]\le g(v_0)$. By the tower
+property, $\mathbb{E}[v_\tau\mathbf{1}_{\neg S}]=\mathbb{E}[v_\tau(1-v_\tau)]=\mathbb{E}[g(v_\tau)]$.
+Dividing by $P(\neg S)=1-v_0$ gives $\mathbb{E}[v_\tau\mid\neg S]\le v_0(1-v_0)/(1-v_0)=v_0$.\hfill$\square$
+
+\textbf{Consequences.} (i) Any backtracking rule that picks its restart point by reading the failed
+trace only up to that point (a fixed depth, a confidence threshold crossed so far, a verifier that
+flags step $k$ using $s_{1:k}$ and resamples from $k$) cannot, per attempt and in expectation over
+failed on-policy traces, beat restarting from scratch. (ii) Rules that look ahead can: resampling
+from \emph{before} a flagged step uses step $k+1$, and the decisive step uses rollouts. The
+proposition therefore sets the bar a backtracking target must clear, and the paper measures how far
+human first errors and verifier signals clear it. (iii) The proposition is per attempt. Under a
+fixed compute budget a later restart point buys more attempts, because continuations are shorter,
+which is why Section~\ref{sec:policies} compares policies at a matched end-to-end budget.
+(iv) ProcessBench traces were not necessarily sampled at the temperature used for $v_k$, so the
+proposition holds only approximately for them; the empirical comparisons do not rely on it.

@@ -16,6 +16,12 @@
     ],
     "chance": 0.18426524455936222,
     "n": 34,
+    "minus_null": [
+      0.35828877005347587,
+      0.19964349376114082,
+      0.5170008912655967
+    ],
+    "minus_null_p": 0.0,
     "position_matched_null": 0.1711229946524064,
     "share_error_at_last_step": 0.029411764705882353,
     "share_excluding_last_step": [
@@ -69,6 +75,30 @@
     "tok_before_error": 253.42514690249928,
     "tok_before_decisive": 307.50683635473194
   },
+  "backtrack_tests": {
+    "dec_minus_err": {
+      "ci90": [
+        0.06749842550287424,
+        0.1731774785748495
+      ],
+      "p": 0.0
+    },
+    "restart_minus_err": {
+      "ci90": [
+        0.04013248538680928,
+        0.17458891569834456
+      ],
+      "p": 0.006
+    },
+    "dec_minus_restart": {
+      "ci90": [
+        -0.027365282858430217,
+        0.05200968569358832
+      ],
+      "p": 0.66
+    }
+  },
+  "backtrack_tost_0.05": "inconclusive",
   "backtrack_all_fatal_decisive_minus_error": [
     0.0867156862745098,
     0.04509191176470588,

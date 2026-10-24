@@ -28,6 +28,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import random
 import re
 import sys
@@ -39,6 +40,28 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.analysis.commitment import answers_match, last_boxed  # noqa: E402
 
 SYSTEM_PROMPT = "Please reason step by step, and put your final answer within \\boxed{}."
+
+
+MODEL_IDS = {  # ProcessBench generator -> open weights used for on-policy continuations
+    "Llama-3.1-8B-Instruct": "unsloth/Meta-Llama-3.1-8B-Instruct",  # ungated mirror of meta-llama/Llama-3.1-8B-Instruct
+    "Meta-Llama-3-8B-Instruct": "unsloth/llama-3-8b-Instruct",
+}
+
+
+def hard_exit(code: int = 0) -> None:
+    """Exit without waiting for vLLM's worker processes, after killing them so they free the GPU."""
+    try:
+        import psutil
+
+        for child in psutil.Process().children(recursive=True):
+            child.kill()
+    except Exception:  # noqa: BLE001
+        pass
+    os._exit(code)
+
+
+def default_model(generator: str) -> str:
+    return MODEL_IDS.get(generator, f"Qwen/{generator}")
 
 
 def norm_problem(text: str) -> str:
@@ -150,7 +173,8 @@ class HFBackend:
     def prompt(self, question: str, prefix_steps: list) -> str:
         return chat_prompt(self.tok, question, prefix_steps)
 
-    def generate(self, prompts: list, m: int, temperature: float, top_p: float, max_tokens: int, seed: int):
+    def generate(self, prompts: list, m: int, temperature: float, top_p: float, max_tokens: int, seed,
+                 seeds: list | None = None):
         torch = self.torch
         torch.manual_seed(seed)
         per_call = max(1, self.max_seqs // m)
@@ -188,22 +212,27 @@ class VLLMBackend:
     def prompt(self, question: str, prefix_steps: list) -> str:
         return chat_prompt(self.tok, question, prefix_steps)
 
-    def generate(self, prompts: list, m: int, temperature: float, top_p: float, max_tokens: int, seed: int):
+    def generate(self, prompts: list, m: int, temperature: float, top_p: float, max_tokens: int, seed,
+                 seeds: list | None = None):
         from vllm import SamplingParams
 
         # Fit every request inside the context window: shorten max_tokens when the prefix is long,
         # and skip (return None for) prompts that leave fewer than 256 tokens to generate.
-        keep, params = [], []
+        keep, params, inputs = [], [], []
         for i, p in enumerate(prompts):
-            room = self.max_model_len - len(self.tok(p, add_special_tokens=False)["input_ids"])
+            # Token ids, not text: the chat template already contains any BOS token, and passing text
+            # would let vLLM add a second one (matters for Llama, a no-op for Qwen).
+            ids = self.tok(p, add_special_tokens=False)["input_ids"]
+            room = self.max_model_len - len(ids)
             if room >= 256:
                 keep.append(i)
+                inputs.append({"prompt_token_ids": ids})
                 params.append(SamplingParams(n=m, temperature=temperature, top_p=top_p, top_k=-1,
                                              repetition_penalty=1.0, max_tokens=min(max_tokens, room),
-                                             seed=seed + i))
+                                             seed=(seeds[i] if seeds is not None else seed + i)))
         results = [None] * len(prompts)
         if keep:
-            outs = self.llm.generate([prompts[i] for i in keep], params, use_tqdm=True)
+            outs = self.llm.generate(inputs, params, use_tqdm=True)
             for i, o in zip(keep, outs):
                 results[i] = [(c.text, len(c.token_ids)) for c in o.outputs]
         return results
@@ -223,7 +252,7 @@ class MockBackend:
         key = f"{question}\x00{len(prefix_steps)}"
         return key
 
-    def generate(self, prompts, m, temperature, top_p, max_tokens, seed):
+    def generate(self, prompts, m, temperature, top_p, max_tokens, seed, seeds=None):
         out = []
         for p in prompts:
             question, k = p.split("\x00")
@@ -258,6 +287,12 @@ def main() -> None:
     ap.add_argument("--gpu-mem", type=float, default=0.90)
     ap.add_argument("--batch", type=int, default=128, help="prompts per generate() call")
     ap.add_argument("--seed", type=int, default=42)
+    ap.add_argument("--select-seed", type=int, default=None,
+                    help="seed for trace selection/shuffling (default: --seed); keep fixed across batches")
+    ap.add_argument("--seed-mode", choices=["offset", "hash"], default="offset",
+                    help="offset: seed+position (Runs A/B); hash: seed from (trace, k, seed), so batches "
+                         "with different --seed never share a sampling seed for the same prompt")
+    ap.add_argument("--batch-id", default=None, help="label stored on every row (independent sampling batch)")
     ap.add_argument("--backend", choices=["vllm", "hf", "mock"], default="vllm")
     ap.add_argument("--hf-max-seqs", type=int, default=128, help="hf backend: sequences per generate() call")
     ap.add_argument("--shard", type=int, default=0)
@@ -290,7 +325,7 @@ def main() -> None:
             return "clean"
         return "recovered" if t["final_correct"] else "fatal"
 
-    rng = random.Random(args.seed)
+    rng = random.Random(args.seed if args.select_seed is None else args.select_seed)
     selected, missing_gold = [], 0
     for grp in args.groups:
         pool = [t for t in traces if t["generator"] == args.generator and t["subset"] in args.tiers
@@ -331,10 +366,10 @@ def main() -> None:
     log(f"{len(jobs)} prefixes to roll out ({len(done)} already done), m={args.m}")
 
     if args.backend == "vllm":
-        model = args.model or f"Qwen/{args.generator}"
+        model = args.model or default_model(args.generator)
         backend = VLLMBackend(model, args.tp, args.dtype, args.max_model_len, args.seed, args.gpu_mem)
     elif args.backend == "hf":
-        model = args.model or f"Qwen/{args.generator}"
+        model = args.model or default_model(args.generator)
         backend = HFBackend(model, args.dtype, args.seed, args.hf_max_seqs)
     else:
         meta = {}
@@ -349,8 +384,12 @@ def main() -> None:
         for start in range(0, len(jobs), args.batch):
             batch = jobs[start: start + args.batch]
             prompts = [backend.prompt(t["question"], t["steps"][:k]) for t, k in batch]
+            seeds = None
+            if args.seed_mode == "hash":
+                seeds = [int(hashlib.sha256(f"{t['trace_id']}|{k}|{args.seed}".encode()).hexdigest()[:8], 16)
+                         for t, k in batch]
             results = backend.generate(prompts, args.m, args.temperature, args.top_p, args.max_tokens,
-                                       args.seed + start)
+                                       args.seed + start, seeds=seeds)
             for (t, k), samples in zip(batch, results):
                 g, src = gold[norm_problem(t["question"])]
                 if samples is None:  # prompt too long for the context window: recorded, excluded later
@@ -370,11 +409,14 @@ def main() -> None:
                     "n_boxed": int(sum(a is not None for a in answers)),
                     "new_tokens": [n for _, n in samples], "answers": answers,
                     "model": model, "backend": args.backend, "temperature": args.temperature,
-                    "top_p": args.top_p, "seed": args.seed,
+                    "top_p": args.top_p, "seed": args.seed, "seed_mode": args.seed_mode,
+                    "batch_id": args.batch_id or f"seed{args.seed}",
                 }, ensure_ascii=False) + "\n")
             fh.flush()
             log(f"  {min(start + args.batch, len(jobs))}/{len(jobs)} prefixes, {time.time() - t0:.0f}s")
     log("done")
+    if args.backend == "vllm":
+        hard_exit(0)  # vLLM workers kept the 7B process alive for hours after "done" in Run B
 
 
 if __name__ == "__main__":

@@ -12,6 +12,8 @@ mkdir -p "$OUT"
 START=$(date +%s)
 LIMIT=${LIMIT:-41400}            # 11.5 h for the whole run; Kaggle stops sessions at 12 h
 SMOKE=${SMOKE:-0}
+# scripts/run_c_mode (if present) overrides SMOKE / PARTS, so the notebook cell never has to change
+[ -f scripts/run_c_mode ] && . scripts/run_c_mode
 ARCHIVE=/kaggle/working/run_c_results.tar.gz
 export TOKENIZERS_PARALLELISM=false
 

@@ -29,7 +29,9 @@ case "$MODE" in
     ;;
   vllm)
     pip install -q vllm 2>&1 | tail -n 3
-    python -c "import vllm, torch, transformers; print('vllm', vllm.__version__, 'torch', torch.__version__, 'transformers', transformers.__version__)"
+    # vLLM brings its own torch; Kaggle's torchaudio is built for the old one and breaks imports.
+    pip uninstall -y -q torchaudio || true
+    python -c "import vllm, torch, transformers; print('vllm', vllm.__version__, 'torch', torch.__version__, 'cuda', torch.version.cuda, torch.cuda.is_available(), 'transformers', transformers.__version__)"
     ;;
   smoke)
     rm -f "$OUT/smoke_${GEN}.jsonl"

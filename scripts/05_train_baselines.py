@@ -57,7 +57,13 @@ def main() -> None:
                     lr=cfg.probes.gru_lr, **common)),
             ]
         for name, run in runs:
-            curve, scores_by_fraction = run()
+            try:
+                curve, scores_by_fraction = run()
+            except RuntimeError as exc:  # optional dependency (torch) missing
+                if name != "surface-GRU":
+                    raise
+                log.warning("  %s NOT_RUN: %s", name, exc)
+                continue
             curves.append(curve)
             if primary:
                 scores_primary[name] = scores_by_fraction

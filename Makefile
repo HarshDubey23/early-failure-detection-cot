@@ -11,7 +11,17 @@ PAPER_DIR ?= ../04_Paper_Overleaf_Package/paper
 TECTONIC ?= tectonic
 
 .PHONY: setup smoke data preprocess eda baselines activations probes analysis \
-        intervention report all test lint diagrams paper guide
+        intervention report all test lint diagrams paper guide \
+        decomposition commitment-mock commitment
+
+# Counterfactual commitment (stages 12-13). GPU for 12; override on the command line.
+GENERATOR ?= Qwen2.5-1.5B-Instruct
+MODEL ?= Qwen/$(GENERATOR)
+M ?= 16
+TP ?= 1
+DTYPE ?= auto
+ROLLOUTS ?= results/commitment/$(GENERATOR).jsonl
+EXTRA ?=
 
 setup:
 	$(PY) -m pip install -r requirements.txt
@@ -55,6 +65,22 @@ intervention:  # E8 -> F11, F12
 
 report:
 	$(PY) scripts/10_build_report.py --config $(CONFIG)
+
+decomposition:  # E9 error-vs-choke-point decomposition + difficulty controls (CPU) -> decomp_*, F16, F17
+	$(PY) scripts/11_choke_point_decomposition.py --config $(CONFIG)
+	$(PY) scripts/11b_decomposition_figures.py --config $(CONFIG)
+
+commitment-mock:  # pipeline check on CPU with a fake generator; writes NO results
+	$(PY) scripts/12_counterfactual_rollouts.py --generator $(GENERATOR) --backend mock --no-source-gold \
+	    --m $(M) --out results/smoke/commitment_mock.jsonl
+	$(PY) scripts/13_commitment_analysis.py --rollouts results/smoke/commitment_mock.jsonl \
+	    --out results/smoke/commitment_mock_tables
+
+commitment:  # E10 counterfactual rollouts (GPU, vLLM) + analysis; see docs/COMMITMENT_EXPERIMENT.md
+	$(PY) scripts/12_counterfactual_rollouts.py --generator $(GENERATOR) --model $(MODEL) \
+	    --m $(M) --tp $(TP) --dtype $(DTYPE) --out $(ROLLOUTS) $(EXTRA)
+	$(PY) scripts/13_commitment_analysis.py --rollouts $(ROLLOUTS) \
+	    --out results/commitment/tables_$(GENERATOR)
 
 all: data preprocess eda baselines activations probes analysis intervention report
 

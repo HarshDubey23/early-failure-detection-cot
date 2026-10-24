@@ -1,0 +1,69 @@
+{
+  "counts": {
+    "fatal": 1700,
+    "clean": 1179,
+    "recovered": 521
+  },
+  "A": {
+    "mann_whitney": {
+      "rho": {
+        "U": 459002.5,
+        "p_value": 0.20654161901301327,
+        "rank_biserial_fatal_vs_recovered": 0.03647397538669983,
+        "median_fatal": 0.5,
+        "median_recovered": 0.47058823529411764,
+        "mean_fatal": 0.5044929327833083,
+        "mean_recovered": 0.4871413568855291
+      },
+      "e": {
+        "U": 437690.5,
+        "p_value": 0.6824826519925262,
+        "rank_biserial_fatal_vs_recovered": -0.011650671785028766,
+        "median_fatal": 3.0,
+        "median_recovered": 3.0,
+        "mean_fatal": 3.778235294117647,
+        "mean_recovered": 3.81957773512476
+      },
+      "steps_after_error": {
+        "U": 416495.0,
+        "p_value": 0.03785417838852271,
+        "rank_biserial_fatal_vs_recovered": -0.05951225019758388,
+        "median_fatal": 3.0,
+        "median_recovered": 4.0,
+        "mean_fatal": 4.100588235294118,
+        "mean_recovered": 4.18042226487524
+      },
+      "n_steps": {
+        "U": 417945.0,
+        "p_value": 0.0505090932586789,
+        "rank_biserial_fatal_vs_recovered": -0.056238003838771644,
+        "median_fatal": 7.0,
+        "median_recovered": 7.0,
+        "mean_fatal": 7.878823529411765,
+        "mean_recovered": 8.0
+      }
+    },
+    "adjusted_logit": {
+      "rho": {
+        "coef": 0.5334522598040887,
+        "ci_lo": -0.4142909903782798,
+        "ci_hi": 1.3634076843018268,
+        "odds_ratio": 1.7048076000184404
+      },
+      "log1p_steps_after": {
+        "coef": 0.22464544847467977,
+        "ci_lo": -0.10375965553784185,
+        "ci_hi": 0.5710488493525439,
+        "odds_ratio": 1.2518787819660742
+      }
+    },
+    "n_fatal": 1700,
+    "n_recovered": 521
+  },
+  "E": {
+    "fisher_odds_recovered_vs_fatal": 1.2499910323552623,
+    "fisher_p": 0.08976169716040092,
+    "recovered_with_marker_after_error": 97,
+    "n_recovered": 521
+  }
+}

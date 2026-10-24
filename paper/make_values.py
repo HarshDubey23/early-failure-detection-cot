@@ -85,7 +85,11 @@ put("lenFixA", lt.loc[0.25, "lexical_minus_length_fixed"], "{:+.3f}"); put("lenF
 
 # ---- stage 13 (GPU) --------------------------------------------------------
 KEYS = {"Qwen2.5-1.5B-Instruct": "QwenSmall", "Qwen2-1.5B-Instruct": "QwenTwo",
-        "Qwen2.5-Math-7B-Instruct": "QwenMath", "Qwen2.5-7B-Instruct": "QwenSeven"}
+        "Qwen2.5-Math-7B-Instruct": "QwenMath", "Qwen2.5-7B-Instruct": "QwenSeven", "Llama-3.1-8B-Instruct": "Llama",
+        # variants: new independent batches only, all batches, pooled new batches, threshold sensitivity
+        "Qwen2.5-1.5B-Instruct_newbatches": "QwenSmallNew", "Qwen2-1.5B-Instruct_newbatches": "QwenTwoNew",
+        "Qwen2.5-1.5B-Instruct_allbatches": "QwenSmallAll", "Qwen2-1.5B-Instruct_allbatches": "QwenTwoAll",
+        "pooled_1p5b_newbatches": "PooledNew"}
 for tables in sorted(C.glob("tables_*")):
     key = KEYS.get(tables.name.replace("tables_", ""))
     if key is None:
@@ -118,11 +122,24 @@ for tables in sorted(C.glob("tables_*")):
             dd = summ[js]
             put(f"{key}{name}", dd[0], "{:+.3f}"); put(f"{key}{name}Lo", dd[1], "{:+.3f}"); put(f"{key}{name}Hi", dd[2], "{:+.3f}")
         put(f"{key}BtN", summ["backtrack_n"], "{:.0f}")
+        tests = summ.get("backtrack_tests", {})
+        for js, name in [("dec_minus_err", "BtDiff"), ("restart_minus_err", "BtRestErr"), ("dec_minus_restart", "BtDecRest")]:
+            if js in tests:
+                pv = tests[js]["p"]
+                put(f"{key}{name}P", "<0.001" if pv < 0.001 else f"{pv:.3f}", "{}")
+                put(f"{key}{name}NinetyLo", tests[js]["ci90"][0], "{:+.3f}")
+                put(f"{key}{name}NinetyHi", tests[js]["ci90"][1], "{:+.3f}")
+        if "backtrack_tost_0.05" in summ:
+            put(f"{key}Tost", summ["backtrack_tost_0.05"], "{}")
         tok = summ["backtrack_tokens"]
         put(f"{key}TokRest", tok["tok_restart"], "{:.0f}"); put(f"{key}TokErr", tok["tok_before_error"], "{:.0f}")
         put(f"{key}TokDec", tok["tok_before_decisive"], "{:.0f}")
         put(f"{key}TokSave", 100 * (1 - tok["tok_before_decisive"] / tok["tok_restart"]), "{:.0f}")
     put(f"{key}DecNull", fe["position_matched_null"])
+    if "minus_null" in fe:
+        put(f"{key}DecMinusNull", fe["minus_null"][0], "{:+.3f}"); put(f"{key}DecMinusNullLo", fe["minus_null"][1], "{:+.3f}")
+        put(f"{key}DecMinusNullHi", fe["minus_null"][2], "{:+.3f}")
+        put(f"{key}DecMinusNullP", "<0.001" if fe["minus_null_p"] < 0.001 else f"{fe['minus_null_p']:.3f}", "{}")
     put(f"{key}DecLast", fe["share_error_at_last_step"])
     put(f"{key}DecExcl", fe["share_excluding_last_step"][0])
     put(f"{key}NFatal", summ["groups"].get("fatal", 0), "{}"); put(f"{key}NClean", summ["groups"].get("clean", 0), "{}")
@@ -142,9 +159,29 @@ for tables in sorted(C.glob("tables_*")):
             if r_ in sub.index:
                 put(f"{key}Ev{gname}{rname}", sub.loc[r_, "mean_v"])
 
+# ---- stage 16 robustness ----------------------------------------------------------
+for rob in sorted(C.glob("robustness_*")):
+    key = KEYS.get(rob.name.replace("robustness_", ""))
+    if key is None or not (rob / "summary.json").exists():
+        continue
+    r = json.loads((rob / "summary.json").read_text())
+    put(f"{key}SplitR", r["split_half"]["pearson_r"]); put(f"{key}SplitSB", r["split_half"]["spearman_brown_full_m"])
+    if "decisive_posterior" in r:
+        dp = r["decisive_posterior"]
+        put(f"{key}PostDec", dp["posterior_mean_share_d_eq_e"][0]); put(f"{key}PostDecLo", dp["posterior_mean_share_d_eq_e"][1])
+        put(f"{key}PostDecHi", dp["posterior_mean_share_d_eq_e"][2])
+        put(f"{key}PostModal", 100 * dp["share_modal_ge_0.5"], "{:.0f}"); put(f"{key}PostModalHigh", 100 * dp["share_modal_ge_0.8"], "{:.0f}")
+    if "decisive_agreement_between_halves" in r:
+        da = r["decisive_agreement_between_halves"]
+        put(f"{key}Agree", da["agreement"][0]); put(f"{key}AgreeNull", da["position_matched_null"])
+    for row in r.get("definition_sensitivity", []):
+        dn = {"largest_drop": "Arg", "point_of_no_return": "Commit", "first_drop_above_clean_floor": "Floor"}[row["definition"]]
+        dl = {0.0625: "A", 0.125: "B", 0.25: "C"}[round(row["delta"], 4)]
+        put(f"{key}Def{dn}{dl}", row["share_first_error"])
+
 tot = 0
 for tables in sorted(C.glob("tables_*")):
-    if KEYS.get(tables.name.replace("tables_", "")):
+    if KEYS.get(tables.name.replace("tables_", "")) in ("QwenSmall", "QwenTwo", "QwenMath", "Llama"):
         pt = pd.read_csv(tables / "per_trace.csv"); tot += int((pt.n * pt.m).sum())
 put("TotalRollouts", tot, "{:,}")
 out = ROOT / "paper" / "values.tex"

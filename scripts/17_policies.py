@@ -194,21 +194,23 @@ def main() -> None:
             k_p2 = int(np.argmax(drops))
         probes = sorted({max(1, n // 4), max(1, n // 2), max(1, (3 * n) // 4)} & set(range(n)))
         for s, sd in enumerate(split_data[tid]):
-            choice = {"P0_restart": (0, 0.0), "P5_human_first_error": (e - 1, 0.0),
-                      "P6_oracle": (sd["dA"] - 1, float(np.sum(L + sd["mA"] * g)))}
+            # (restart point k, overhead prefill tokens, overhead generated tokens)
+            choice = {"P0_restart": (0, 0.0, 0.0), "P5_human_first_error": (e - 1, 0.0, 0.0),
+                      "P6_oracle": (sd["dA"] - 1, float(np.sum(L)), float(sd["mA"] * np.sum(g)))}
             if prm is not None:
-                choice["P1_prm_first_error"] = (k_p1, prm_pass)
-                choice["P2_prm_largest_drop"] = (k_p2, prm_pass)
+                choice["P1_prm_first_error"] = (k_p1, prm_pass, 0.0)
+                choice["P2_prm_largest_drop"] = (k_p2, prm_pass, 0.0)
             if (tid, s) in learned_target:
-                choice["P4_learned"] = (learned_target[(tid, s)] - 1, prm_pass + trace_tokens)
+                choice["P4_learned"] = (learned_target[(tid, s)] - 1, prm_pass + trace_tokens, 0.0)
             ok = [k for k in probes if sd["probe"][k] > 0]
-            choice["P3_probe_search"] = (max(ok) if ok else 0, float(sum(L[k] + 2 * g[k] for k in probes)))
-            for pol, (k, overhead) in choice.items():
+            choice["P3_probe_search"] = (max(ok) if ok else 0, float(sum(L[k] for k in probes)),
+                                         float(sum(2 * g[k] for k in probes)))
+            for pol, (k, oh_pre, oh_gen) in choice.items():
                 for b in args.budgets:
                     for acct, wpf in [("flops", 1.0), ("decode_only", 0.0)]:
                         C0 = wpf * P + g[0]
                         B = b * C0
-                        oh = overhead if acct == "flops" else overhead - (0 if pol != "P6_oracle" else float(np.sum(L)))
+                        oh = wpf * oh_pre + oh_gen  # decode-only view drops every prefill, including verifier passes
                         N = np.floor((B - oh - wpf * L[k]) / max(g[k], 1.0))
                         succ = float(jeffreys_pass(sd["cB"][k], sd["nB"], N))
                         rows.append({"trace_id": tid, "generator": gen, "split": s, "policy": pol, "budget": b,

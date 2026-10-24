@@ -15,6 +15,9 @@ M=${3:-16}
 shift $(( $# < 3 ? $# : 3 ))
 EXTRA=("$@")
 OUT=results/commitment
+BACKEND=${BACKEND:-hf}     # hf (transformers) or vllm
+TP=${TP:-1}                # vllm tensor parallel size; TP>1 runs one process over all GPUs
+MAXTOK=${MAXTOK:-1536}
 mkdir -p "$OUT"
 
 case "$MODE" in
@@ -24,9 +27,16 @@ case "$MODE" in
     nvidia-smi --query-gpu=index,name,memory.total --format=csv
     python -c "import torch, transformers; print('torch', torch.__version__, 'transformers', transformers.__version__, 'cuda', torch.cuda.is_available())"
     ;;
+  vllm)
+    pip install -q vllm 2>&1 | tail -n 3
+    # vLLM brings its own torch; Kaggle's torchaudio is built for the old one and breaks imports.
+    pip uninstall -y -q torchaudio || true
+    python -c "import vllm, torch, transformers; print('vllm', vllm.__version__, 'torch', torch.__version__, 'cuda', torch.version.cuda, torch.cuda.is_available(), 'transformers', transformers.__version__)"
+    ;;
   smoke)
-    python scripts/12_counterfactual_rollouts.py --generator "$GEN" --backend hf --dtype half \
-      --m 4 --max-tokens 768 --max-per-group 1 --out "$OUT/smoke_${GEN}.jsonl"
+    rm -f "$OUT/smoke_${GEN}.jsonl"
+    python scripts/12_counterfactual_rollouts.py --generator "$GEN" --backend "$BACKEND" --dtype half --tp "$TP" \
+      --m 4 --max-tokens 768 --max-per-group 1 --out "$OUT/smoke_${GEN}.jsonl" 2>&1 | grep -E "prefixes|selected|done|Error|error" | tail -n 8
     python - "$OUT/smoke_${GEN}.jsonl" <<'PY'
 import json, sys
 for line in open(sys.argv[1]):
@@ -38,17 +48,29 @@ PY
     ;;
   run)
     NG=$(nvidia-smi -L | wc -l)
-    echo "starting $NG shard(s) for $GEN, m=$M ${EXTRA[*]:-}"
+    if [ "$TP" -gt 1 ]; then NG=1; fi
+    echo "starting $NG shard(s) for $GEN, backend=$BACKEND tp=$TP m=$M ${EXTRA[*]:-}"
     pids=()
     for i in $(seq 0 $((NG - 1))); do
-      CUDA_VISIBLE_DEVICES=$i python scripts/12_counterfactual_rollouts.py --generator "$GEN" \
-        --backend hf --dtype half --m "$M" --shard "$i" --num-shards "$NG" \
+      if [ "$TP" -gt 1 ]; then DEV=$(seq -s, 0 $((TP - 1))); else DEV=$i; fi
+      CUDA_VISIBLE_DEVICES=$DEV python scripts/12_counterfactual_rollouts.py --generator "$GEN" \
+        --backend "$BACKEND" --tp "$TP" --dtype half --m "$M" --max-tokens "$MAXTOK" --shard "$i" --num-shards "$NG" \
         --out "$OUT/${GEN}_s${i}.jsonl" "${EXTRA[@]}" > "$OUT/${GEN}_s${i}.stdout" 2>&1 &
       pids+=($!)
     done
     for p in "${pids[@]}"; do wait "$p"; done
     tail -n 3 "$OUT/${GEN}"_s*.stdout
     python scripts/13_commitment_analysis.py --rollouts "$OUT/${GEN}"_s*.jsonl --out "$OUT/tables_${GEN}"
+    ;;
+  bg)
+    # Same as run, but detached: returns at once; poll with `bash scripts/kaggle_commitment.sh status GEN`.
+    BACKEND=$BACKEND TP=$TP MAXTOK=$MAXTOK nohup bash scripts/kaggle_commitment.sh run "$GEN" "$M" "${EXTRA[@]}" \
+      > "$OUT/${GEN}_run.out" 2>&1 &
+    echo "started in background (pid $!); log: $OUT/${GEN}_run.out"
+    ;;
+  status)
+    for f in "$OUT/${GEN}"_s*.log; do [ -f "$f" ] && echo "$f: $(tail -n 1 "$f")"; done
+    tail -n 25 "$OUT/${GEN}_run.out" 2>/dev/null || true
     ;;
   *)
     echo "unknown mode $MODE"; exit 1;;

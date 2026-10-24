@@ -1,0 +1,213 @@
+\documentclass[10pt,twocolumn]{article}
+\usepackage[margin=0.75in,columnsep=0.25in]{geometry}
+\usepackage{times}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage[hidelinks]{hyperref}
+\usepackage[font=small,labelfont=bf]{caption}
+\usepackage{microtype}
+\usepackage{enumitem}
+\setlist{nosep,leftmargin=*}
+\graphicspath{{../results/figures/}}
+\input{values}
+
+\title{\Large\bfseries Errors Are Not Choke Points: Difficulty, Error Onset and\\Counterfactual Commitment in LLM Reasoning Failures}
+\author{Harsh Dubey \quad Harshit Saini \quad Prashant Jain \quad Himanshu Kumar \quad Gaurav Kaushal \quad Rohit Chaudhary\\
+\small Dept.\ of CSE (AI\&ML), KIET Group of Institutions, Ghaziabad, India\\
+\small \texttt{harsh.2428cseaiml127@kiet.edu}}
+\date{}
+
+\begin{document}
+\maketitle
+
+\input{abstract}
+
+\section{Introduction}
+Chain-of-thought (CoT) reasoning~\cite{wei2022cot} turns a single prediction into a trajectory of
+steps, and two widely used ideas assume that a wrong final answer is decided at an identifiable
+point inside that trajectory. Process supervision~\cite{lightman2023,uesato2022,processbench} trains
+and evaluates verifiers to find the \emph{first incorrect step}, and verifier-guided search
+backtracks to it. Early-warning detectors~\cite{afzal2025,lugoloobi2026} predict from a partial
+trajectory that the answer will be wrong, so that computation can be stopped or redirected.
+
+Both ideas rest on two assumptions that are rarely tested. The first is that the signal they use is
+about the \emph{trajectory}: a detector that reads a prefix should know more than a detector that
+reads only the question. The second is that the \emph{annotated first error is the point at which
+the outcome is decided}. We call a step that decides the outcome a \emph{choke point}, and ask
+whether errors and choke points coincide.
+
+We test both assumptions on ProcessBench~\cite{processbench}, which provides expert first-error
+labels for 3,400 solutions written by 12 open models, and we contribute:
+\begin{enumerate}
+\item \textbf{A difficulty-controlled protocol for early failure detection.} A detector that reads
+only the question and the generator's identity reaches AUROC \aucQG; reading the first quarter of
+the reasoning on top of that adds \dIncA\ (n.s.), and within a problem the 25\% prefix is at chance
+(\wpPA). Reasoning text adds \dIncB--\dIncC\ AUROC only after half the chain.
+\item \textbf{Errors are not choke points, observationally.} \nonFatalPct\% of first errors are
+followed by a correct answer (\nonFatalOmniPct\% on Omni-MATH), fatality does not depend on where
+the error occurs, and a coded sample shows these are rarely repairs.
+\item \textbf{Failure detectors track error presence, not commitment.} They rank non-fatal errors as
+riskier than fatal ones (AUROC \twOutFR), and once an error has occurred its fatality is not
+predictable from the text.
+\item \textbf{A counterfactual measurement of commitment.} For traces written by open models we
+resample the \emph{same} model from every prefix and estimate the success probability $v_k$ after
+each step, which locates where a trajectory actually becomes unrecoverable and compares it with the
+human-annotated first error (Section~\ref{sec:counterfactual}).
+\end{enumerate}
+All code, tables and the generator of every number in this paper are released.\footnote{\url{https://github.com/HarshDubey23/early-failure-detection-cot}}
+
+\section{Related Work}
+\textbf{Process supervision.} Step-level supervision outperforms outcome supervision~\cite{lightman2023,uesato2022};
+Monte Carlo rollouts can label steps automatically~\cite{wang2024shepherd}, but such labels disagree with human
+judgements because a completion can reach the right answer from a wrong step and vice versa, which
+Zhang et al.~\cite{zhang2025lessons} treat as label noise. ProcessBench~\cite{processbench} evaluates
+first-error identification. We study the disagreement itself.
+
+\textbf{Predicting failure early.} Hidden states predict CoT success before or during generation~\cite{afzal2025,lugoloobi2026}.
+Bulut~\cite{bulut2026} shows that such pooled AUROCs are largely explained by problem difficulty and
+fall to chance within a problem. We apply the same control to text detectors on human-annotated traces.
+
+\textbf{Which steps matter.} Resampling from prefixes identifies influential sentences~\cite{bogdan2025},
+tokens~\cite{lin2025critical,bigelow2025} and the importance of the first step~\cite{liao2025lost}.
+Merrill and Srivastava~\cite{merrill2026} localise the point of no return for deceptive behaviour and
+name incorrect solutions as future work; recoverability of error states has been studied for
+distillation~\cite{jiang2026ocr}. None compares a counterfactual decision point with human first-error
+labels. Work on performative CoT~\cite{li2026performative,boppana2026} finds that answers are often
+fixed apart from the written reasoning, which our non-fatal errors echo.
+
+\section{Data and Definitions}
+\textbf{Data.} ProcessBench~\cite{processbench} contains 3,400 step-segmented solutions to GSM8K,
+MATH, OlympiadBench and Omni-MATH problems (2,842 distinct problems) from 12 open models, each with
+the index $e$ of the first erroneous step (or none) and whether the final answer is correct. Correct
+and incorrect answers are balanced within each tier by construction.
+
+\textbf{Outcome groups.} A trace is \emph{clean} (no annotated error; 1,179), \emph{recovered}
+(an error, but a correct answer; \nRecovered) or \emph{fatal} (an error and a wrong answer; \nFatal).
+No clean trace has a wrong answer. The \emph{fatality} of first errors is
+$P(\text{wrong} \mid \text{error})$.
+
+\textbf{Counterfactual value.} For a trace $T=(s_1,\dots,s_n)$ written by model $M$, let
+$v_k = P_M(\text{correct} \mid q, s_{1:k})$, estimated by sampling $m$ continuations of the prefix
+from $M$; $v_0$ is $M$'s from-scratch solve rate and $v_n$ is the observed outcome. The
+\emph{decisive step} is $d=\arg\max_k (v_{k-1}-v_k)$, and the \emph{point of no return} is
+$c=\min\{k : v_j\le\delta\ \forall j\ge k\}$. A failing trace is \emph{capability-limited} if
+$v_0\le\delta$, shows \emph{latent commitment} if $c<e$, \emph{commits at the error} if $c=e$, and
+has a \emph{recoverable error} if $c>e$.
+
+\textbf{Statistics.} Detectors are TF-IDF (uni+bigrams) or one-hot features with logistic
+regression~\cite{tfidf}, cross-fitted over 5 folds grouped by problem and repeated over 5 seeds.
+Intervals are 95\% question-level cluster bootstrap intervals~\cite{field2007} (1,000 resamples);
+differences between detectors use a paired bootstrap on the same traces.
+
+\section{Observational Results}
+\subsection{Early failure prediction is a difficulty signal}
+Table~\ref{tab:difficulty} and Fig.~\ref{fig:difficulty} compare detectors that read the question,
+the generator and tier, the reasoning prefix, or combinations. The question alone reaches
+\aucQ\ and question plus generator \aucQG\ [\aucQGLo, \aucQGHi]. A detector reading only the first
+25\% of the reasoning is \emph{worse} than that (\dPAvsQG, $p=\dPAvsQGP$), and adding the 25\% prefix
+to question and generator changes AUROC by \dIncA\ [\dIncALo, \dIncAHi]. The reasoning adds
+\dIncB\ at 50\% and \dIncC\ [\dIncCLo, \dIncCHi] at 100\%, consistently across all five seeds.
+
+Within a problem the generator is the only varying factor besides the reasoning: over \wpProblems\
+problems with both a failing and a succeeding trace (\wpPairs\ pairs), the 25\% prefix orders pairs
+correctly \wpPA\ of the time [\wpPALo, \wpPAHi] and the full prefix \wpPC\ [\wpPCLo, \wpPCHi],
+neither better than generator identity alone (\wpG). Early failure prediction on this benchmark is
+therefore almost entirely a statement about which problems are hard for which models.
+
+\begin{table}[t]\centering\small
+\caption{AUROC for a wrong final answer (out-of-fold, 3,400 traces). Q: question text; G: generator and tier.}
+\label{tab:difficulty}
+\begin{tabular}{lccc}\toprule
+Detector & AUROC & 95\% CI & SD (5 seeds)\\\midrule
+Q & \aucQ & \aucQLo--\aucQHi & \aucQSd\\
+G & \aucG & \aucGLo--\aucGHi & \aucGSd\\
+Q+G & \aucQG & \aucQGLo--\aucQGHi & \aucQGSd\\
+Prefix 25\% & \aucPA & \aucPALo--\aucPAHi & \aucPASd\\
+Prefix 100\% & \aucPC & \aucPCLo--\aucPCHi & \aucPCSd\\
+Q+G+prefix 25\% & \aucQGPA & \aucQGPALo--\aucQGPAHi & \aucQGPASd\\
+Q+G+prefix 50\% & \aucQGPB & \aucQGPBLo--\aucQGPBHi & \aucQGPBSd\\
+Q+G+prefix 100\% & \aucQGPC & \aucQGPCLo--\aucQGPCHi & \aucQGPCSd\\
+Trace length & \aucLenC & \aucLenCLo--\aucLenCHi & \aucLenCSd\\\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure}[t]\centering
+\includegraphics[width=\columnwidth]{fig17_difficulty_control.pdf}
+\caption{The prefix adds nothing beyond question and generator until half the chain is observed.}
+\label{fig:difficulty}
+\end{figure}
+
+\subsection{One first error in four is not fatal}
+Fatality of first errors is \fatAll\ [\fatAllLo, \fatAllHi]: \nonFatalPct\% of annotated first errors
+are followed by a correct answer (Fig.~\ref{fig:fatality}). Fatality falls with difficulty, from
+\fatGsm\ on GSM8K to \fatOmni\ on Omni-MATH, and is flat in the position of the error
+(\fatOnsetMin--\fatOnsetMax\ across onset quartiles; \fatLast\ only when the error is in the final
+step). Fatal and recovered errors occur at the same relative position (Mann--Whitney $p=\mwRhoP$,
+$r=\mwRhoR$).
+
+We read and coded a seeded sample of \codeN\ recovered traces. In \codeFlawed\ the reasoning stays
+wrong and the correct answer appears anyway; \codeLowEnt\ have low-entropy or qualitative answers
+(yes/no, true/false); in \codeNotLoad\ the error does not bear on the answer; only \codeRepair\
+contain a repair; \codeQuest\ flagged step looked correct to the coder. Explicit re-checking
+language after the error is barely more frequent in recovered than in fatal traces (\markRec\% vs
+\markFat\%, $p=\markP$). Non-fatal errors are thus mostly cases where the written reasoning does not
+determine the answer, consistent with~\cite{zhang2025lessons,li2026performative}.
+
+\begin{figure}[t]\centering
+\includegraphics[width=\columnwidth]{fig16_error_fatality.pdf}
+\caption{Fatality of first errors by difficulty tier and by where the error occurs.}
+\label{fig:fatality}
+\end{figure}
+
+\subsection{Detectors track errors, not commitment}
+If a failure detector captured commitment, it would score recovered traces like clean ones. It does
+the opposite (Table~\ref{tab:threeway}): trained to predict a wrong answer, the full-prefix detector
+separates recovered from clean traces (\twOutRC) but ranks fatal traces \emph{below} recovered ones
+(\twOutFR\ [\twOutFRLo, \twOutFRHi]); with question and generator included the ranking is at chance
+(\twOutQGFR). A detector trained to find errors inverts more strongly (\twErrFR). Among erroneous
+traces, the fatality of the first error is predicted by question and generator (AUROC \fatPredQG),
+and the error step, the prefix up to it or the next one or two steps change this by at most
+\fatPredMaxInc.
+
+\begin{table}[t]\centering\small
+\caption{AUROC between outcome groups (positive vs negative).}
+\label{tab:threeway}
+\begin{tabular}{lccc}\toprule
+Detector (trained on) & rec.\ vs clean & fatal vs rec. & fatal vs clean\\\midrule
+Prefix 100\% (wrong answer) & \twOutRC & \twOutFR & \twOutFC\\
+Q+G+prefix (wrong answer) & \twOutQGRC & \twOutQGFR & \twOutQGFC\\
+Prefix 100\% (has error) & \twErrRC & \twErrFR & \twErrFC\\\bottomrule
+\end{tabular}
+\end{table}
+
+\input{counterfactual}
+
+\section{Discussion}
+\textbf{For early warning.} Reported AUROCs for early failure prediction should be accompanied by a
+question-only and a generator baseline, the increment over them, and a within-problem concordance;
+without them a detector of problem difficulty is indistinguishable from a detector of reasoning
+failure. On ProcessBench, text detectors pass this test only after half the chain.
+
+\textbf{For process supervision.} Human first-error labels mark where reasoning first goes wrong,
+which is the right target for auditing reasoning. They are not, in general, where the outcome is
+decided. Verifiers that are trained or evaluated on first errors and then used to steer search
+inherit this gap; the counterfactual value curve measures it directly.
+
+\section{Limitations}
+ProcessBench balances answers within each tier, so absolute fatality rates describe the benchmark,
+not deployment. The coded sample is small and was coded by one person; we release it for re-coding.
+Counterfactual continuations are sampled at temperature 0.7 from models whose original traces were
+re-segmented by ProcessBench, so prefixes are near- rather than exactly on-policy. We study
+mathematics only, and small open models only.
+
+\section{Conclusion}
+Errors are where reasoning first goes wrong; choke points are where it stops being recoverable. On
+ProcessBench the two differ often enough, and text-based failure detectors confuse them with problem
+difficulty often enough, that both process supervision and early warning should measure the second
+directly. The counterfactual value curve does this at the cost of sampling, and its labels are the
+natural target for cheaper commitment detectors.
+
+\input{refs}
+\end{document}

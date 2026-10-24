@@ -141,7 +141,7 @@ class HFBackend:
         if self.tok.pad_token is None:
             self.tok.pad_token = self.tok.eos_token
         torch_dtype = torch.bfloat16 if dtype == "bfloat16" else torch.float16
-        self.model = AutoModelForCausalLM.from_pretrained(model, torch_dtype=torch_dtype).to("cuda").eval()
+        self.model = AutoModelForCausalLM.from_pretrained(model, dtype=torch_dtype).to("cuda").eval()
         eos = self.model.generation_config.eos_token_id
         self.eos = set(eos if isinstance(eos, list) else [eos]) | {self.tok.eos_token_id, self.tok.pad_token_id}
         self.max_seqs = max_seqs
@@ -179,8 +179,11 @@ class VLLMBackend:
         from vllm import LLM
 
         self.tok = AutoTokenizer.from_pretrained(model)
+        self.max_model_len = max_model_len
+        # enforce_eager / no custom all-reduce: compatibility settings for T4 (SM75) GPUs.
         self.llm = LLM(model=model, tensor_parallel_size=tp, dtype=dtype, seed=seed,
-                       max_model_len=max_model_len, gpu_memory_utilization=gpu_mem)
+                       max_model_len=max_model_len, gpu_memory_utilization=gpu_mem,
+                       enforce_eager=True, disable_custom_all_reduce=True)
 
     def prompt(self, question: str, prefix_steps: list) -> str:
         return chat_prompt(self.tok, question, prefix_steps)
@@ -188,10 +191,22 @@ class VLLMBackend:
     def generate(self, prompts: list, m: int, temperature: float, top_p: float, max_tokens: int, seed: int):
         from vllm import SamplingParams
 
-        params = SamplingParams(n=m, temperature=temperature, top_p=top_p, top_k=-1, repetition_penalty=1.0,
-                                max_tokens=max_tokens, seed=seed)
-        outs = self.llm.generate(prompts, params, use_tqdm=True)
-        return [[(c.text, len(c.token_ids)) for c in o.outputs] for o in outs]
+        # Fit every request inside the context window: shorten max_tokens when the prefix is long,
+        # and skip (return None for) prompts that leave fewer than 256 tokens to generate.
+        keep, params = [], []
+        for i, p in enumerate(prompts):
+            room = self.max_model_len - len(self.tok(p, add_special_tokens=False)["input_ids"])
+            if room >= 256:
+                keep.append(i)
+                params.append(SamplingParams(n=m, temperature=temperature, top_p=top_p, top_k=-1,
+                                             repetition_penalty=1.0, max_tokens=min(max_tokens, room),
+                                             seed=seed + i))
+        results = [None] * len(prompts)
+        if keep:
+            outs = self.llm.generate([prompts[i] for i in keep], params, use_tqdm=True)
+            for i, o in zip(keep, outs):
+                results[i] = [(c.text, len(c.token_ids)) for c in o.outputs]
+        return results
 
 
 class MockBackend:
@@ -232,6 +247,7 @@ def main() -> None:
     ap.add_argument("--tiers", nargs="*", default=["gsm8k", "math", "olympiadbench", "omnimath"])
     ap.add_argument("--groups", nargs="*", default=["fatal", "recovered", "clean"])
     ap.add_argument("--max-per-group", type=int, default=0, help="0 = all")
+    ap.add_argument("--max-clean", type=int, default=0, help="cap on clean (error-free) traces only; 0 = all")
     ap.add_argument("--m", type=int, default=16, help="continuations per prefix")
     ap.add_argument("--temperature", type=float, default=0.7)
     ap.add_argument("--top-p", type=float, default=0.95)
@@ -282,6 +298,8 @@ def main() -> None:
         rng.shuffle(pool)
         if args.max_per_group:
             pool = pool[: args.max_per_group]
+        if grp == "clean" and args.max_clean:
+            pool = pool[: args.max_clean]
         for t in pool:
             if norm_problem(t["question"]) in gold:
                 selected.append(t)
@@ -296,7 +314,10 @@ def main() -> None:
     done = set()
     if out_path.exists():
         for line in open(out_path, encoding="utf-8"):
-            row = json.loads(line)
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:  # last line cut by an interrupted run
+                continue
             done.add((row["trace_id"], row["k"]))
     jobs = []  # (trace, k)
     if args.num_shards > 1:  # deterministic split by trace id, one process per GPU
@@ -332,6 +353,13 @@ def main() -> None:
                                        args.seed + start)
             for (t, k), samples in zip(batch, results):
                 g, src = gold[norm_problem(t["question"])]
+                if samples is None:  # prompt too long for the context window: recorded, excluded later
+                    fh.write(json.dumps({"trace_id": t["trace_id"], "generator": t["generator"], "subset": t["subset"],
+                                         "k": k, "n_steps": len(t["steps"]), "skipped": "context",
+                                         "first_error_idx": t["first_error_idx"], "final_correct": t["final_correct"],
+                                         "m": 0, "n_correct": 0, "correct": [], "new_tokens": [], "answers": [],
+                                         "model": model, "backend": args.backend}) + "\n")
+                    continue
                 answers = [last_boxed(text) for text, _ in samples]
                 correct = [answers_match(a, g) for a in answers]
                 fh.write(json.dumps({

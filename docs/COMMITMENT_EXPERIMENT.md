@@ -66,23 +66,56 @@ Caveats to state in the paper: ProcessBench re-segmented the original solutions 
 paragraphs, so prefixes are near-, not exactly, on-policy; temperature-0.7 continuations
 measure the model's sampling distribution, not the greedy decode that produced the trace.
 
-## Running it (Kaggle, 2x T4, or Colab)
+## Running it (Kaggle, 2x T4)
+
+Tested on Kaggle (2x Tesla T4, 2026-10-24): transformers 5.16 and vLLM 0.32 (torch 2.13 cu130)
+both run; vLLM is about 4-5x faster and is the default for the real runs.
 
 ```bash
-git clone https://github.com/HarshDubey23/early-failure-detection-cot && cd early-failure-detection-cot
-pip install -r requirements.txt vllm math-verify
-python scripts/01_download_data.py --config configs/default.yaml   # needs internet (HF)
-python scripts/02_preprocess.py --config configs/default.yaml
-make commitment-mock                                               # 1 minute, CPU: checks the pipeline
-make commitment GENERATOR=Qwen2.5-1.5B-Instruct M=16 DTYPE=half    # pilot, one T4
-make commitment GENERATOR=Qwen2.5-Math-7B-Instruct M=16 TP=2 DTYPE=half   # main, 2x T4
+git clone -b novelty-upgrade https://github.com/HarshDubey23/early-failure-detection-cot && cd early-failure-detection-cot
+bash scripts/kaggle_commitment.sh setup                       # math-verify + ProcessBench from HF
+bash scripts/kaggle_commitment.sh vllm                        # installs vLLM, removes the mismatched torchaudio
+BACKEND=vllm bash scripts/kaggle_commitment.sh smoke Qwen2.5-1.5B-Instruct          # 3 traces, m = 4
+BACKEND=vllm bash scripts/kaggle_commitment.sh run Qwen2.5-1.5B-Instruct 16         # one process per GPU
+BACKEND=vllm TP=2 bash scripts/kaggle_commitment.sh run Qwen2.5-Math-7B-Instruct 16 # 7B over both T4s
 ```
 
-T4s have no bfloat16, hence `DTYPE=half`. Stage 12 appends to its JSONL after every batch and
-skips finished prefixes on restart, so a session that times out can be resumed. Run the pilot
-first and read `results/commitment/<generator>.log` for the measured throughput before
-committing GPU hours to the 7B runs; if time is short, start the 7B model with
-`make commitment ... M=8` or `EXTRA="--max-per-group 60"`.
+T4s have no bfloat16, so everything runs in float16; vLLM runs eager with custom all-reduce off
+(compatibility settings for Turing GPUs). Prompts that do not fit the context window are recorded
+as skipped and their traces dropped from the analysis. Stage 12 appends to its JSONL after every
+batch and skips finished prefixes on restart, so a session that times out can be resumed.
 
 Outputs: `results/commitment/<generator>.jsonl` (every continuation's answer and correctness),
 `results/commitment/tables_<generator>/{per_trace.csv, commitment_categories.csv, summary.txt}`.
+
+## Run log
+
+**Run A — interactive pilot, 2026-10-24, Kaggle 2x T4, vLLM 0.32.** Qwen2.5-1.5B-Instruct on all
+116 of its ProcessBench traces (53 clean, 51 fatal, 12 recovered), m = 16, temperature 0.7,
+max 1,536 new tokens, ~20 minutes. Numbers below were read off the stage-13 summary printed in the
+notebook; the raw JSONL of this interactive session was not kept (the session was stopped to start
+Run B, which repeats this configuration with independent sampling seeds and saves everything).
+
+| Quantity (fatal traces, δ = 1/8) | Value | 95% CI |
+|---|---:|---|
+| capability-limited (v_0 ≤ δ) | 0.353 | 0.235–0.490 |
+| latent commitment (c < e) | 0.176 | 0.078–0.294 |
+| commits at the annotated error (c = e) | 0.412 | 0.275–0.549 |
+| recoverable error (c > e) | 0.059 | 0.000–0.137 |
+| first error is the decisive step (not capability-limited, n = 33) | 0.606 | 0.455–0.758 (chance 0.181) |
+| mean drop in v at the first error, fatal | +0.234 | +0.165 to +0.311 |
+| mean drop in v at the first error, recovered | −0.099 | −0.318 to +0.089 |
+| noise floor: largest per-trace drop, clean | +0.093 | +0.065 to +0.125 |
+| backtrack: restart from scratch | 0.489 | 0.390–0.583 |
+| backtrack: just before the annotated first error | 0.386 | 0.280–0.492 |
+| backtrack: just before the decisive step (sample-split) | 0.508 | 0.413–0.602 |
+| backtrack: best prefix (oracle, in-sample) | 0.574 | 0.490–0.655 |
+| decisive step minus first error | +0.121 | +0.049 to +0.205 |
+
+Event study (mean v at k − e = −1, 0, +1): fatal 0.257 → 0.023 → 0.014; recovered 0.667 → 0.766 →
+0.790; clean (random anchor) 0.868 → 0.923 → 0.966.
+
+**Run B — background "Save Version" run, started 2026-10-24 13:13 IST.** `scripts/kaggle_full.sh`:
+Qwen2.5-1.5B-Instruct (m = 16, independent replicate of Run A), Qwen2-1.5B-Instruct (m = 16),
+Qwen2.5-Math-7B-Instruct (TP = 2, m = 12, clean traces capped at 60, 8.5-hour limit). Outputs:
+`/kaggle/working/commitment_results.tar.gz` in the notebook version's output.

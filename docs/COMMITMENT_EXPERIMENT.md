@@ -139,3 +139,19 @@ selection is applied when the archive is re-analysed).
 
 Run A and Run B agree for Qwen2.5-1.5B (decisive minus first error +0.121 vs +0.118). For Qwen2-1.5B
 the annotated first error is the decisive step barely more often than chance.
+
+**Run B, Qwen2.5-Math-7B-Instruct (finished 2026-10-24 22:25 IST; read from the version log).**
+TP = 2, m = 12, max 1,024 new tokens, clean traces capped at 60; the 8.5-hour limit was reached,
+and 314 traces were complete (207 of 210 fatal, 47 of 47 recovered, 60 clean).
+
+| Quantity | Qwen2.5-Math-7B |
+|---|---|
+| fatal: capability-limited / latent / at error / recoverable | 0.657 / 0.063 / 0.179 / 0.101 |
+| first error is the decisive step | 0.423 [0.310, 0.535], n = 71, chance 0.153 |
+| mean drop at the first error: fatal / recovered | +0.109 / −0.215 |
+| clean noise floor | +0.078 |
+| backtrack: restart / before error / before decisive / oracle | 0.538 / 0.432 / 0.561 / 0.641 |
+| decisive step minus first error | **+0.129 [+0.061, +0.200]** |
+| mean continuation tokens: restart / before error / before decisive | 633 / 469 / 458 |
+| event study, fatal: v at r = −1, 0, +1 | 0.175, 0.066, 0.044 |
+| event study, recovered | 0.374, 0.589, 0.670 |

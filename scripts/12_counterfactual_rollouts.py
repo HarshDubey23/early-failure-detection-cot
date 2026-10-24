@@ -311,7 +311,10 @@ def main() -> None:
     done = set()
     if out_path.exists():
         for line in open(out_path, encoding="utf-8"):
-            row = json.loads(line)
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:  # last line cut by an interrupted run
+                continue
             done.add((row["trace_id"], row["k"]))
     jobs = []  # (trace, k)
     if args.num_shards > 1:  # deterministic split by trace id, one process per GPU

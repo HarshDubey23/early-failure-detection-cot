@@ -41,7 +41,10 @@ def load_curves(paths: list) -> dict:
     seen = set()
     for path in paths:
         for line in open(path, encoding="utf-8"):
-            row = json.loads(line)
+            try:
+                row = json.loads(line)
+            except json.JSONDecodeError:  # last line cut by an interrupted run
+                continue
             if row.get("skipped") or row.get("m", 0) == 0:
                 continue  # prefix could not be rolled out; the trace becomes incomplete and is dropped
             if (row["trace_id"], row["k"]) in seen:

@@ -62,6 +62,16 @@ PY
     tail -n 3 "$OUT/${GEN}"_s*.stdout
     python scripts/13_commitment_analysis.py --rollouts "$OUT/${GEN}"_s*.jsonl --out "$OUT/tables_${GEN}"
     ;;
+  bg)
+    # Same as run, but detached: returns at once; poll with `bash scripts/kaggle_commitment.sh status GEN`.
+    BACKEND=$BACKEND TP=$TP MAXTOK=$MAXTOK nohup bash scripts/kaggle_commitment.sh run "$GEN" "$M" "${EXTRA[@]}" \
+      > "$OUT/${GEN}_run.out" 2>&1 &
+    echo "started in background (pid $!); log: $OUT/${GEN}_run.out"
+    ;;
+  status)
+    for f in "$OUT/${GEN}"_s*.log; do [ -f "$f" ] && echo "$f: $(tail -n 1 "$f")"; done
+    tail -n 25 "$OUT/${GEN}_run.out" 2>/dev/null || true
+    ;;
   *)
     echo "unknown mode $MODE"; exit 1;;
 esac

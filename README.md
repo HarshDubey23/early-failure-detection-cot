@@ -21,6 +21,26 @@ held-out questions, measures detection lead time and calibration, tests transfer
 BIG-Bench Mistake, and replays a cost-aware selective-intervention policy offline. Every
 number is computed by the pipeline; stages that could not run are reported as `NOT_RUN`.
 
+## Update 2026-10-24: difficulty controls and error fatality
+
+Two controls change how the results below should be read (`make decomposition`; details in
+[`docs/RESULTS_DECOMPOSITION.md`](docs/RESULTS_DECOMPOSITION.md), positioning in
+[`docs/NOVELTY_AUDIT.md`](docs/NOVELTY_AUDIT.md)):
+
+- **Early prediction is mostly difficulty.** Question text + generator identity alone reach
+  AUROC 0.588 [0.570, 0.607]. Adding the first 25% of the reasoning adds +0.005 (n.s.); the
+  full chain adds +0.031 [0.020, 0.041]. Within a problem, the 25% prefix is at chance.
+- **Errors are not choke points.** 521 of 2,221 first errors (23.5%) still end in a correct
+  answer (34% on Omni-MATH), and fatality is flat in error position. Failure detectors rank
+  these non-fatal errors as riskier than fatal ones (AUROC 0.456).
+- **Next experiment (GPU, ready to run):** on-policy counterfactual rollouts from every prefix
+  measure where success probability actually collapses and compare it with the annotated first
+  error ([`docs/COMMITMENT_EXPERIMENT.md`](docs/COMMITMENT_EXPERIMENT.md), `make commitment`).
+- Fixed: the length-only baseline broke ties arbitrarily (platform-dependent); lexical −
+  length-only at 25% is +0.052 (p = 0.032), not +0.073.
+
+![Error fatality](results/figures/fig16_error_fatality.png)
+
 ## Headline result
 
 From `docs/RESULTS.md` (full run of 2026-09-15; CPU only, so the GPU hidden-state

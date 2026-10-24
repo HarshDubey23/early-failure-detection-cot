@@ -1,0 +1,41 @@
+sample_index,trace_id,tier,generator,e,n,category,note
+0,processbench:omnimath:omnimath-972,omnimath,Qwen2-72B-Instruct,2,9,low_entropy_or_qualitative_answer,"construction problem; boxed answer is a description, matched loosely"
+1,processbench:math:math-954,math,Qwen2.5-1.5B-Instruct,1,6,flawed_reasoning_correct_answer,wrong collinearity claim; reaches -2 without valid derivation
+2,processbench:gsm8k:gsm8k-399,gsm8k,Qwen2.5-Math-72B-Instruct,1,6,silent_repair,"says 85 remaining days, next step uses 185 correctly"
+3,processbench:olympiadbench:olympiadbench-939,olympiadbench,Qwen2-72B-Instruct,2,8,flawed_reasoning_correct_answer,confuses f(y)=0 with y=2; still states -32/9
+4,processbench:math:math-942,math,Meta-Llama-3-70B-Instruct,1,3,flawed_reasoning_correct_answer,invalid centroid ratios; still states 8
+5,processbench:omnimath:omnimath-642,omnimath,Qwen2.5-Math-72B-Instruct,2,7,flawed_reasoning_correct_answer,wrong area-ratio formula; still states 5
+6,processbench:olympiadbench:olympiadbench-723,olympiadbench,Llama-3.1-8B-Instruct,8,8,error_not_load_bearing,domain remark contradicts the answer but answer kept
+7,processbench:omnimath:omnimath-623,omnimath,Qwen2-7B-Instruct,3,8,flawed_reasoning_correct_answer,game analysis wrong; still states 503
+8,processbench:omnimath:omnimath-560,omnimath,Qwen2.5-72B-Instruct,3,8,error_not_load_bearing,LTE stated with a missing condition; computation correct
+9,processbench:omnimath:omnimath-927,omnimath,Qwen2-72B-Instruct,2,4,flawed_reasoning_correct_answer,hand-wavy counting argument; known closed form stated
+10,processbench:olympiadbench:olympiadbench-657,olympiadbench,Qwen2.5-Math-7B-Instruct,3,5,flawed_reasoning_correct_answer,false isosceles claim; still states 48
+11,processbench:olympiadbench:olympiadbench-745,olympiadbench,Qwen2.5-Math-72B-Instruct,8,17,error_not_load_bearing,errors inside an exploratory example; conclusion revised later
+12,processbench:omnimath:omnimath-963,omnimath,Llama-3.1-8B-Instruct,2,11,flawed_reasoning_correct_answer,invalid substitution y=0; still states f=0
+13,processbench:omnimath:omnimath-975,omnimath,Llama-3.1-8B-Instruct,4,13,low_entropy_or_qualitative_answer,proof problem; boxed 'even' matched
+14,processbench:math:math-520,math,Qwen2.5-7B-Instruct,4,11,explicit_self_correction,wrong orthocentre angle; final step says 'the correct angle is 47'
+15,processbench:omnimath:omnimath-893,omnimath,Llama-3.1-8B-Instruct,3,6,silent_repair,wrong generic statement; next step counts correctly
+16,processbench:omnimath:omnimath-719,omnimath,Llama-3.1-70B-Instruct,5,9,explicit_self_correction,wrong pattern; s7 abandons it and switches method
+17,processbench:math:math-579,math,Qwen2-72B-Instruct,7,13,flawed_reasoning_correct_answer,algebra slip; still states 16
+18,processbench:olympiadbench:olympiadbench-832,olympiadbench,Llama-3.1-8B-Instruct,1,4,flawed_reasoning_correct_answer,wrong characterisation of n; still states 9
+19,processbench:olympiadbench:olympiadbench-970,olympiadbench,Qwen2.5-Math-7B-Instruct,4,7,flawed_reasoning_correct_answer,invalid inequalities; known value 25/2 stated
+20,processbench:olympiadbench:olympiadbench-691,olympiadbench,Llama-3.1-70B-Instruct,7,9,flawed_reasoning_correct_answer,double-count reasoning wrong; still states 81
+21,processbench:math:math-923,math,Qwen2-7B-Instruct,3,8,flawed_reasoning_correct_answer,rectangle counting wrong; still states 36
+22,processbench:olympiadbench:olympiadbench-612,olympiadbench,Qwen2.5-7B-Instruct,7,10,flawed_reasoning_correct_answer,parity argument does not give the boxed value
+23,processbench:olympiadbench:olympiadbench-642,olympiadbench,Qwen2.5-Math-7B-Instruct,1,5,flawed_reasoning_correct_answer,wrong angle formula; still states 60
+24,processbench:olympiadbench:olympiadbench-905,olympiadbench,Qwen2-72B-Instruct,3,8,error_not_load_bearing,wrong quadrant for the argument; magnitude alone fixes k=16
+25,processbench:omnimath:omnimath-518,omnimath,Qwen2-7B-Instruct,2,8,low_entropy_or_qualitative_answer,yes/no question; flawed argument
+26,processbench:math:math-910,math,Llama-3.1-8B-Instruct,2,14,flawed_reasoning_correct_answer,wrong common denominator; still states 0
+27,processbench:omnimath:omnimath-738,omnimath,Qwen2-72B-Instruct,3,5,flawed_reasoning_correct_answer,invalid proof; standard answer f(x)=ax stated
+28,processbench:omnimath:omnimath-767,omnimath,Qwen2.5-Math-7B-Instruct,6,7,flawed_reasoning_correct_answer,false arithmetic check (12^3+3*12^2+1 != 2017); still states 22
+29,processbench:olympiadbench:olympiadbench-915,olympiadbench,Llama-3.1-70B-Instruct,3,10,flawed_reasoning_correct_answer,invalid manipulation; standard answer stated
+30,processbench:omnimath:omnimath-817,omnimath,Qwen2.5-7B-Instruct,5,6,low_entropy_or_qualitative_answer,binary choice u or v; approximate argument
+31,processbench:olympiadbench:olympiadbench-725,olympiadbench,Qwen2.5-Math-72B-Instruct,4,8,flawed_reasoning_correct_answer,invalid parity argument; still states 12
+32,processbench:omnimath:omnimath-641,omnimath,Qwen2-7B-Instruct,1,7,low_entropy_or_qualitative_answer,yes/no question; flawed argument
+33,processbench:math:math-513,math,Llama-3.1-8B-Instruct,1,15,flawed_reasoning_correct_answer,false isosceles-right claim; still states sqrt(17)
+34,processbench:omnimath:omnimath-958,omnimath,Qwen2.5-72B-Instruct,11,13,flawed_reasoning_correct_answer,wrong recurrence; still states 33
+35,processbench:math:math-828,math,Llama-3.1-8B-Instruct,3,12,error_not_load_bearing,"unjustified 10a = 0 mod 20; conclusion 17 holds since a,b odd"
+36,processbench:olympiadbench:olympiadbench-789,olympiadbench,Qwen2.5-72B-Instruct,10,12,flawed_reasoning_correct_answer,"testing errors; still states 1,3"
+37,processbench:olympiadbench:olympiadbench-593,olympiadbench,Qwen2-72B-Instruct,4,6,flawed_reasoning_correct_answer,guessing digits; still states 9
+38,processbench:omnimath:omnimath-755,omnimath,Llama-3.1-8B-Instruct,2,6,low_entropy_or_qualitative_answer,true/false question; flawed argument
+39,processbench:olympiadbench:olympiadbench-756,olympiadbench,Qwen2.5-Math-7B-Instruct,2,8,annotation_questionable,flagged step looks correct to this coder

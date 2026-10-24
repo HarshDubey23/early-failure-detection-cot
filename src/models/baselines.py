@@ -39,8 +39,14 @@ def length_only_scores(n_steps_test: np.ndarray, n_steps_train: np.ndarray,
     )
     if direction == 0:
         direction = 1.0
-    order = np.argsort(np.argsort(n_steps_test))
-    scores = order / max(1, len(order) - 1)
+    # Tied lengths must receive tied scores. An argsort-of-argsort rank gives
+    # tied traces arbitrary distinct ranks whose order depends on the sort
+    # implementation, which made this baseline platform-dependent (0.539 on
+    # Windows vs 0.535 on Linux for the same split). Average ranks fix that.
+    from scipy.stats import rankdata
+
+    ranks = rankdata(np.asarray(n_steps_test, dtype=float), method="average")
+    scores = (ranks - 1.0) / max(1, len(ranks) - 1)
     return scores if direction > 0 else 1.0 - scores
 
 

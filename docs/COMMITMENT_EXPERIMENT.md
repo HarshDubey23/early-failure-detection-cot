@@ -119,3 +119,23 @@ Event study (mean v at k − e = −1, 0, +1): fatal 0.257 → 0.023 → 0.014; 
 Qwen2.5-1.5B-Instruct (m = 16, independent replicate of Run A), Qwen2-1.5B-Instruct (m = 16),
 Qwen2.5-Math-7B-Instruct (TP = 2, m = 12, clean traces capped at 60, 8.5-hour limit). Outputs:
 `/kaggle/working/commitment_results.tar.gz` in the notebook version's output.
+
+**Run B, small models (finished 2026-10-24 13:55 IST; read from the version log).** Same analysis
+code as Run A (selection of "not capability-limited" on all samples; the corrected held-out
+selection is applied when the archive is re-analysed).
+
+| Quantity | Qwen2.5-1.5B (replicate) | Qwen2-1.5B |
+|---|---|---|
+| fatal traces: capability-limited | 0.333 [0.196, 0.471] | 0.522 [0.403, 0.642] |
+| latent commitment (c < e) | 0.216 [0.098, 0.333] | 0.134 [0.060, 0.224] |
+| commits at the error (c = e) | 0.373 [0.255, 0.510] | 0.239 [0.134, 0.343] |
+| recoverable error (c > e) | 0.078 [0.020, 0.157] | 0.104 [0.045, 0.179] |
+| first error is the decisive step | 0.529 [0.353, 0.706], n = 34, chance 0.184 | 0.344 [0.188, 0.531], n = 32, chance 0.238 |
+| mean drop at the first error: fatal / recovered | +0.238 / −0.099 | +0.140 / +0.208 |
+| clean noise floor | +0.081 | +0.208 |
+| backtrack: restart / before error / before decisive | 0.438 / 0.382 / 0.500 | 0.621 / 0.406 / 0.566 |
+| decisive step minus first error | **+0.118 [+0.033, +0.202]** | **+0.160 [+0.051, +0.277]** |
+| event study, fatal: v at r = −1, 0, +1 | 0.270, 0.032, 0.019 | 0.193, 0.053, 0.024 |
+
+Run A and Run B agree for Qwen2.5-1.5B (decisive minus first error +0.121 vs +0.118). For Qwen2-1.5B
+the annotated first error is the decisive step barely more often than chance.

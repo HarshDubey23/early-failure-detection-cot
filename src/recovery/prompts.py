@@ -66,9 +66,11 @@ def repair_prompt(source_prompt: str, draft: str, j: int, sentence: str) -> str:
 
 def parse_repair(text: str) -> str | None:
     """Rewritten sentence, or None for DELETE / empty output."""
-    t = (text or "").strip()
-    t = re.sub(r"^(rewritten sentence|sentence|answer)\s*:\s*", "", t, flags=re.I).strip()
-    t = t.split("\n")[0].strip().strip('"').strip()
+    # chat models often open with "Sure, here's the rewritten sentence:" or "REWRITE SENTENCE 2:"
+    preamble = re.compile(r"^(sure|here|certainly|okay|ok)\b.*:$|^(rewrite|rewritten|sentence)[\w ]*:$", re.I)
+    lines = [ln.strip() for ln in (text or "").splitlines() if ln.strip() and not preamble.match(ln.strip())]
+    t = lines[0] if lines else ""
+    t = re.sub(r"^(rewrite|rewritten sentence|sentence( \d+)?|answer)\s*:\s*", "", t, flags=re.I).strip().strip('"').strip()
     if not t or t.upper().startswith("DELETE"):
         return None
     return t
@@ -111,6 +113,17 @@ def cove_revise_prompt(source_prompt: str, draft: str, qa: list) -> str:
         "Write the final response to the ORIGINAL TASK. Keep everything in the draft that the source supports, "
         "correct anything the verification contradicts, and remove anything the source does not state. "
         "Reply with the final response only.")
+
+
+def parse_final(text: str) -> str:
+    """CoVe revision without the header lines chat models put first ("Sure, here is the final
+    response:", "FINAL RESPONSE:", "DRAFT RESPONSE:")."""
+    head = re.compile(r"^((sure|here|certainly|okay)\b.*:|(final|draft|revised)( response)?\s*:)$", re.I)
+    lines = (text or "").strip().splitlines()
+    while lines and (not lines[0].strip() or head.match(lines[0].strip())):
+        lines.pop(0)
+    out = "\n".join(lines).strip()
+    return re.sub(r"^(final|revised) response\s*:\s*", "", out, flags=re.I)
 
 
 # ---------------------------------------------------------------------------------------------

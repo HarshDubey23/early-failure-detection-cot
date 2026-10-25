@@ -236,7 +236,7 @@ def main() -> None:
             draft_steps=[(p0, draft_tok)])
 
     # ---------------------------------------------------------------- replay
-    rows = []
+    rows, round0 = [], []
     policies = [(p, 0.0) for p in R.POLICIES_FIXED] + [(p, b) for p in R.POLICIES_BUDGETED for b in args.budgets]
     for iid, ctx in ctxs.items():
         it = run["items"][iid]
@@ -246,6 +246,8 @@ def main() -> None:
             acc, actions = [], Counter()
             for rnd in range(n_rounds):
                 o = R.run_policy(pol, ctx, rnd, b, args.tau)
+                if rnd == 0:
+                    round0.append({"item_id": iid, "policy": pol, "budget": b, "cid": o.cid, "action": o.action})
                 ev = evaluate(o.cid, it)
                 steps = ctx.draft_steps + ([(0.0, 0.0)] if uses_d(pol) else []) + o.steps
                 ev.update({"cost_recovery": o.cost, "cost_total": ctx.common + (ctx.det_draft if uses_d(pol) else 0) + o.cost,
@@ -264,6 +266,7 @@ def main() -> None:
                                         else np.nan)})
     df = pd.DataFrame(rows)
     df.to_csv(out / "per_item.csv", index=False)
+    pd.DataFrame(round0).to_csv(out / "outputs_round0.csv", index=False)  # concrete outputs, for human review
 
     # ---------------------------------------------------------------- summaries
     metrics = ["hall_E1", "hall_E2", "hall_D", "hall_human", "covered", "words", "supported_sent", "correct",

@@ -192,4 +192,4 @@ class RecoveryController:
         if r is None:
             return draft
         self.cost += r["prompt_tokens"] + r["samples"][0][1]
-        return r["samples"][0][0].strip()
+        return P.parse_final(r["samples"][0][0])

@@ -1,0 +1,3 @@
+# read by scripts/kaggle_recovery.sh (SMOKE=1: a few items per benchmark; SMOKE=0: the preregistered run)
+SMOKE=1
+PARTS=""

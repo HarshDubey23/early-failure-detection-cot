@@ -36,3 +36,6 @@ results/smoke/
 # Files over 50 MB must never be committed; `git ls-files -s | ...` check in README.
 docs/study_guide/
 docs/explained/
+
+# External datasets cloned from GitHub (RAGTruth): fetched by scripts/30_ragtruth_label_analysis.py --fetch
+data/external/

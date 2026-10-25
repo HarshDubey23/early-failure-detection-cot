@@ -209,3 +209,17 @@ anchors are used for 39 human-clean drafts.
 - Nothing from E2 or D alone is described as a reduction in hallucinations.
 - No human evaluation of Run R outputs exists. A blinded comparison sheet will be prepared, and
   any human result will be reported only after people have actually completed it.
+
+## 12. Changes after the smoke test (before any full-run data)
+
+The smoke test (Kaggle, 2026-10-25, 17 items per generator) was used only to check the pipeline.
+It is not analysed.
+- **Repair parsing.** Llama-2 opens every rewrite with "Sure, here's the rewritten sentence:", and
+  the parser kept that line instead of the rewrite. 14 of 14 smoke repairs were affected. Fixed in
+  `prompts.parse_repair`; `tests/test_recovery.py` now covers these outputs.
+- **CoVe parsing.** Llama-2 prefixes its revision with "DRAFT RESPONSE:", "FINAL RESPONSE:" or
+  "Sure, here is…". These header lines are now stripped (`prompts.parse_final`).
+- **Judge.** 165 of 165 smoke judgments parsed. No change.
+- **Scope.** This week's GPU quota covers the primary generator only. Llama-2-7B-chat (sections
+  7-9) runs first. The secondary Llama-3.1-8B arm runs later with the same code and is reported
+  as a separate run.

@@ -308,7 +308,7 @@ def main() -> None:
                     if r is None:
                         rec["skipped"] = "context"
                         continue
-                    rec["final"] = r["samples"][0][0].strip()
+                    rec["final"] = P.parse_final(r["samples"][0][0])
                     rec["calls"].append({"step": "revise", "prompt_tokens": r["prompt_tokens"], "gen_tokens": r["samples"][0][1]})
             with open(cove_path, "a", encoding="utf-8") as fh:
                 for rec in recs.values():

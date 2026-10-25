@@ -53,6 +53,16 @@ def test_judge_and_repair_parsing():
     assert P.parse_judge("no json here", 3) is None
     assert P.parse_repair("DELETE") is None
     assert P.parse_repair('"The shop opens at 9."\nextra') == "The shop opens at 9."
+    # real Llama-2 outputs from the Run R smoke test
+    assert P.parse_repair("  Sure, here's the rewritten sentence:\n\nThe shop opens at 9.") == "The shop opens at 9."
+    assert P.parse_repair("  Sure, here's the rewritten sentence:\n\nDELETE - not in the source.") is None
+    assert P.parse_repair("  REWRITE SENTENCE 2:\nThe band has four members.") == "The band has four members."
+    assert P.parse_repair("Sure, here's the rewritten sentence:\n\nREWRITE: It opened in 2022.") == "It opened in 2022."
+    assert P.parse_repair("SENTENCE 3: It opened in 2022.") == "It opened in 2022."
+    assert P.parse_final("Sure, here is the final response to the original task:\n\nDRAFT RESPONSE:\nA is B.\nC.") == "A is B.\nC."
+    assert P.parse_final("FINAL RESPONSE:\nA is B.") == "A is B."
+    assert P.parse_final("FINAL RESPONSE: A is B.") == "A is B."
+    assert P.parse_final("A is B.") == "A is B."
     assert P.parse_questions("1. Who?\n2) When did it open?\nnot a question") == ["Who?", "When did it open?"]
 
 

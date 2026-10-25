@@ -12,7 +12,8 @@ TECTONIC ?= tectonic
 
 .PHONY: setup smoke data preprocess eda baselines activations probes analysis \
         intervention report all test lint diagrams paper guide \
-        decomposition commitment-mock commitment commitment-analysis choke-paper
+        decomposition commitment-mock commitment commitment-analysis choke-paper \
+        recovery-labels recovery-mock recovery-analysis
 
 # Counterfactual commitment (stages 12-13). GPU for 12; override on the command line.
 GENERATOR ?= Qwen2.5-1.5B-Instruct
@@ -113,3 +114,17 @@ paper:      # copy vector figures + diagrams into the Overleaf package and compi
 guide:      # study and viva guide: check every number, then compile (needs Tectonic)
 	$(PY) docs/diagrams/check_paper_values.py docs/study_guide/study_guide.tex --tables
 	cd docs/study_guide && $(TECTONIC) study_guide.tex
+
+# Run R: recovering from hallucinations (docs/RECOVERY_SYSTEM.md, docs/PREREGISTRATION_RECOVERY.md)
+recovery-labels:  # RAGTruth human-label analysis, no model (CPU, ~10 min)
+	[ -d data/external/RAGTruth ] || git clone --depth 1 https://github.com/ParticleMedia/RAGTruth data/external/RAGTruth
+	$(PY) scripts/30_ragtruth_label_analysis.py
+
+recovery-mock:  # the whole Run R sequence on CPU with fake models; writes NO results (into /tmp)
+	rm -rf /tmp/recovery_mock && mkdir -p /tmp/recovery_mock && tar --exclude=.git --exclude=results/recovery -cf - . | tar -xf - -C /tmp/recovery_mock
+	cd /tmp/recovery_mock && MOCK=1 ARCHIVE=/tmp/recovery_mock/out.tar.gz bash scripts/kaggle_recovery.sh
+	cd /tmp/recovery_mock && $(PY) scripts/34_replay.py --items data/recovery/items.*.jsonl --out /tmp/recovery_mock/final --allow-mock --rounds 3
+
+recovery-analysis:  # after extracting recovery_results.tar.gz here: replay, tests, mechanism
+	$(PY) scripts/34_replay.py --items data/recovery/items.*.jsonl --out results/recovery/final
+	$(PY) scripts/35_mechanism.py --items data/recovery/items.ragtruth.llama-2-7b-chat.jsonl --out results/recovery/final/mechanism

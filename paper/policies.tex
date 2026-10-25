@@ -1,0 +1,89 @@
+\section{Practical Policies at a Matched Budget}\label{sec:policies}
+Section~\ref{sec:backtrack} compares targets per attempt, using oracle knowledge of the decisive
+step. A deployed system has to choose a restart point without rollouts and pays for every token. We
+therefore compare practical policies against restart under a matched end-to-end budget.
+
+\textbf{Policies.} All were fixed before the confirmatory data existed (Section~\ref{sec:evidence}).
+\begin{itemize}
+\item Restart.
+\item PRM first error: resample from before the first step that Qwen2.5-Math-PRM-7B~\cite{zhang2025lessons}
+scores below 0.5.
+\item PRM largest drop: resample from before the step with the largest fall in PRM score.
+\item Probe search: two probe continuations at each of three prefixes, then resample from the
+latest prefix with a success.
+\item Learned: logistic regression on step features (PRM score and drop, the generator's NLL and
+entropy, position, length), trained to predict the decisive step on the \emph{other} generators.
+For Llama, it is trained only on the three Qwen models.
+\item Two references: human first error (the expert label, not available in deployment) and the
+oracle decisive step (all its rollouts counted).
+\end{itemize}
+
+\textbf{Implementation check.} Our implementation of the verifier loads the reward head directly
+from the checkpoint. It reaches a ProcessBench F1 of \prmFOne\ over \PrmTraces\ traces
+(GSM8K \prmFOneGsm, MATH \prmFOneMath, OlympiadBench \prmFOneOlym, Omni-MATH \prmFOneOmni). The
+published value is 73.5~\cite{zhang2025lessons}.
+
+\textbf{Cost.}
+\begin{itemize}
+\item Tokens are weighted by model size relative to the generator (FLOPs $\propto$ parameters
+$\times$ tokens).
+\item Every prefill (question plus prefix) counts once per restart point, assuming prefix caching.
+\item Every generated token counts.
+\item Verifier passes, probes and oracle rollouts are charged to the policies that use them.
+\item The budget is $b$ times the cost of one restart attempt, for each trace.
+\item A policy spends what is left on independent attempts from its restart point. We report the
+probability that at least one attempt is correct (Jeffreys-posterior estimate from held-out
+continuations, 50 splits, trace bootstrap).
+\end{itemize}
+
+\begin{table*}[t]\centering\small
+\caption{P(solved) minus restart for fatal traces at a budget of four restart attempts (FLOP-matched,
+all overheads charged). 95\% trace-bootstrap CIs. ``Shared verifier'': the PRM pass is not charged,
+as if it had been run anyway to detect the failure (exploratory). Llama rows are confirmatory for
+PRM largest drop and Learned; all other rows are exploratory.}
+\label{tab:policies}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccc}\toprule
+ & Qwen2.5-1.5B & Qwen2-1.5B & Qwen2.5-Math-7B & Llama-3.1-8B\\\midrule
+Restart: P(solved) & \QwenSmallPolRestartFour & \QwenTwoPolRestartFour & \QwenMathPolRestartFour & \LlamaPolRestartFour\\\midrule
+PRM first error & \QwenSmallPolPrmFirstFourDiff\ {\scriptsize[\QwenSmallPolPrmFirstFourLo, \QwenSmallPolPrmFirstFourHi]} & \QwenTwoPolPrmFirstFourDiff\ {\scriptsize[\QwenTwoPolPrmFirstFourLo, \QwenTwoPolPrmFirstFourHi]} & \QwenMathPolPrmFirstFourDiff\ {\scriptsize[\QwenMathPolPrmFirstFourLo, \QwenMathPolPrmFirstFourHi]} & \LlamaPolPrmFirstFourDiff\ {\scriptsize[\LlamaPolPrmFirstFourLo, \LlamaPolPrmFirstFourHi]}\\
+PRM largest drop & \QwenSmallPolPrmDropFourDiff\ {\scriptsize[\QwenSmallPolPrmDropFourLo, \QwenSmallPolPrmDropFourHi]} & \QwenTwoPolPrmDropFourDiff\ {\scriptsize[\QwenTwoPolPrmDropFourLo, \QwenTwoPolPrmDropFourHi]} & \QwenMathPolPrmDropFourDiff\ {\scriptsize[\QwenMathPolPrmDropFourLo, \QwenMathPolPrmDropFourHi]} & \LlamaPolPrmDropFourDiff\ {\scriptsize[\LlamaPolPrmDropFourLo, \LlamaPolPrmDropFourHi]}\\
+Probe search & \QwenSmallPolProbeFourDiff\ {\scriptsize[\QwenSmallPolProbeFourLo, \QwenSmallPolProbeFourHi]} & \QwenTwoPolProbeFourDiff\ {\scriptsize[\QwenTwoPolProbeFourLo, \QwenTwoPolProbeFourHi]} & \QwenMathPolProbeFourDiff\ {\scriptsize[\QwenMathPolProbeFourLo, \QwenMathPolProbeFourHi]} & \LlamaPolProbeFourDiff\ {\scriptsize[\LlamaPolProbeFourLo, \LlamaPolProbeFourHi]}\\
+Learned & \QwenSmallPolLearnedFourDiff\ {\scriptsize[\QwenSmallPolLearnedFourLo, \QwenSmallPolLearnedFourHi]} & \QwenTwoPolLearnedFourDiff\ {\scriptsize[\QwenTwoPolLearnedFourLo, \QwenTwoPolLearnedFourHi]} & \QwenMathPolLearnedFourDiff\ {\scriptsize[\QwenMathPolLearnedFourLo, \QwenMathPolLearnedFourHi]} & \LlamaPolLearnedFourDiff\ {\scriptsize[\LlamaPolLearnedFourLo, \LlamaPolLearnedFourHi]}\\\midrule
+Human first error (reference) & \QwenSmallPolHumanFourDiff\ {\scriptsize[\QwenSmallPolHumanFourLo, \QwenSmallPolHumanFourHi]} & \QwenTwoPolHumanFourDiff\ {\scriptsize[\QwenTwoPolHumanFourLo, \QwenTwoPolHumanFourHi]} & \QwenMathPolHumanFourDiff\ {\scriptsize[\QwenMathPolHumanFourLo, \QwenMathPolHumanFourHi]} & \LlamaPolHumanFourDiff\ {\scriptsize[\LlamaPolHumanFourLo, \LlamaPolHumanFourHi]}\\
+Oracle decisive step, rollouts counted & \QwenSmallPolOracleFourDiff & \QwenTwoPolOracleFourDiff & \QwenMathPolOracleFourDiff & \LlamaPolOracleFourDiff\\\midrule
+PRM largest drop, shared verifier & \QwenSmallPolPrmDropFourShDiff\ {\scriptsize[\QwenSmallPolPrmDropFourShLo, \QwenSmallPolPrmDropFourShHi]} & \QwenTwoPolPrmDropFourShDiff\ {\scriptsize[\QwenTwoPolPrmDropFourShLo, \QwenTwoPolPrmDropFourShHi]} & \QwenMathPolPrmDropFourShDiff\ {\scriptsize[\QwenMathPolPrmDropFourShLo, \QwenMathPolPrmDropFourShHi]} & \LlamaPolPrmDropFourShDiff\ {\scriptsize[\LlamaPolPrmDropFourShLo, \LlamaPolPrmDropFourShHi]}\\\bottomrule
+\end{tabular}
+\end{table*}
+
+\begin{figure*}[t]\centering
+\includegraphics[width=0.95\textwidth]{fig22_policies.pdf}
+\caption{P(solved) for fatal traces against the end-to-end budget (in restart attempts,
+FLOP-matched, all overheads charged).}
+\label{fig:policies}
+\end{figure*}
+
+\textbf{No practical policy beats restart reliably} (Table~\ref{tab:policies},
+Fig.~\ref{fig:policies}).
+\begin{itemize}
+\item \textbf{Llama (confirmatory).} PRM largest-drop backtracking is \emph{worse} than restart at
+four attempts, \LlamaPolPrmDropFourDiff\ [\LlamaPolPrmDropFourLo, \LlamaPolPrmDropFourHi]. So is the
+learned policy transferred from Qwen, at \LlamaPolLearnedFourDiff\ [\LlamaPolLearnedFourLo,
+\LlamaPolLearnedFourHi].
+\item \textbf{The 1.5B models.} Scoring the trace with a 7B verifier costs about five generator
+attempts, so every verifier-based policy loses heavily at small budgets.
+\item \textbf{Qwen2.5-Math-7B.} PRM largest-drop backtracking is the only practical policy with a
+positive estimate. Under full accounting it is \QwenMathPolPrmDropFourDiff\
+[\QwenMathPolPrmDropFourLo, \QwenMathPolPrmDropFourHi] at four attempts and
+\QwenMathPolPrmDropEightDiff\ [\QwenMathPolPrmDropEightLo, \QwenMathPolPrmDropEightHi] at eight. If
+the verifier pass is assumed to be paid anyway, it is \QwenMathPolPrmDropFourShDiff\
+[\QwenMathPolPrmDropFourShLo, \QwenMathPolPrmDropFourShHi] (exploratory).
+\item \textbf{Probe search and the oracle.} Both spend most of the budget on finding the restart
+point, and lose.
+\end{itemize}
+
+\textbf{Even a perfect first-error verifier is no shortcut.} The human first error, which no
+deployed system has, is within a few points of restart at matched compute for every model:
+\QwenSmallPolHumanFourDiff, \QwenTwoPolHumanFourDiff, \QwenMathPolHumanFourDiff\ and
+\LlamaPolHumanFourDiff. Later restart points buy more attempts, but each attempt is worth less,
+which is the trade-off the proposition in Appendix~\ref{app:prop} anticipates.

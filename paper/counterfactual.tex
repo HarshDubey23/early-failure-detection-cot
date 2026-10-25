@@ -1,21 +1,35 @@
 \section{Counterfactual Commitment}\label{sec:counterfactual}
-The observational results say that first errors and outcomes come apart, but not where a failing
-trajectory actually becomes unrecoverable. We measure that directly by resampling.
+The observational results show that first errors and outcomes come apart. They do not show where a
+failing trajectory actually becomes unrecoverable. We measure that directly by resampling.
 
 \subsection{Setup}
-\textbf{Generators and traces.} We use the three ProcessBench generators whose weights fit on two
-16\,GB GPUs: Qwen2.5-1.5B-Instruct and Qwen2-1.5B-Instruct~\cite{qwen25}, all of whose traces we use
-(\QwenSmallN\ and \QwenTwoN), and Qwen2.5-Math-7B-Instruct~\cite{qwen25math}, for which we use all
-fatal and recovered traces with a recoverable gold answer and 60 clean traces (\QwenMathN\ in total;
-3 traces without a gold answer are dropped). Gold answers come from the source datasets, matched on
-problem text, and answers are compared with \texttt{math-verify}.
+\textbf{Generators and traces.} We use four ProcessBench generators whose weights fit on two
+16\,GB GPUs, from two model families:
+\begin{itemize}
+\item Qwen2.5-1.5B-Instruct and Qwen2-1.5B-Instruct~\cite{qwen25}: all their traces
+(\QwenSmallAllN\ and \QwenTwoAllN).
+\item Qwen2.5-Math-7B-Instruct~\cite{qwen25math}: all fatal and recovered traces with a gold answer,
+and 60 clean traces (\QwenMathN\ in total).
+\item Llama-3.1-8B-Instruct: the fatal traces completed within the time limit of the confirmatory
+run (\LlamaN; Section~\ref{sec:evidence}).
+\end{itemize}
+The Llama traces cover \QuestionsLlama\ questions, \QuestionsLlamaNew\ of which appear in none of the
+Qwen traces (\QuestionsUnion\ distinct questions in total). Gold answers come from the source datasets,
+matched on problem text, and are compared with \texttt{math-verify}.
 
 \textbf{Rollouts.} For every prefix $s_{1:k}$, $k=0,\dots,n-1$, we sample $m$ continuations from the
-trace's own generator (\QwenSmallM, \QwenTwoM\ and \QwenMathM\ respectively; temperature 0.7, top-$p$
-0.95; at most 1,536 new tokens for the 1.5B models and 1,024 for the 7B model) with vLLM~\cite{vllm}
-in float16, and estimate $v_k$ as the fraction that reach the gold answer. In total we score
-\TotalRollouts\ continuations from \QwenSmallPrefixes, \QwenTwoPrefixes\ and \QwenMathPrefixes\
-prefixes. Every continuation, its answer and its correctness are released.
+trace's own generator with vLLM~\cite{vllm} in float16, at temperature 0.7 and top-$p$ 0.95, and
+estimate $v_k$ as the fraction that reach the gold answer. The sample sizes are:
+\begin{itemize}
+\item the 1.5B models: $m=\QwenSmallAllM$, as four independent sampling batches of 16 with different
+seeds;
+\item Qwen2.5-Math-7B: $m=\QwenMathM$;
+\item Llama: $m=\LlamaM$.
+\end{itemize}
+Continuations are capped at 1,536 new tokens for the 1.5B models and at 1,024 for the larger
+models. At the cap, \QwenMathTruncPct\% (Qwen2.5-Math-7B) and \LlamaTruncPct\% (Llama) of
+continuations end without an answer. In total we score \TotalRollouts\ continuations. Every
+continuation, its answer and its correctness are released.
 
 \textbf{What can and cannot be read off $v_k$.} Under the generating policy, $v_k$ is a martingale.
 Curves conditioned on the eventual outcome therefore drift even when no single step matters: for
@@ -24,107 +38,160 @@ any fixed $k$ (and any stopping time),
 \mathbb{E}[v_k \mid \text{fail}] = \frac{\mathbb{E}[v_k(1-v_k)]}{P(\text{fail})} \le v_0,
 \label{eq:supermart}
 \end{equation}
-because $x(1-x)$ is concave, so $v_k(1-v_k)$ is a supermartingale. We therefore never interpret a
-downward drift of failing curves by itself. We ask instead whether the drop is \emph{concentrated}
-at the annotated error, against a position-matched null and the drop noise floor of clean traces,
-and we evaluate backtracking policies with sample splitting.
+because $x(1-x)$ is concave (Appendix~\ref{app:prop}). We therefore never interpret a downward drift
+of failing curves by itself. We ask whether the drop is \emph{concentrated} at the annotated error,
+against a position-matched null and the noise floor of clean traces. We evaluate backtracking
+targets with sample splitting.
+
+\subsection{How precise are the value curves?}\label{sec:reliability}
+Each $v_k$ is a binomial estimate, and the decisive step $d=\arg\max_k(v_{k-1}-v_k)$ is a noisy
+argmax. We quantify both kinds of uncertainty (Fig.~\ref{fig:reliability}).
+
+\textbf{Value curves.} With the four independent batches of the 1.5B models split two against two,
+$v_k$ correlates at \QwenSmallAllSplitR\ and \QwenTwoAllSplitR\ across all prefixes (Spearman--Brown
+projection to $m=64$: \QwenSmallAllSplitSB\ and \QwenTwoAllSplitSB). The random split-half
+correlation is \QwenMathSplitR\ for Qwen2.5-Math-7B ($m=12$) and \LlamaSplitR\ for Llama ($m=16$).
+
+\textbf{Decisive steps.} We draw every $v_k$ from its Jeffreys posterior and recompute $d$
+2,000 times. The modal step has posterior probability at least 0.5 in \QwenSmallAllPostModal\%,
+\QwenTwoAllPostModal\%, \QwenMathPostModal\% and \LlamaPostModal\% of the not-capability-limited
+fatal traces. Independent halves of the continuations pick the same decisive step in
+\QwenSmallAllAgree, \QwenTwoAllAgree, \QwenMathAgree\ and \LlamaAgree\ of traces, against
+position-matched nulls of \QwenMathAgreeNull--\QwenTwoAllAgreeNull. The posterior probability
+that the decisive step is the annotated error is bimodal: for most traces it is either clearly yes
+or clearly no. Disagreement between decisive steps and labels is therefore not measurement noise.
+
+\begin{figure}[t]\centering
+\includegraphics[width=\columnwidth]{fig21_reliability.pdf}
+\caption{Left: split-half correlation of $v_k$ as a function of the continuations per prefix.
+Right: posterior probability, per fatal trace, that the decisive step is the annotated first error.}
+\label{fig:reliability}
+\end{figure}
 
 \subsection{Where failing trajectories commit}
-Table~\ref{tab:commit} classifies each fatal trace at $\delta=1/8$.
+Table~\ref{tab:commit} classifies every fatal trace at $\delta=1/8$.
 
-\textbf{Many failures are decided before the first step.} \QwenSmallCapPct\%, \QwenTwoCapPct\% and
-\QwenMathCapPct\% of fatal traces are capability-limited: the model solves the problem from scratch
-at most one time in eight, so no step of the trace is a choke point. This is the counterfactual
-counterpart of Section~4's difficulty result, and it grows with the share of hard problems in a
-model's traces. Shares at $\delta\in\{1/16,1/4\}$ move by a few points and do not change the ordering
-(released tables).
+\textbf{Many failures are decided before the first step.} \QwenSmallAllCapPct\%, \QwenTwoAllCapPct\%,
+\QwenMathCapPct\% and \LlamaCapPct\% of fatal traces are capability-limited: the model solves the
+problem from scratch at most one time in eight, so no step of the trace is a choke point. This is
+the counterfactual counterpart of Section~4's difficulty result.
 
-\textbf{When the outcome is still open, the annotated error is often, but not usually exclusively,
-where it closes.} Among fatal traces that are not capability-limited, the first error is the
-largest drop in $v$ in \QwenSmallDec\ [\QwenSmallDecLo, \QwenSmallDecHi],
-\QwenTwoDec\ [\QwenTwoDecLo, \QwenTwoDecHi] and \QwenMathDec\ [\QwenMathDecLo, \QwenMathDecHi] of
-traces, against a position-matched null of \QwenSmallDecNull, \QwenTwoDecNull\ and
-\QwenMathDecNull\ (the Qwen2-1.5B interval includes its null). Errors at the final step, where $v_n$ is the observed outcome, are rare
-(\QwenMathDecLast\ for the 7B model) and excluding them leaves the shares unchanged
-(\QwenSmallDecExcl, \QwenTwoDecExcl, \QwenMathDecExcl). The rest of these traces split between
-\emph{latent commitment}, where success has already collapsed before the written error
-(\QwenSmallLatentNL\%, \QwenTwoLatentNL\% and \QwenMathLatentNL\% of non-capability-limited fatal
-traces), and \emph{recoverable errors}, after which success stays above $\delta$ until a later step
-(\QwenSmallRecovNL\%, \QwenTwoRecovNL\% and \QwenMathRecovNL\%).
+\textbf{When the outcome is still open, the annotated error is often where it closes.} Among fatal
+traces that are not capability-limited, the first error is the largest drop in $v$ in
+\QwenSmallAllDec, \QwenTwoAllDec, \QwenMathDec\ and \LlamaDec\ of traces. The position-matched nulls
+are \QwenSmallAllDecNull, \QwenTwoAllDecNull, \QwenMathDecNull\ and \LlamaDecNull. The differences
+are \QwenSmallAllDecMinusNull\ [\QwenSmallAllDecMinusNullLo, \QwenSmallAllDecMinusNullHi],
+\QwenTwoAllDecMinusNull\ [\QwenTwoAllDecMinusNullLo, \QwenTwoAllDecMinusNullHi],
+\QwenMathDecMinusNull\ [\QwenMathDecMinusNullLo, \QwenMathDecMinusNullHi] and
+\LlamaDecMinusNull\ [\LlamaDecMinusNullLo, \LlamaDecMinusNullHi]. For Llama this was preregistered
+(C3) and is confirmed. The remaining traces show one of two patterns:
+\begin{itemize}
+\item \emph{latent commitment}: success has already collapsed before the written error
+(\QwenSmallAllLatentNL\%, \QwenTwoAllLatentNL\%, \QwenMathLatentNL\% and \LlamaLatentNL\% of
+not-capability-limited fatal traces);
+\item \emph{recoverable errors}: success stays above $\delta$ past the error
+(\QwenSmallAllRecovNL\%, \QwenTwoAllRecovNL\%, \QwenMathRecovNL\% and \LlamaRecovNL\%).
+\end{itemize}
 
 \textbf{Event study.} Aligned at the annotated error (Fig.~\ref{fig:event}), fatal traces show a step
-change from $r=-1$ to $r=0$ (\QwenSmallEvFatBefore$\to$\QwenSmallEvFatAfter,
-\QwenTwoEvFatBefore$\to$\QwenTwoEvFatAfter, \QwenMathEvFatBefore$\to$\QwenMathEvFatAfter), while
-clean traces aligned at a random step drift smoothly upward, as the analogue of
-Eq.~\ref{eq:supermart} for successes predicts. For recovered traces of the 7B model, success \emph{rises} across the annotated error
-(\QwenMathEvRecBefore$\to$\QwenMathEvRecAfter), by far more than the success-conditioned drift of
-clean traces (\QwenMathEvCleanBefore$\to$\QwenMathEvCleanAfter): for this model, a step that humans
-mark as the first error often makes the correct answer more, not less, likely.
+change from $r=-1$ to $r=0$:
+\QwenSmallAllEvFatBefore$\to$\QwenSmallAllEvFatAfter,
+\QwenTwoAllEvFatBefore$\to$\QwenTwoAllEvFatAfter,
+\QwenMathEvFatBefore$\to$\QwenMathEvFatAfter\ and \LlamaEvFatBefore$\to$\LlamaEvFatAfter. Clean
+traces aligned at a random step drift smoothly upward, as the success-conditioned analogue of
+Eq.~\ref{eq:supermart} predicts. For recovered traces of Qwen2.5-Math-7B, success \emph{rises}
+across the annotated error (\QwenMathEvRecBefore$\to$\QwenMathEvRecAfter), by far more than the
+drift of clean traces.
 
 \begin{table}[t]\centering\small
-\caption{Where fatal traces commit ($\delta=1/8$; 95\% bootstrap CIs in the text). ``Decisive'':
-share of non-capability-limited fatal traces whose largest drop in $v$ is at the annotated first
-error; null: position-matched.}
+\caption{Where fatal traces commit ($\delta=1/8$). ``Decisive'': share of not-capability-limited
+fatal traces whose largest drop in $v$ is at the annotated first error; null: position-matched.
+Llama: fatal traces only.}
 \label{tab:commit}
-\setlength{\tabcolsep}{3pt}
+\setlength{\tabcolsep}{2.5pt}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{lccc}\toprule
- & Qwen2.5-1.5B & Qwen2-1.5B & Qwen2.5-Math-7B\\\midrule
-Traces (clean/fatal/rec.) & \QwenSmallNClean/\QwenSmallNFatal/\QwenSmallNRecov & \QwenTwoNClean/\QwenTwoNFatal/\QwenTwoNRecov & \QwenMathNClean/\QwenMathNFatal/\QwenMathNRecov\\
-Capability-limited & \QwenSmallCap & \QwenTwoCap & \QwenMathCap\\
-Latent commitment ($c<e$) & \QwenSmallLatent & \QwenTwoLatent & \QwenMathLatent\\
-Commits at error ($c=e$) & \QwenSmallAtErr & \QwenTwoAtErr & \QwenMathAtErr\\
-Recoverable error ($c>e$) & \QwenSmallRecov & \QwenTwoRecov & \QwenMathRecov\\\midrule
-Decisive = first error & \QwenSmallDec & \QwenTwoDec & \QwenMathDec\\
-\quad position-matched null & \QwenSmallDecNull & \QwenTwoDecNull & \QwenMathDecNull\\
-\quad $n$ & \QwenSmallDecN & \QwenTwoDecN & \QwenMathDecN\\\midrule
-Drop at error: fatal & \QwenSmallDropFat & \QwenTwoDropFat & \QwenMathDropFat\\
-Drop at error: recovered & \QwenSmallDropRec & \QwenTwoDropRec & \QwenMathDropRec\\
-Noise floor (clean) & \QwenSmallFloor & \QwenTwoFloor & \QwenMathFloor\\\bottomrule
+\begin{tabular}{lcccc}\toprule
+ & Qwen2.5-1.5B & Qwen2-1.5B & Qwen2.5-Math-7B & Llama-3.1-8B\\\midrule
+Traces (clean/fatal/rec.) & \QwenSmallAllNClean/\QwenSmallAllNFatal/\QwenSmallAllNRecov & \QwenTwoAllNClean/\QwenTwoAllNFatal/\QwenTwoAllNRecov & \QwenMathNClean/\QwenMathNFatal/\QwenMathNRecov & --/\LlamaNFatal/--\\
+Continuations per prefix & \QwenSmallAllM & \QwenTwoAllM & \QwenMathM & \LlamaM\\
+Capability-limited & \QwenSmallAllCap & \QwenTwoAllCap & \QwenMathCap & \LlamaCap\\
+Latent commitment ($c<e$) & \QwenSmallAllLatent & \QwenTwoAllLatent & \QwenMathLatent & \LlamaLatent\\
+Commits at error ($c=e$) & \QwenSmallAllAtErr & \QwenTwoAllAtErr & \QwenMathAtErr & \LlamaAtErr\\
+Recoverable error ($c>e$) & \QwenSmallAllRecov & \QwenTwoAllRecov & \QwenMathRecov & \LlamaRecov\\\midrule
+Decisive = first error & \QwenSmallAllDec & \QwenTwoAllDec & \QwenMathDec & \LlamaDec\\
+\quad position-matched null & \QwenSmallAllDecNull & \QwenTwoAllDecNull & \QwenMathDecNull & \LlamaDecNull\\
+\quad $n$ & \QwenSmallAllDecN & \QwenTwoAllDecN & \QwenMathDecN & \LlamaDecN\\\midrule
+Drop at error: fatal & \QwenSmallAllDropFat & \QwenTwoAllDropFat & \QwenMathDropFat & \LlamaDropFat\\
+Drop at error: recovered & \QwenSmallAllDropRec & \QwenTwoAllDropRec & \QwenMathDropRec & --\\
+Noise floor (clean) & \QwenSmallAllFloor & \QwenTwoAllFloor & \QwenMathFloor & --\\\bottomrule
 \end{tabular}}
 \end{table}
 
 \begin{figure*}[t]\centering
-\includegraphics[width=0.9\textwidth]{fig18_event_study.pdf}
-\caption{Success probability $v_k$ aligned at the annotated first error ($k-e$; dashed line between
-the last correct step and the error). Shaded: 95\% bootstrap CI. Clean traces are aligned at a
-uniformly drawn step (placebo).}
+\includegraphics[width=0.95\textwidth]{fig18_event_study.pdf}
+\caption{Success probability $v_k$ aligned at the annotated first error ($k-e$; the dashed line
+separates the last correct step from the error). Shaded: 95\% bootstrap CI. Clean traces are
+aligned at a uniformly drawn step (placebo). Llama: fatal traces only.}
 \label{fig:event}
 \end{figure*}
 
-\subsection{Where to backtrack}
-Verifier-guided search resamples a failing trace from some earlier point. We compare four targets on
-fatal traces: restarting from scratch ($v_0$), resampling from just before the annotated first error
-($v_{e-1}$), resampling from just before the decisive step ($v_{d-1}$), and the best prefix in
-hindsight (an in-sample upper bound). The decisive step is an oracle quantity, but choosing it and
-scoring it on the same continuations would reward noise. We therefore split the $m$ continuations of
-every prefix at random into halves $A$ and $B$; half $A$ decides whether a trace is not
-capability-limited ($v_0^A>\delta$) and where its decisive step is, and half $B$ scores every
-policy. We average over 50 random splits and bootstrap over traces. On a planted-effect simulation
-in which the first error is the decisive step by construction, this estimator returns a difference
-of $+0.001$ between decisive-step and first-error backtracking, so it is not biased by the selection.
+\textbf{Does the model already know its answer?} (exploratory) At every prefix we force an
+immediate answer (\ProbeSamples\ forced answers), giving an \emph{answer curve} $a_k$. The probe is
+valid at the endpoints. After the full trace, the forced answer reproduces the trace's own answer in
+79--91\% of cases for three models, but in only 47\% for Qwen2-1.5B, for which the probe is
+unreliable. From the bare question it is right in 11--14\% of cases. Answers become
+accessible late, mostly after the error position (Fig.~\ref{fig:answers}). In fatal traces, the
+model's accessible answer was correct just before the error and wrong just after it in only
+\QwenMathAnsFatTurnsWrongAtError\ (Qwen2.5-Math-7B) and \LlamaAnsFatTurnsWrongAtError\ (Llama) of
+traces. In most fatal traces the forced answer was never right (\QwenMathAnsFatNeverRight\ and
+\LlamaAnsFatNeverRight). In recovered traces, the correct answer is already accessible right
+after the error in \QwenMathAnsRecFixed\ ($n=\QwenMathAnsRecN$) and \LlamaAnsRecFixed\
+($n=\LlamaAnsRecN$) of traces. This is a lower bound on recoveries in which the written error did
+not matter, because answers are computed late even in clean traces.
 
-\begin{table}[t]\centering\small
-\caption{Success after resampling a fatal trace from each target (sample-split, 50 splits; mean pool
-size in parentheses). Differences are paired, with 95\% trace-bootstrap CIs.}
+\begin{figure*}[t]\centering
+\includegraphics[width=0.95\textwidth]{fig23_answer_curves.pdf}
+\caption{Answer curves: accuracy of an immediately forced answer after $k$ steps, aligned at the
+annotated first error (clean traces at their middle step).}
+\label{fig:answers}
+\end{figure*}
+
+\subsection{Where to backtrack, per attempt}\label{sec:backtrack}
+Verifier-guided search resamples a failing trace from some earlier point. We compare four targets on
+fatal traces:
+\begin{itemize}
+\item restarting from scratch ($v_0$);
+\item resampling from just before the annotated first error ($v_{e-1}$);
+\item resampling from just before the decisive step ($v_{d-1}$);
+\item the best prefix in hindsight (an in-sample upper bound).
+\end{itemize}
+Choosing a step and scoring it on the same continuations would reward noise, so we split every
+prefix's continuations at random into halves $A$ and $B$. Half $A$ selects the trace
+($v_0^A>\delta$) and its decisive step, and half $B$ scores every target. We average over 50
+splits and bootstrap over traces. On a planted-effect simulation in which the first error is the
+decisive step by construction, this estimator returns $+0.001$, so it does not create a gap.
+
+\begin{table*}[t]\centering\small
+\caption{Success after resampling a fatal trace from each target, per attempt (sample-split, 50
+splits; mean pool size in parentheses). 95\% trace-bootstrap CIs. Evidence level per row: see
+Section~\ref{sec:evidence}.}
 \label{tab:backtrack}
-\setlength{\tabcolsep}{3pt}
-\resizebox{\columnwidth}{!}{%
-\begin{tabular}{lccc}\toprule
- & Qwen2.5-1.5B (\QwenSmallBtN) & Qwen2-1.5B (\QwenTwoBtN) & Math-7B (\QwenMathBtN)\\\midrule
-Restart & \QwenSmallBtRestart & \QwenTwoBtRestart & \QwenMathBtRestart\\
-Before first error & \QwenSmallBtErr & \QwenTwoBtErr & \QwenMathBtErr\\
-Before decisive step & \QwenSmallBtDec & \QwenTwoBtDec & \QwenMathBtDec\\
-Best prefix (oracle) & \QwenSmallBtOracle & \QwenTwoBtOracle & \QwenMathBtOracle\\\midrule
-Restart $-$ error & \QwenSmallBtRestErr & \QwenTwoBtRestErr & \QwenMathBtRestErr\\
- & {\scriptsize[\QwenSmallBtRestErrLo, \QwenSmallBtRestErrHi]} & {\scriptsize[\QwenTwoBtRestErrLo, \QwenTwoBtRestErrHi]} & {\scriptsize[\QwenMathBtRestErrLo, \QwenMathBtRestErrHi]}\\
-Decisive $-$ error & \QwenSmallBtDiff & \QwenTwoBtDiff & \QwenMathBtDiff\\
- & {\scriptsize[\QwenSmallBtDiffLo, \QwenSmallBtDiffHi]} & {\scriptsize[\QwenTwoBtDiffLo, \QwenTwoBtDiffHi]} & {\scriptsize[\QwenMathBtDiffLo, \QwenMathBtDiffHi]}\\
-Decisive $-$ restart & \QwenSmallBtDecRest & \QwenTwoBtDecRest & \QwenMathBtDecRest\\
- & {\scriptsize[\QwenSmallBtDecRestLo, \QwenSmallBtDecRestHi]} & {\scriptsize[\QwenTwoBtDecRestLo, \QwenTwoBtDecRestHi]} & {\scriptsize[\QwenMathBtDecRestLo, \QwenMathBtDecRestHi]}\\\midrule
-Tokens: restart / decisive & \QwenSmallTokRest\,/\,\QwenSmallTokDec & \QwenTwoTokRest\,/\,\QwenTwoTokDec & \QwenMathTokRest\,/\,\QwenMathTokDec\\\bottomrule
-\end{tabular}}
-\end{table}
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{lcccc}\toprule
+ & Qwen2.5-1.5B (\QwenSmallAllBtN) & Qwen2-1.5B (\QwenTwoAllBtN) & Qwen2.5-Math-7B (\QwenMathBtN) & Llama-3.1-8B (\LlamaBtN)\\\midrule
+Restart & \QwenSmallAllBtRestart & \QwenTwoAllBtRestart & \QwenMathBtRestart & \LlamaBtRestart\\
+Before annotated first error & \QwenSmallAllBtErr & \QwenTwoAllBtErr & \QwenMathBtErr & \LlamaBtErr\\
+Before decisive step & \QwenSmallAllBtDec & \QwenTwoAllBtDec & \QwenMathBtDec & \LlamaBtDec\\
+Best prefix (oracle, in-sample) & \QwenSmallAllBtOracle & \QwenTwoAllBtOracle & \QwenMathBtOracle & \LlamaBtOracle\\\midrule
+Restart $-$ first error & \QwenSmallAllBtRestErr\ [\QwenSmallAllBtRestErrLo, \QwenSmallAllBtRestErrHi] & \QwenTwoAllBtRestErr\ [\QwenTwoAllBtRestErrLo, \QwenTwoAllBtRestErrHi] & \QwenMathBtRestErr\ [\QwenMathBtRestErrLo, \QwenMathBtRestErrHi] & \LlamaBtRestErr\ [\LlamaBtRestErrLo, \LlamaBtRestErrHi]\\
+\quad new batches only (replication) & \QwenSmallNewBtRestErr\ [\QwenSmallNewBtRestErrLo, \QwenSmallNewBtRestErrHi] & \QwenTwoNewBtRestErr\ [\QwenTwoNewBtRestErrLo, \QwenTwoNewBtRestErrHi] & -- & --\\
+\quad truncated continuations dropped & -- & -- & \QwenMathTruncBtRestErr\ [\QwenMathTruncBtRestErrLo, \QwenMathTruncBtRestErrHi] & \LlamaTruncBtRestErr\ [\LlamaTruncBtRestErrLo, \LlamaTruncBtRestErrHi]\\
+Decisive $-$ first error & \QwenSmallAllBtDiff\ [\QwenSmallAllBtDiffLo, \QwenSmallAllBtDiffHi] & \QwenTwoAllBtDiff\ [\QwenTwoAllBtDiffLo, \QwenTwoAllBtDiffHi] & \QwenMathBtDiff\ [\QwenMathBtDiffLo, \QwenMathBtDiffHi] & \LlamaBtDiff\ [\LlamaBtDiffLo, \LlamaBtDiffHi]\\
+Decisive $-$ restart & \QwenSmallAllBtDecRest\ [\QwenSmallAllBtDecRestLo, \QwenSmallAllBtDecRestHi] & \QwenTwoAllBtDecRest\ [\QwenTwoAllBtDecRestLo, \QwenTwoAllBtDecRestHi] & \QwenMathBtDecRest\ [\QwenMathBtDecRestLo, \QwenMathBtDecRestHi] & \LlamaBtDecRest\ [\LlamaBtDecRestLo, \LlamaBtDecRestHi]\\
+\quad TOST at $\pm0.05$ (90\% CI) & \QwenSmallAllTost & \QwenTwoAllTost & \QwenMathTost & \LlamaTost\\\midrule
+Continuation tokens: restart / decisive & \QwenSmallAllTokRest\,/\,\QwenSmallAllTokDec & \QwenTwoAllTokRest\,/\,\QwenTwoAllTokDec & \QwenMathTokRest\,/\,\QwenMathTokDec & \LlamaTokRest\,/\,\LlamaTokDec\\\bottomrule
+\end{tabular}
+\end{table*}
 
 \begin{figure}[t]\centering
 \includegraphics[width=\columnwidth]{fig20_backtracking.pdf}
@@ -132,28 +199,41 @@ Tokens: restart / decisive & \QwenSmallTokRest\,/\,\QwenSmallTokDec & \QwenTwoTo
 \label{fig:backtrack}
 \end{figure}
 
-\textbf{Backtracking to the annotated first error is worse than starting over.} In all three models,
-resampling from just before the human-annotated first error succeeds less often than restarting from
-scratch, by \QwenSmallBtRestErr\ [\QwenSmallBtRestErrLo, \QwenSmallBtRestErrHi],
-\QwenTwoBtRestErr\ [\QwenTwoBtRestErrLo, \QwenTwoBtRestErrHi] and \QwenMathBtRestErr\
-[\QwenMathBtRestErrLo, \QwenMathBtRestErrHi] (Table~\ref{tab:backtrack}, Fig.~\ref{fig:backtrack}).
-These are traces where the model can solve the problem, and the target is the expert label, i.e.\ a
-perfect ProcessBench verifier. The correct steps before the error already lower the chance of
-success: the prefix carries the failure before the error is written.
+\textbf{For the three Qwen models, backtracking to the annotated first error is worse than starting
+over.} This was found exploratorily in Run B. Restart beats first-error backtracking by
+\QwenSmallAllBtRestErr, \QwenTwoAllBtRestErr\ and \QwenMathBtRestErr\ (Table~\ref{tab:backtrack}).
+On the 48 new continuations per prefix alone, which were sampled after the effect was found, it
+replicates for both 1.5B models. The pooled difference is \PooledNewBtRestErr\
+[\PooledNewBtRestErrLo, \PooledNewBtRestErrHi] (preregistered R1, confirmed). The steps before the
+error already lower the chance of success. Resampling from just before the decisive step recovers
+the loss: it beats first-error backtracking by \QwenSmallAllBtDiff, \QwenTwoAllBtDiff\ and
+\QwenMathBtDiff\ (all CIs above zero).
 
-\textbf{Backtracking to where success drops recovers the loss at lower cost.} Resampling from just
-before the decisive step beats first-error backtracking by \QwenSmallBtDiff, \QwenTwoBtDiff\ and
-\QwenMathBtDiff\ (all CIs above zero; \QwenMathBtDiffAll\ for the 7B model with no selection at all)
-and matches restarting (\QwenSmallBtDecRest, \QwenTwoBtDecRest, \QwenMathBtDecRest; all CIs include
-zero) while generating \QwenSmallTokSave\%, \QwenTwoTokSave\% and \QwenMathTokSave\% fewer
-continuation tokens. The best prefix in hindsight reaches \QwenSmallBtOracle, \QwenTwoBtOracle\ and
-\QwenMathBtOracle, so there is headroom for a target chosen better than either.
+\textbf{For Llama-3.1-8B, it is not.} The preregistered confirmatory tests on the new model family
+fail:
+\begin{itemize}
+\item restart $-$ first error is \LlamaBtRestErr\ [\LlamaBtRestErrLo, \LlamaBtRestErrHi]
+(C1, Holm-adjusted $p$ = \LlamaHolmCOne);
+\item decisive step $-$ first error is \LlamaBtDiff\ [\LlamaBtDiffLo, \LlamaBtDiffHi]
+(C2, Holm-adjusted $p$ = \LlamaHolmCTwo).
+\end{itemize}
+This is not an artefact of truncation. With continuations that hit the token limit treated as
+missing rather than wrong, restart $-$ first error is \LlamaTruncBtRestErr\
+[\LlamaTruncBtRestErrLo, \LlamaTruncBtRestErrHi]. The Llama result is consistent with its
+localization result: the annotated error is the decisive step more often (\LlamaDec), so the step
+before the error is usually still a good place to resume. Backtracking to human first errors is
+therefore model-dependent. It is worse than restarting for three Qwen models, but not in general.
 
-\textbf{Reading.} Eq.~\ref{eq:supermart} explains why restart is a strong baseline: for any
-backtracking point at a fixed depth, or at a stopping time of the trace, prefixes of failed
-on-policy traces are on average no better than the empty prefix. The point just before the first
-error is neither (it depends on the next step), so the inequality does not force first-error
-backtracking below restart; the data show that it falls below anyway. A target helps only if it is
-chosen with information about where success is lost. Correctness labels do not provide that information; value drops do. Verifier-guided
-backtracking should therefore be evaluated against restart at matched compute, and verifiers meant
-to steer search should be trained to find drops in $v$, not first errors.
+\textbf{Decisive-step backtracking and restart: no difference detected, equivalence mostly
+untested.} Decisive $-$ restart is within $\pm0.04$ for every model, and every 95\% CI includes
+zero. Equivalence at a margin of $\pm0.05$ (TOST, 90\% CI) holds for Qwen2.5-1.5B and for the
+pooled new batches. It is inconclusive for the other models, including the preregistered C4 test
+on Llama. We therefore do not claim that decisive-step backtracking matches restart; we claim only
+that no difference was detected. It uses 15--29\% fewer continuation tokens per attempt. The best
+prefix in hindsight reaches \QwenSmallAllBtOracle--\LlamaBtOracle.
+
+\textbf{Reading.} Eq.~\ref{eq:supermart} explains why restart is a strong baseline: for a
+backtracking point at a fixed depth or at a stopping time of the trace, failed on-policy prefixes
+are on average no better than the empty prefix. The point just before the first error is neither,
+because it depends on the next step. So the inequality allows first-error backtracking to beat
+restart or to lose to it. The data show both outcomes, depending on the model.

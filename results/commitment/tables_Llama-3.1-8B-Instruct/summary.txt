@@ -1,0 +1,26 @@
+rollouts: ['results/run_c/rollouts.Llama-3.1-8B-Instruct.b4004.jsonl']
+backend(s): ['vllm']
+traces: 144 ({'fatal': 144})
+[fatal, delta=0.125] capability-limited   0.583 [0.500, 0.660]
+[fatal, delta=0.125] latent-commitment    0.076 [0.035, 0.125]
+[fatal, delta=0.125] commits-at-error     0.208 [0.146, 0.278]
+[fatal, delta=0.125] recoverable-error    0.132 [0.076, 0.188]
+[fatal, delta=0.125] never-commits        0.000 [0.000, 0.000]
+[fatal, not capability-limited, n=60] first error is the decisive step: 0.633 [0.517, 0.767] (chance if uniform: 0.158)
+[fatal] mean drop in success prob at the first error: +0.179 [+0.133, +0.228]
+[fatal, not capability-limited] position-matched null: 0.187; first error at the last step: 0.000; decisive share without those (n=60): 0.633 [0.517, 0.767]
+[fatal, not capability-limited] decisive share minus position-matched null: +0.447 [+0.328, +0.569], bootstrap p = 0.0000
+[backtrack, fatal, v0_A > delta, mean pool 56.1, 50 splits] bt_restart               success 0.537 [0.476, 0.596]
+[backtrack, fatal, v0_A > delta, mean pool 56.1, 50 splits] bt_before_error          success 0.559 [0.476, 0.638]
+[backtrack, fatal, v0_A > delta, mean pool 56.1, 50 splits] bt_before_decisive       success 0.569 [0.504, 0.635]
+[backtrack, fatal, v0_A > delta, mean pool 56.1, 50 splits] bt_best_prefix_oracle    success 0.678 [0.618, 0.736]
+[backtrack] decisive-step minus first-error: +0.010 [-0.030, +0.058]
+[backtrack] restart minus first-error: -0.022 [-0.090, +0.047]
+[backtrack] decisive-step minus restart: +0.032 [-0.017, +0.085]
+[backtrack] mean continuation tokens tok_restart          430
+[backtrack] mean continuation tokens tok_before_error     301
+[backtrack] mean continuation tokens tok_before_decisive  316
+[backtrack] TOST decisive vs restart, margin 0.05: 90% CI [-0.008, +0.076] -> inconclusive
+[backtrack] bootstrap p: dec_minus_err 0.7040, restart_minus_err 0.5240, dec_minus_restart 0.2210
+[backtrack, all fatal, n=144] decisive-step minus first-error: +0.017 [-0.003, +0.038]
+[event study, fatal] v at r=-1..+1 relative to the error: r=-1: 0.241, r=0: 0.062, r=1: 0.038

@@ -1,0 +1,30 @@
+rollouts: ['results/commitment/Qwen2-1.5B-Instruct_s0.jsonl', 'results/commitment/Qwen2-1.5B-Instruct_s1.jsonl', 'results/run_c/rollouts.Qwen2-1.5B-Instruct.b1001.s0.jsonl', 'results/run_c/rollouts.Qwen2-1.5B-Instruct.b1001.s1.jsonl', 'results/run_c/rollouts.Qwen2-1.5B-Instruct.b2002.s0.jsonl', 'results/run_c/rollouts.Qwen2-1.5B-Instruct.b2002.s1.jsonl', 'results/run_c/rollouts.Qwen2-1.5B-Instruct.b3003.s0.jsonl', 'results/run_c/rollouts.Qwen2-1.5B-Instruct.b3003.s1.jsonl']
+backend(s): ['vllm']
+traces: 88 ({'fatal': 67, 'clean': 15, 'recovered': 6})
+[fatal, delta=0.125] capability-limited   0.522 [0.403, 0.642]
+[fatal, delta=0.125] latent-commitment    0.119 [0.045, 0.194]
+[fatal, delta=0.125] commits-at-error     0.254 [0.149, 0.358]
+[fatal, delta=0.125] recoverable-error    0.104 [0.045, 0.179]
+[fatal, delta=0.125] never-commits        0.000 [0.000, 0.000]
+[fatal, not capability-limited, n=32] first error is the decisive step: 0.438 [0.281, 0.625] (chance if uniform: 0.241)
+[fatal] mean drop in success prob at the first error: +0.162 [+0.098, +0.233]
+[recovered] mean drop in success prob at the first error: +0.211 [+0.008, +0.458]
+[clean] noise floor, mean of the largest per-trace drop: +0.201 [+0.095, +0.333]
+[fatal, not capability-limited] position-matched null: 0.204; first error at the last step: 0.156; decisive share without those (n=27): 0.370 [0.185, 0.556]
+[fatal, not capability-limited] decisive share minus position-matched null: +0.234 [+0.063, +0.407], bootstrap p = 0.0080
+[backtrack, fatal, v0_A > delta, mean pool 32.3, 50 splits] bt_restart               success 0.575 [0.479, 0.672]
+[backtrack, fatal, v0_A > delta, mean pool 32.3, 50 splits] bt_before_error          success 0.410 [0.303, 0.522]
+[backtrack, fatal, v0_A > delta, mean pool 32.3, 50 splits] bt_before_decisive       success 0.557 [0.468, 0.653]
+[backtrack, fatal, v0_A > delta, mean pool 32.3, 50 splits] bt_best_prefix_oracle    success 0.621 [0.524, 0.715]
+[backtrack] decisive-step minus first-error: +0.147 [+0.061, +0.236]
+[backtrack] restart minus first-error: +0.165 [+0.067, +0.265]
+[backtrack] decisive-step minus restart: -0.018 [-0.061, +0.032]
+[backtrack] mean continuation tokens tok_restart          210
+[backtrack] mean continuation tokens tok_before_error     168
+[backtrack] mean continuation tokens tok_before_decisive  178
+[backtrack] TOST decisive vs restart, margin 0.05: 90% CI [-0.055, +0.024] -> inconclusive
+[backtrack] bootstrap p: dec_minus_err 0.0000, restart_minus_err 0.0000, dec_minus_restart 0.4680
+[backtrack, all fatal, n=67] decisive-step minus first-error: +0.084 [+0.039, +0.131]
+[event study, fatal] v at r=-1..+1 relative to the error: r=-1: 0.208, r=0: 0.046, r=1: 0.021
+[event study, recovered] v at r=-1..+1 relative to the error: r=-1: 0.349, r=0: 0.138, r=1: 0.388
+[event study, clean] v at r=-1..+1 relative to the error: r=-1: 0.721, r=0: 0.766, r=1: 0.802

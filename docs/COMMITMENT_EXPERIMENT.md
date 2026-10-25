@@ -225,3 +225,25 @@ data existed. Driver: `scripts/kaggle_run_c.sh` (Kaggle, 2x T4).
   batches for both 1.5B models, Llama-3.1-8B rollouts).
 - Full run (version 5, Kaggle script version 361921902) started from `17c83cc` on 2026-10-24 at
   about 19:55 UTC.
+
+### Run C results (cite these; preregistered outcomes in PREREGISTRATION_RUN_C.md)
+
+| Quantity | Qwen2.5-1.5B (m = 64) | Qwen2-1.5B (m = 64) | Qwen2.5-Math-7B (m = 12) | Llama-3.1-8B (m = 16) |
+|---|---|---|---|---|
+| fatal traces / not capability-limited | 51 / 34 | 67 / 32 | 207 / 71 | 144 / 60 |
+| capability-limited | 0.333 | 0.522 | 0.657 | 0.583 |
+| first error = decisive step (null) | 0.647 (0.166) | 0.438 (0.204) | 0.423 (0.159) | 0.633 (0.187) |
+| restart − first error | +0.123 [+0.054, +0.197] | +0.165 [+0.067, +0.265] | +0.068 [+0.007, +0.133] | −0.022 [−0.090, +0.047] |
+| same, new batches only | +0.128 [+0.055, +0.206] | +0.151 [+0.054, +0.249] | – | – |
+| same, truncated continuations dropped | – | – | +0.107 [+0.044, +0.176] | −0.007 [−0.068, +0.048] |
+| decisive − first error | +0.103 [+0.053, +0.161] | +0.147 [+0.061, +0.236] | +0.108 [+0.051, +0.165] | +0.010 [−0.030, +0.058] |
+| decisive − restart (TOST ±0.05) | −0.020 (equivalent) | −0.018 (inconclusive) | +0.040 (inconclusive) | +0.032 (inconclusive) |
+| split-half r of v_k | 0.985 (by batch) | 0.976 (by batch) | 0.951 | 0.896 |
+| PRM largest drop − restart, b = 4, all costs | −0.651 | −0.514 | −0.022 [−0.052, +0.010] | −0.063 [−0.100, −0.024] |
+| PRM largest drop − restart, b = 4, shared verifier | −0.061 | −0.098 | +0.046 [+0.017, +0.075] | +0.003 [−0.030, +0.036] |
+| human first error − restart, b = 4 | −0.047 | −0.075 | +0.039 | +0.001 |
+
+Reading: the localization result (the annotated error is the decisive step far more often than
+chance) holds for all four models and is confirmed on Llama. The restart-beats-first-error result
+holds and replicates on independent samples for the three Qwen models, but is not confirmed on
+Llama. No practical policy reliably beats restart at a matched end-to-end budget.

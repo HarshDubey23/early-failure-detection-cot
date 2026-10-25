@@ -23,3 +23,35 @@ fixed compute budget a later restart point buys more attempts, because continuat
 which is why Section~\ref{sec:policies} compares policies at a matched end-to-end budget.
 (iv) ProcessBench traces were not necessarily sampled at the temperature used for $v_k$, so the
 proposition holds only approximately for them; the empirical comparisons do not rely on it.
+
+\section{Preregistered tests and outcomes}\label{app:prereg}
+\begin{table}[h]\centering\small
+\begin{tabular}{p{1.1cm}p{7.4cm}p{3.6cm}p{2.6cm}}\toprule
+Test & Hypothesis (data) & Estimate [95\% CI] & Outcome\\\midrule
+H1 & first error is the decisive step more often than chance (Qwen, Run B) & see Table~\ref{tab:commit} & supported (Qwen2-1.5B CI includes null at $m=16$)\\
+C1 & restart $>$ first-error backtracking (Llama) & \LlamaBtRestErr\ [\LlamaBtRestErrLo, \LlamaBtRestErrHi] & not confirmed\\
+C2 & decisive-step $>$ first-error backtracking (Llama) & \LlamaBtDiff\ [\LlamaBtDiffLo, \LlamaBtDiffHi] & not confirmed\\
+C3 & decisive share $>$ position-matched null (Llama) & \LlamaDecMinusNull\ [\LlamaDecMinusNullLo, \LlamaDecMinusNullHi] & confirmed (Holm-adjusted $p$ \LlamaHolmCThree)\\
+C4 & decisive-step $\equiv$ restart within $\pm0.05$ (Llama) & 90\%: [\LlamaBtDecRestNinetyLo, \LlamaBtDecRestNinetyHi] & inconclusive\\
+R1 & restart $>$ first error on new batches only (Qwen 1.5B, pooled) & \PooledNewBtRestErr\ [\PooledNewBtRestErrLo, \PooledNewBtRestErrHi] & confirmed\\
+R2 & $v_k$ reliable across independent batches & $r=\QwenSmallAllSplitR$, \QwenTwoAllSplitR & confirmed\\
+R3 & decisive step stable under posterior noise & modal $\ge0.5$: \QwenSmallAllPostModal\%, \QwenTwoAllPostModal\% & confirmed\\
+P2, P4 & practical policies vs restart at $b=4$ (Llama) & \LlamaPolPrmDropFourDiff, \LlamaPolLearnedFourDiff & both worse than restart\\\bottomrule
+\end{tabular}
+\end{table}
+
+\section{Threshold and definition sensitivity}\label{app:sens}
+\begin{table}[h]\centering\small
+\begin{tabular}{lcccc}\toprule
+ & Qwen2.5-1.5B & Qwen2-1.5B & Qwen2.5-Math-7B & Llama-3.1-8B\\\midrule
+Restart $-$ first error, $\delta=1/16$ & \QwenSmallAllDABtRestErr & \QwenTwoAllDABtRestErr & \QwenMathDABtRestErr & \LlamaDABtRestErr\\
+Restart $-$ first error, $\delta=1/8$ & \QwenSmallAllBtRestErr & \QwenTwoAllBtRestErr & \QwenMathBtRestErr & \LlamaBtRestErr\\
+Restart $-$ first error, $\delta=1/4$ & \QwenSmallAllDCBtRestErr & \QwenTwoAllDCBtRestErr & \QwenMathDCBtRestErr & \LlamaDCBtRestErr\\\midrule
+First error = largest drop, $\delta=1/16 \,/\, 1/8 \,/\, 1/4$ & \QwenSmallAllDefArgA\,/\,\QwenSmallAllDefArgB\,/\,\QwenSmallAllDefArgC & \QwenTwoAllDefArgA\,/\,\QwenTwoAllDefArgB\,/\,\QwenTwoAllDefArgC & \QwenMathDefArgA\,/\,\QwenMathDefArgB\,/\,\QwenMathDefArgC & \LlamaDefArgA\,/\,\LlamaDefArgB\,/\,\LlamaDefArgC\\
+First error = point of no return & \QwenSmallAllDefCommitA\,/\,\QwenSmallAllDefCommitB\,/\,\QwenSmallAllDefCommitC & \QwenTwoAllDefCommitA\,/\,\QwenTwoAllDefCommitB\,/\,\QwenTwoAllDefCommitC & \QwenMathDefCommitA\,/\,\QwenMathDefCommitB\,/\,\QwenMathDefCommitC & \LlamaDefCommitA\,/\,\LlamaDefCommitB\,/\,\LlamaDefCommitC\\
+First error = first drop above clean floor & \QwenSmallAllDefFloorA\,/\,\QwenSmallAllDefFloorB\,/\,\QwenSmallAllDefFloorC & \QwenTwoAllDefFloorA\,/\,\QwenTwoAllDefFloorB\,/\,\QwenTwoAllDefFloorC & \QwenMathDefFloorA\,/\,\QwenMathDefFloorB\,/\,\QwenMathDefFloorC & --\\\bottomrule
+\end{tabular}
+\end{table}
+Restart $-$ first error keeps its sign and significance at every threshold for every model: positive
+for the three Qwen models and null for Llama. The clean-floor definition is unavailable for Llama
+(no clean traces were run).

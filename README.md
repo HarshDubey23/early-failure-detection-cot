@@ -1,94 +1,96 @@
 # Errors Are Not Choke Points: Difficulty, Error Onset and Counterfactual Commitment in LLM Reasoning Failures
 
-> **Status: preprint draft, not peer-reviewed or submitted.** Every number below is computed by
-> the code in this repository from real data: 3,400 expert-annotated ProcessBench solutions (CPU)
-> and 50,152 model continuations sampled on GPU and committed as raw JSONL. The hidden-state
-> experiment (E4) has not been run, and the intervention policy (E8) has only been replayed in an
-> offline simulation. The repository was first titled "Detecting and Mitigating Choke Points in
-> LLM Reasoning" and later "Where Reasoning Fails First"; the current title follows the evidence.
+> **Status: preprint draft, not peer-reviewed.** Every number is computed by the code here from
+> real data:
+> - 3,400 expert-annotated ProcessBench solutions (CPU);
+> - 125,832 model continuations sampled on GPU and committed as raw JSONL;
+> - 65,976 forced-answer probes;
+> - process-reward-model scores for 3,374 traces.
+>
+> Claims carry an evidence level: **preregistered**, **exploratory** or **confirmatory** (a
+> preregistered test on new data). Results that did not confirm are reported as such. What remains
+> unverified is listed [below](#limitations-and-what-remains-unverified).
 
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![Tests: pytest](https://img.shields.io/badge/tests-pytest-lightgrey)
 ![CI](https://github.com/HarshDubey23/early-failure-detection-cot/actions/workflows/ci.yml/badge.svg)
 
-Process supervision assumes that the first incorrect step of a reasoning trace is where it
-fails. Verifier-guided search backtracks to that step, and early-warning detectors assume that
-failure is visible in a partial trace. This repository tests those assumptions. It first
-controls failure detectors for problem difficulty. It then measures, by resampling the model
-that wrote each trace, the step after which success actually becomes unlikely, and compares
-that step with the human-annotated first error.
+Process supervision assumes that the first incorrect step of a reasoning trace is where it fails,
+and verifier-guided search backtracks to that step. This repository tests that assumption
+counterfactually. We resample four open models from two families at every step of their own
+ProcessBench traces and measure where success actually becomes unlikely. We then compare that
+point with the human-annotated first error, and backtracking policies with simply restarting, at a
+matched compute budget.
 
-**Paper:** [`paper/main.pdf`](paper/main.pdf) (6 pages; every number in it is generated from the
+**Paper:** [`paper/main.pdf`](paper/main.pdf) (10 pages; every number in it is generated from the
 result tables by `paper/make_values.py`).
 
 ## Key findings
 
-**1. Early failure prediction is mostly a difficulty signal** (CPU, 3,400 traces, 5 seeds,
-question-level cluster bootstrap).
-- Question text plus generator identity alone predict a wrong answer with AUROC
-  0.588 [0.570, 0.607].
-- Adding the first 25% of the reasoning adds +0.005 (n.s.); the full chain adds
-  +0.031 [0.020, 0.041].
-- Within a problem, the 25% prefix is at chance (0.485).
-
-**2. One first error in four is not fatal.**
-- 521 of 2,221 annotated first errors (23.5%) still end in a correct answer (34% on Omni-MATH).
-- Fatality does not depend on where the error occurs.
-- Failure detectors rank these non-fatal errors as riskier than fatal ones (AUROC 0.456).
-
-**3. Counterfactual commitment** (GPU, Kaggle 2x T4, vLLM). For every prefix of every trace,
-the same model is sampled m times (temperature 0.7) and the success probability
-v_k = P(correct | question, first k steps) is estimated.
-
-| | Qwen2.5-1.5B-Instruct | Qwen2-1.5B-Instruct | Qwen2.5-Math-7B-Instruct |
-|---|---|---|---|
-| traces (clean / fatal / recovered) | 53 / 51 / 12 | 15 / 67 / 6 | 60 / 207 / 47 |
-| continuations per prefix / total scored | 16 / 11,264 | 16 / 7,136 | 12 / 31,752 |
-| fatal traces that are capability-limited (v_0 ≤ 1/8) | 0.333 | 0.522 | 0.657 |
-| first error = largest drop in v (not capability-limited) | 0.529 [0.353, 0.706] | 0.344 [0.188, 0.531] | 0.423 [0.310, 0.535] |
-| position-matched null | 0.171 | 0.214 | 0.159 |
-| success: restart from scratch | 0.481 | 0.621 | 0.470 |
-| success: resample from just before the first error | 0.375 | 0.406 | 0.402 |
-| success: resample from just before the largest drop | 0.493 | 0.601 | 0.511 |
-| **restart − first-error backtracking** | **+0.106 [+0.027, +0.187]** | **+0.215 [+0.095, +0.339]** | **+0.068 [+0.007, +0.133]** |
-| largest-drop − first-error backtracking | +0.117 [+0.059, +0.183] | +0.196 [+0.082, +0.316] | +0.108 [+0.051, +0.165] |
-| largest-drop − restart | +0.011 [−0.035, +0.061] | −0.020 [−0.057, +0.020] | +0.040 [−0.008, +0.089] |
-| continuation tokens: restart / largest drop | 374 / 308 | 203 / 173 | 650 / 463 |
-
-What the table shows:
-- **33–66% of failures are decided before the first step.** The model almost never solves the
-  problem from scratch, so no step is the choke point.
-- **When the outcome is still open, the annotated error is often, but far from always, where
-  it closes.** It is the largest drop in v in 34–53% of traces, against 16–21% expected by
-  chance. For Qwen2-1.5B the interval includes the null.
-- **Backtracking to the expert-labelled first error is worse than restarting from scratch, in
-  all three models.** Even a perfect first-error verifier, used to choose where to resample,
-  loses to a restart.
-- **Resampling from just before the largest drop matches a restart with 15–29% fewer tokens.**
-  Verifiers that steer search should be trained to find drops in success probability, not first
-  errors.
-
-Backtracking numbers use repeated sample splitting. Half of each prefix's continuations select
-the trace and the target step, the other half score it. Results are averaged over 50 random
-splits, with a trace bootstrap for the intervals. On a planted-effect simulation, where the
-first error is the decisive step by construction, the estimator gives +0.001, so it does not
-create a gap.
+| # | Finding | Evidence |
+|---|---|---|
+| 1 | **Early failure prediction is mostly difficulty.** Question + generator alone predict a wrong answer with AUROC 0.588 [0.570, 0.607]; the first 25% of the reasoning adds +0.005 (n.s.) and is at chance within a problem. | exploratory, CPU |
+| 2 | **One first error in four is not fatal** (23.5%), fatality is flat in error position, and failure detectors rank non-fatal errors as riskier than fatal ones (AUROC 0.456). | exploratory, CPU |
+| 3 | **The counterfactual measurement is reliable.** Value curves from independent sampling batches correlate at r = 0.985 / 0.976. The decisive step's posterior mode is ≥ 0.5 in 87–100% of traces, so disagreement with human labels is not sampling noise. | confirmatory (R2, R3) |
+| 4 | **33–66% of failures are decided before the first step**: the model almost never solves the problem from scratch. | preregistered categories |
+| 5 | **When the outcome is still open, the annotated error is the step where success collapses in 42–65% of traces** (position-matched null 0.16–0.20). | preregistered (Qwen); **confirmed** on Llama (0.633 vs 0.187, Holm p < 0.002) |
+| 6 | **Backtracking to the human first error is model-dependent.** For three Qwen models it is *worse than restarting* per attempt (by 0.07–0.17), and this replicates on 48 new continuations per step (+0.140 [+0.078, +0.202]). **It does not generalize to Llama-3.1-8B**: −0.022 [−0.090, +0.047], also with truncated outputs dropped. | exploratory → replicated (R1) → **not confirmed** on Llama (C1) |
+| 7 | **No practical policy beats restart at a matched end-to-end budget** that counts every token, including verifier passes and probes. PRM-guided backtracking with a validated verifier (ProcessBench F1 73.2 vs published 73.5) is *worse* than restart for Llama (−0.063 [−0.100, −0.024]). A learned restart-point predictor transferred across families is worse everywhere. The only positive estimate is a small gain for Qwen2.5-Math-7B at large budgets or with a free verifier pass. | **confirmed** on Llama (P2, P4); exploratory elsewhere |
+| 8 | **Why restart is hard to beat:** for on-policy traces, any restart point chosen without looking ahead is, per attempt and in expectation over failures, no better than starting over (a supermartingale argument, Appendix A). | theory |
 
 ![Where to backtrack](results/figures/fig20_backtracking.png)
 
-![Event study](results/figures/fig18_event_study.png)
+Success after resampling a failed trace from each target, per attempt. Each step choice is made on
+one half of the continuations and scored on the other; 50 splits; 95% CIs.
 
-Success probability aligned at the annotated first error. Fatal traces collapse exactly at the
-error. Recovered 7B traces become *more* likely to succeed across it. Clean traces, aligned at
-a random step, drift smoothly.
+![Policies at a matched budget](results/figures/fig22_policies.png)
 
-Details:
-- Difficulty controls and error fatality:
-  [`docs/RESULTS_DECOMPOSITION.md`](docs/RESULTS_DECOMPOSITION.md).
-- Counterfactual experiment, run log and final numbers:
-  [`docs/COMMITMENT_EXPERIMENT.md`](docs/COMMITMENT_EXPERIMENT.md).
-- Positioning against prior work: [`docs/NOVELTY_AUDIT.md`](docs/NOVELTY_AUDIT.md).
+P(solved) for failed traces against the end-to-end budget, counted in restart attempts. The budget
+is FLOP-matched and every overhead is charged.
+
+## Evidence levels: what was preregistered and what was found
+
+- **Preregistered before any rollout** (`a6fb04c`): the commitment categories, the decisive step,
+  sample-split backtracking, δ = 1/8 (1/16 and 1/4 as sensitivity).
+- **Exploratory (found in Runs A/B):** restart vs first-error backtracking, the position-matched
+  null, repeated sample splitting, and the CPU difficulty and fatality analyses.
+- **Preregistered for the confirmatory run** ([`docs/PREREGISTRATION_RUN_C.md`](docs/PREREGISTRATION_RUN_C.md),
+  committed in `459ff22` before any Run C data):
+  - C1–C4 on Llama-3.1-8B, whose traces cover 479 questions not in the Qwen traces;
+  - R1–R3 on three new independent sampling batches;
+  - the practical policies and their cost accounting.
+
+  Outcomes, including the failures, are appended to the same file.
+
+| Test | Result | Outcome |
+|---|---|---|
+| C1 restart > first error (Llama) | −0.022 [−0.090, +0.047] | not confirmed |
+| C2 decisive step > first error (Llama) | +0.010 [−0.030, +0.058] | not confirmed |
+| C3 decisive share > null (Llama) | +0.447 [+0.328, +0.569] | confirmed |
+| C4 decisive ≡ restart within ±0.05 (Llama) | 90% CI [−0.008, +0.076] | inconclusive |
+| R1 restart > first error on new batches | +0.140 [+0.078, +0.202] | confirmed |
+| R2 / R3 measurement reliability | r = 0.985 / 0.976; stable decisive steps | confirmed |
+| P2 / P4 practical policies vs restart (Llama) | −0.063 / −0.187 | both worse than restart |
+
+## Per-model results
+
+| | Qwen2.5-1.5B | Qwen2-1.5B | Qwen2.5-Math-7B | Llama-3.1-8B |
+|---|---|---|---|---|
+| continuations per step | 64 (4 batches) | 64 (4 batches) | 12 | 16 |
+| fatal traces / not capability-limited | 51 / 34 | 67 / 32 | 207 / 71 | 144 / 60 |
+| capability-limited fatal traces | 0.333 | 0.522 | 0.657 | 0.583 |
+| first error = decisive step (null) | 0.647 (0.166) | 0.438 (0.204) | 0.423 (0.159) | 0.633 (0.187) |
+| restart − first error, per attempt | +0.123 [+0.054, +0.197] | +0.165 [+0.067, +0.265] | +0.068 [+0.007, +0.133] | −0.022 [−0.090, +0.047] |
+| decisive step − restart (TOST ±0.05) | −0.020 (equivalent) | −0.018 (inconclusive) | +0.040 (inconclusive) | +0.032 (inconclusive) |
+| PRM largest drop − restart, budget 4, all costs | −0.651 | −0.514 | −0.022 [−0.052, +0.010] | −0.063 [−0.100, −0.024] |
+| human first error − restart, budget 4 | −0.047 | −0.075 | +0.039 | +0.001 |
+
+"No difference detected" is never reported as "equal": equivalence is claimed only where a TOST
+at ±0.05 passes. Details and every other number:
+- [`docs/COMMITMENT_EXPERIMENT.md`](docs/COMMITMENT_EXPERIMENT.md) (counterfactual runs);
+- [`docs/RESULTS_DECOMPOSITION.md`](docs/RESULTS_DECOMPOSITION.md) (difficulty and fatality);
+- [`docs/NOVELTY_AUDIT.md`](docs/NOVELTY_AUDIT.md) (positioning).
 
 ## Reproducing the results
 
@@ -96,95 +98,71 @@ Details:
 python -m pip install -r requirements.txt
 ```
 
-Exact versions are pinned (tested on Python 3.13.3, CPU). On Windows use any GNU make
-(`mingw32-make`, Git for Windows, WSL); override the interpreter with `make <target> PY=py`.
-
 | Command | Hardware | What it does |
 |---|---|---|
-| `make decomposition` | CPU, minutes | difficulty controls, error fatality, three-way AUROC (findings 1-2), Fig. 16-17 |
-| `make commitment-analysis` | CPU, minutes | re-derives every counterfactual number and Fig. 18-20 from the committed raw rollouts in `results/commitment/` |
-| `make choke-paper` | CPU | regenerates `paper/values.tex` from the tables and compiles `paper/main.pdf` (pdflatex) |
-| `make commitment-mock` | CPU | runs stages 12-13 with a fake generator to check the pipeline; writes no results |
-| `make commitment GENERATOR=... TP=... DTYPE=half` | GPU | samples new rollouts for one generator (stage 12) and analyses them (stage 13) |
-| `make test` | CPU | 54 tests, including the leakage checks on every split and a planted-effect test of the commitment pipeline |
+| `make decomposition` | CPU | difficulty controls, error fatality, three-way AUROC (findings 1–2) |
+| `make commitment-analysis` | CPU | Run B numbers and Fig. 18–20 from the committed rollouts |
+| `bash scripts/run_c_analysis.sh` | CPU | every preregistered Run C analysis from `results/run_c/` (confirmatory tests, replication, robustness, policies, PRM check, answer curves) |
+| `python scripts/21_run_c_figures.py` | CPU | Fig. 21–23 |
+| `make choke-paper` | CPU | regenerates `paper/values.tex` and compiles `paper/main.pdf` |
+| `make test` | CPU | the test suite, including a planted-effect test of the commitment pipeline |
+| `bash scripts/kaggle_run_c.sh` | Kaggle 2x T4 | the full GPU run (~11.5 h; `scripts/run_c_mode` selects smoke or full) |
 
-To re-run the GPU experiment on a free Kaggle notebook (2x T4):
-
-```bash
-git clone https://github.com/HarshDubey23/early-failure-detection-cot && cd early-failure-detection-cot
-bash scripts/kaggle_commitment.sh setup     # math-verify + ProcessBench from Hugging Face
-bash scripts/kaggle_commitment.sh vllm      # installs vLLM, removes the mismatched torchaudio
-BACKEND=vllm bash scripts/kaggle_commitment.sh run Qwen2.5-1.5B-Instruct 16
-bash scripts/kaggle_full.sh                 # the full three-model run used for the paper (~6 h on 2x T4)
-```
-
-T4s have no bfloat16, so everything runs in float16 with eager execution. Stage 12 appends to its
-JSONL after every batch and resumes from it, so a session that times out can be continued.
+GPU code paths: stage 12 (rollouts, vLLM), stage 14 (PRM and generator step signals), stage 15
+(forced-answer probes). T4s have no bfloat16, so everything runs in float16 with eager execution.
+Every stage appends results as it goes and resumes after an interruption.
 
 ## Repository map
 
 | Path | Contents |
 |---|---|
-| `paper/` | `main.tex`, `counterfactual.tex`, `abstract.tex`, `refs.tex`, `make_values.py` (all numbers), `main.pdf` |
-| `scripts/11_*`, `11b_*` | E9: difficulty controls and error-fatality decomposition (CPU) |
-| `scripts/12_*`, `12a_*` | E10: counterfactual rollouts (vLLM / transformers / mock backends) and ProcessBench preparation |
-| `scripts/13_*`, `13b_*` | E10: commitment analysis (categories, event study, sample-split backtracking) and figures |
-| `scripts/kaggle_*.sh` | Kaggle drivers for the GPU runs |
-| `results/commitment/` | raw rollouts (`<model>_s<shard>.jsonl`: every continuation's answer and correctness), run logs, `tables_<model>/` |
-| `src/analysis/decomposition.py`, `commitment.py` | outcome groups, grouped cross-fitting, concordance; value curves, decisive step, point of no return |
-| `configs/` | `default.yaml` (full run), `quick.yaml` (smoke) |
-| `src/data/`, `src/features/`, `src/models/` | loaders with a uniform `Trace` schema, preprocessing, features, detectors and probes |
-| `src/analysis/` (other) | onset (E1), statistics (E2), predictability (E3), lead time (E5), calibration (E6), transfer (E7) |
-| `src/intervention/` | selective-intervention policy and offline simulator (E8) |
-| `scripts/01-10` | the original ten-stage pipeline |
-| `tests/` | leakage, loaders, preprocessing, metrics, reproducibility, commitment pipeline |
-| `results/tables/`, `results/figures/` | CSV + LaTeX tables; PNG (300 dpi) + PDF figures |
-| `docs/` | METHODOLOGY, DESIGN_DECISIONS, RESULTS, RESULTS_DECOMPOSITION, COMMITMENT_EXPERIMENT, NOVELTY_AUDIT, BENCHMARKS, diagrams |
-| `notebooks/` | `00_walkthrough.ipynb` (narrated tour of saved results), `01_original_prototype.ipynb` |
+| `paper/` | `main.tex`, `counterfactual.tex`, `policies.tex`, `appendix.tex` (proposition, preregistered outcomes, sensitivity), `make_values.py`, `main.pdf` |
+| `results/commitment/` | Run A/B rollouts and logs, `tables_*`, `robustness_*`, `policies/`, `answer_curves/`, `prm_check.json` |
+| `results/run_c/` | Run C raw outputs: rollouts (new batches, Llama), PRM and generator step signals, forced-answer probes, logs |
+| `results/coding/` | blinded sheets for human coding of recovered traces (protocol: `docs/CODING_PROTOCOL.md`) |
+| `scripts/11*` | difficulty and fatality decomposition (CPU) |
+| `scripts/12*`–`15` | GPU stages: rollouts, ProcessBench preparation, step signals, answer probes |
+| `scripts/13*`, `16`–`21` | analysis: commitment, robustness, policies, coding agreement, PRM check, answer curves, figures |
+| `scripts/kaggle_*.sh`, `run_c_analysis.sh` | GPU drivers and the Run C analysis runner |
+| `docs/` | PREREGISTRATION_RUN_C, COMMITMENT_EXPERIMENT, RESULTS_DECOMPOSITION, CODING_PROTOCOL, NOVELTY_AUDIT, METHODOLOGY, RESULTS |
+| `src/`, `scripts/01-10`, `tests/` | the original pipeline (E1–E8) and its tests |
 
-## Original study (E1-E8)
+## Limitations and what remains unverified
+
+- **Coverage.** Four open models of at most 8B parameters, mathematics only.
+  - Llama contributes 144 of its 274 fatal traces. The time limit ran out; traces were processed
+    in a random order.
+  - Llama's recovered and clean traces were not run.
+- **On-policy approximation.** ProcessBench re-segmented the original solutions, and their
+  decoding settings are unknown, so prefixes are near-, not exactly, on-policy.
+- **Truncation.** For the larger models, 17% (Qwen2.5-Math-7B) and 29% (Llama) of continuations
+  hit the 1,024-token cap without an answer. Treating them as missing changes no conclusion.
+- **Equivalence.** Decisive-step backtracking and restart are shown equivalent (±0.05) only for
+  Qwen2.5-1.5B and the pooled new batches.
+- **Human coding.** The two-coder human coding of recovered traces has not been done yet. The
+  protocol and blinded sheets are released, and no coding result is reported until it is complete.
+- **Exploratory results.** The CPU analyses, the answer curves, the shared-verifier accounting
+  and all policy results on Qwen models are exploratory.
+
+## Original study (E1–E8)
 
 The first version of this project studied where first errors occur and whether a partial trace
-predicts a wrong answer. Those results are kept here as they were computed (full CPU run of
-2026-09-15, `make all`; every value with its interval and source file is in
-[`docs/RESULTS.md`](docs/RESULTS.md)). The difficulty controls above change how they should be
-read: the 25% prefix AUROC of 0.588 equals what the question and generator alone achieve.
-
-| Experiment | Main quantity | Value |
-|---|---|---|
-| E1 | traces / with process error / with incorrect answer | 3,400 / 65.3% / 50.0% |
-| E1 | mean relative onset rho = e/n [95% CI]; mean steps after first error | 0.500 [0.490, 0.510]; 4.12 |
-| E2 | discrete null (error uniform over each trace's steps) | p <= 0.001; mean rho 0.500 vs 0.578 (errors come earlier) |
-| E2 | first errors on the final step, observed vs expected | 4.1% vs 15.5% |
-| E3 | lexical (TF-IDF) AUROC at 25% / 100% of the chain | 0.588 / 0.626 |
-| E3 | lexical − length-only at 25% (tie handling fixed) | +0.052 (p = 0.032); earlier reported as +0.073 |
-| E3 | lexical AUROC at 25% over 5 grouped splits | mean 0.577, SD 0.015 |
-| E4 | hidden-state probes | NOT_RUN (no GPU at the time) |
-| E5 | tau = 0.5 alarm rate on erroneous / error-free traces | 0.908 / 0.723 |
-| E6 | ECE lexical / surface / MLP / GRU | 0.025 / 0.021 / 0.046 / 0.164 |
-| E7 | lexical AUROC, ProcessBench -> BIG-Bench Mistake tasks | 0.626 -> 0.172 to 0.502 |
-| E8 | intervention | simulated under assumed parameters only |
-
-```bash
-make smoke   # all ten stages on seeded synthetic data (~1.5 min, no network, no GPU)
-make all     # full original pipeline on real data (~8 min on CPU)
-```
-
-![System architecture](docs/diagrams/rendered/architecture.png)
+predicts a wrong answer. Those results are kept as they were computed (`make all`; details in
+[`docs/RESULTS.md`](docs/RESULTS.md)). The difficulty controls above change how to read them: the
+25%-prefix AUROC of 0.588 equals what question and generator achieve alone. The lexical −
+length-only difference at 25% is +0.052 (p = 0.032) after a tie-handling fix, not +0.073. The
+hidden-state probes (E4) were not run, and the intervention policy (E8) was only simulated.
 
 ## Datasets, models and licences
 
 | Resource | Source | Licence (as declared) | Role |
 |---|---|---|---|
 | ProcessBench | HF `Qwen/ProcessBench` (Zheng et al., ACL 2025) | Apache-2.0 | primary data |
-| BIG-Bench Mistake | GitHub `WHGTyen/BIG-Bench-Mistake` (Tyen et al., 2024) | Apache-2.0 | transfer |
-| GSM8K | HF `openai/gsm8k` | MIT | gold answers for rollouts |
-| MATH-500 / MATH | HF `HuggingFaceH4/MATH-500`, `EleutherAI/hendrycks_math` | see card | gold answers for rollouts |
-| OlympiadBench, Omni-MATH | HF `Hothan/OlympiadBench`, `KbsdJames/Omni-MATH` | see card | gold answers for rollouts |
-| Qwen2.5-1.5B-Instruct, Qwen2-1.5B-Instruct, Qwen2.5-Math-7B-Instruct | HF `Qwen/...` | see model card | generators resampled in E10 |
-
-Raw and processed datasets are not committed (`make data preprocess` recreates them); model
-rollouts are committed because they are this project's own measurements.
+| BIG-Bench Mistake | GitHub `WHGTyen/BIG-Bench-Mistake` | Apache-2.0 | transfer (E7) |
+| GSM8K, MATH-500, MATH, OlympiadBench, Omni-MATH | HF `openai/gsm8k`, `HuggingFaceH4/MATH-500`, `EleutherAI/hendrycks_math`, `Hothan/OlympiadBench`, `KbsdJames/Omni-MATH` | see cards | gold answers |
+| Qwen2.5-1.5B-Instruct, Qwen2-1.5B-Instruct, Qwen2.5-Math-7B-Instruct | HF `Qwen/...` | see model cards | generators |
+| Llama-3.1-8B-Instruct | HF `unsloth/Meta-Llama-3.1-8B-Instruct` (copy of the Meta release) | Llama 3.1 Community License | generator |
+| Qwen2.5-Math-PRM-7B | HF `Qwen/Qwen2.5-Math-PRM-7B` | see model card | process reward model |
 
 ## Citation
 
@@ -202,6 +180,6 @@ rollouts are committed because they are this project's own measurements.
 
 ## Acknowledgements
 
-Supervised by Dr. Rohit Chaudhary (KIET Group of Institutions). GPU runs used free Kaggle
-notebooks. Thanks to the authors of ProcessBench and BIG-Bench Mistake for releasing
-step-annotated reasoning traces, and to the Qwen team for open weights.
+Supervised by Dr. Rohit Chaudhary (KIET Group of Institutions). The GPU runs used free Kaggle
+notebooks. Thanks to the ProcessBench, BIG-Bench Mistake, Qwen and Llama teams for releasing data
+and weights.

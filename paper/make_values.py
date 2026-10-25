@@ -89,7 +89,12 @@ KEYS = {"Qwen2.5-1.5B-Instruct": "QwenSmall", "Qwen2-1.5B-Instruct": "QwenTwo",
         # variants: new independent batches only, all batches, pooled new batches, threshold sensitivity
         "Qwen2.5-1.5B-Instruct_newbatches": "QwenSmallNew", "Qwen2-1.5B-Instruct_newbatches": "QwenTwoNew",
         "Qwen2.5-1.5B-Instruct_allbatches": "QwenSmallAll", "Qwen2-1.5B-Instruct_allbatches": "QwenTwoAll",
-        "pooled_1p5b_newbatches": "PooledNew"}
+        "pooled_1p5b_newbatches": "PooledNew", "Llama-3.1-8B-Instruct_droptrunc": "LlamaTrunc",
+        "Qwen2.5-Math-7B-Instruct_droptrunc": "QwenMathTrunc",
+        "Qwen2.5-1.5B-Instruct_allbatches_delta0.0625": "QwenSmallAllDA", "Qwen2.5-1.5B-Instruct_allbatches_delta0.25": "QwenSmallAllDC",
+        "Qwen2-1.5B-Instruct_allbatches_delta0.0625": "QwenTwoAllDA", "Qwen2-1.5B-Instruct_allbatches_delta0.25": "QwenTwoAllDC",
+        "Qwen2.5-Math-7B-Instruct_delta0.0625": "QwenMathDA", "Qwen2.5-Math-7B-Instruct_delta0.25": "QwenMathDC",
+        "Llama-3.1-8B-Instruct_delta0.0625": "LlamaDA", "Llama-3.1-8B-Instruct_delta0.25": "LlamaDC"}
 for tables in sorted(C.glob("tables_*")):
     key = KEYS.get(tables.name.replace("tables_", ""))
     if key is None:
@@ -126,7 +131,7 @@ for tables in sorted(C.glob("tables_*")):
         for js, name in [("dec_minus_err", "BtDiff"), ("restart_minus_err", "BtRestErr"), ("dec_minus_restart", "BtDecRest")]:
             if js in tests:
                 pv = tests[js]["p"]
-                put(f"{key}{name}P", "<0.001" if pv < 0.001 else f"{pv:.3f}", "{}")
+                put(f"{key}{name}P", "$<$0.001" if pv < 0.001 else f"{pv:.3f}", "{}")
                 put(f"{key}{name}NinetyLo", tests[js]["ci90"][0], "{:+.3f}")
                 put(f"{key}{name}NinetyHi", tests[js]["ci90"][1], "{:+.3f}")
         if "backtrack_tost_0.05" in summ:
@@ -139,7 +144,7 @@ for tables in sorted(C.glob("tables_*")):
     if "minus_null" in fe:
         put(f"{key}DecMinusNull", fe["minus_null"][0], "{:+.3f}"); put(f"{key}DecMinusNullLo", fe["minus_null"][1], "{:+.3f}")
         put(f"{key}DecMinusNullHi", fe["minus_null"][2], "{:+.3f}")
-        put(f"{key}DecMinusNullP", "<0.001" if fe["minus_null_p"] < 0.001 else f"{fe['minus_null_p']:.3f}", "{}")
+        put(f"{key}DecMinusNullP", "$<$0.001" if fe["minus_null_p"] < 0.001 else f"{fe['minus_null_p']:.3f}", "{}")
     put(f"{key}DecLast", fe["share_error_at_last_step"])
     put(f"{key}DecExcl", fe["share_excluding_last_step"][0])
     put(f"{key}NFatal", summ["groups"].get("fatal", 0), "{}"); put(f"{key}NClean", summ["groups"].get("clean", 0), "{}")
@@ -179,11 +184,114 @@ for rob in sorted(C.glob("robustness_*")):
         dl = {0.0625: "A", 0.125: "B", 0.25: "C"}[round(row["delta"], 4)]
         put(f"{key}Def{dn}{dl}", row["share_first_error"])
 
-tot = 0
-for tables in sorted(C.glob("tables_*")):
-    if KEYS.get(tables.name.replace("tables_", "")) in ("QwenSmall", "QwenTwo", "QwenMath", "Llama"):
-        pt = pd.read_csv(tables / "per_trace.csv"); tot += int((pt.n * pt.m).sum())
-put("TotalRollouts", tot, "{:,}")
+# ---- stage 17 policies, stage 19 PRM check, stage 20 answer curves --------------------
+POL = {"P0_restart": "Restart", "P1_prm_first_error": "PrmFirst", "P2_prm_largest_drop": "PrmDrop",
+       "P3_probe_search": "Probe", "P4_learned": "Learned", "P5_human_first_error": "Human", "P6_oracle": "Oracle"}
+pol_file = C / "policies" / "policy_summary.csv"
+if pol_file.exists():
+    PS = pd.read_csv(pol_file)
+    for (gen, b, acct, pop, pol), r in PS.set_index(["generator", "budget", "accounting", "population", "policy"]).iterrows():
+        key = KEYS.get(gen)
+        if key is None or acct not in ("flops", "flops_shared_verifier") or pop != "all_fatal" or b not in (1, 4, 8):
+            continue
+        tag = {1: "One", 4: "Four", 8: "Eight"}[b] + ("Sh" if acct == "flops_shared_verifier" else "")
+        put(f"{key}Pol{POL[pol]}{tag}", r.success)
+        put(f"{key}Pol{POL[pol]}{tag}Diff", r.minus_restart, "{:+.3f}")
+        put(f"{key}Pol{POL[pol]}{tag}Lo", r.diff_lo, "{:+.3f}")
+        put(f"{key}Pol{POL[pol]}{tag}Hi", r.diff_hi, "{:+.3f}")
+        put(f"{key}Pol{POL[pol]}{tag}N", r.attempts, "{:.1f}")
+prm_file = C / "prm_check.json"
+if prm_file.exists():
+    pc = json.loads(prm_file.read_text())
+    put("prmFOne", 100 * pc["mean_f1_over_subsets"], "{:.1f}")
+    for sub, name in [("gsm8k", "Gsm"), ("math", "Math"), ("olympiadbench", "Olym"), ("omnimath", "Omni")]:
+        if sub in pc:
+            put(f"prmFOne{name}", 100 * pc[sub]["f1"], "{:.1f}")
+    put("prmN", pc["all"]["n"], "{:,}")
+ans_file = C / "answer_curves" / "summary.json"
+if ans_file.exists():
+    for gen, d in json.loads(ans_file.read_text()).items():
+        key = KEYS.get(gen)
+        if key is None:
+            continue
+        if "recovered_answer_already_correct_at_error" in d:
+            v = d["recovered_answer_already_correct_at_error"]
+            put(f"{key}AnsRecFixed", v[0]); put(f"{key}AnsRecFixedLo", v[1]); put(f"{key}AnsRecFixedHi", v[2])
+            put(f"{key}AnsRecN", d["recovered_n"], "{}")
+        for c in ["never_right", "wrong_before_error", "turns_wrong_at_error", "turns_wrong_later"]:
+            if f"fatal_{c}" in d:
+                nm = "".join(w.capitalize() for w in c.split("_"))
+                put(f"{key}AnsFat{nm}", d[f"fatal_{c}"][0])
+
+# ---- Llama confirmatory tests: Holm adjustment over C1-C3 -----------------------------
+lt = C / "tables_Llama-3.1-8B-Instruct" / "summary.json"
+if lt.exists():
+    ls = json.loads(lt.read_text())
+    raw = {"COne": ls["backtrack_tests"]["restart_minus_err"]["p"], "CTwo": ls["backtrack_tests"]["dec_minus_err"]["p"],
+           "CThree": max(ls["first_error_is_decisive"]["minus_null_p"], 1 / 2000)}
+    order = sorted(raw, key=raw.get)
+    adj, running = {}, 0.0
+    for i, k in enumerate(order):
+        running = max(running, min(1.0, (len(order) - i) * raw[k]))
+        adj[k] = running
+    for k, v in adj.items():
+        put(f"LlamaHolm{k}", "$<$0.002" if v < 0.002 else f"{v:.2f}", "{}")
+
+# ---- truncation and answer formatting of the continuations -----------------------------
+def trunc_stats(files, cap=1020):
+    tot = at_cap = boxed = 0
+    for f in files:
+        for line in open(f, encoding="utf-8"):
+            r = json.loads(line)
+            if r.get("skipped") or not r.get("m"):
+                continue
+            tot += r["m"]
+            at_cap += sum(1 for t, a in zip(r["new_tokens"], r["answers"]) if t >= cap and a is None)
+            boxed += r.get("n_boxed", 0)
+    return (100 * at_cap / tot, 100 * boxed / tot) if tot else (float("nan"), float("nan"))
+
+
+RC0 = ROOT / "results" / "run_c"
+for files, key in [(sorted(RC0.glob("rollouts.Llama-3.1-8B-Instruct.*.jsonl")), "Llama"),
+                   (sorted(C.glob("Qwen2.5-Math-7B-Instruct_s*.jsonl")), "QwenMath")]:
+    if files:
+        tr, bx = trunc_stats(files)
+        put(f"{key}TruncPct", tr, "{:.0f}"); put(f"{key}BoxedPct", bx, "{:.0f}")
+
+# ---- question coverage --------------------------------------------------------------
+pt_file = ROOT / "data" / "processed" / "processed_traces.jsonl"
+if pt_file.exists():
+    import re as _re
+    qs: dict = {}
+    for line in open(pt_file, encoding="utf-8"):
+        r = json.loads(line)
+        qs.setdefault(r["generator"], set()).add(_re.sub(r"\s+", " ", r["question"]).strip().lower())
+    qwen = qs.get("Qwen2.5-1.5B-Instruct", set()) | qs.get("Qwen2-1.5B-Instruct", set()) | qs.get("Qwen2.5-Math-7B-Instruct", set())
+    ll = qs.get("Llama-3.1-8B-Instruct", set())
+    put("QuestionsQwen", len(qwen), "{:,}"); put("QuestionsLlama", len(ll), "{:,}")
+    put("QuestionsLlamaNew", len(ll - qwen), "{:,}"); put("QuestionsUnion", len(ll | qwen), "{:,}")
+
+# ---- totals straight from the raw JSONL files ------------------------------------------
+def count_rows(files):
+    n = 0
+    for f in files:
+        for line in open(f, encoding="utf-8"):
+            try:
+                r = json.loads(line)
+            except json.JSONDecodeError:
+                continue
+            n += 0 if r.get("skipped") else int(r.get("m", 0))
+    return n
+
+
+RC = ROOT / "results" / "run_c"
+roll_files = sorted(C.glob("*_s*.jsonl")) + sorted(RC.glob("rollouts.*.jsonl"))
+put("TotalRollouts", count_rows(roll_files), "{:,}")
+put("RunBRollouts", count_rows(sorted(C.glob("*_s*.jsonl"))), "{:,}")
+put("RunCRollouts", count_rows(sorted(RC.glob("rollouts.*.jsonl"))), "{:,}")
+put("ProbeSamples", count_rows(sorted(RC.glob("probe.*.jsonl"))), "{:,}")
+prm_rows = [json.loads(x) for x in open(RC / "signals_prm.jsonl")] if (RC / "signals_prm.jsonl").exists() else []
+put("PrmTraces", sum(1 for r in prm_rows if r.get("ok")), "{:,}")
 out = ROOT / "paper" / "values.tex"
 out.write_text("% generated by paper/make_values.py -- do not edit\n"
                + "\n".join(f"\\newcommand{{\\{k}}}{{{v}}}" for k, v in sorted(macros.items())) + "\n")

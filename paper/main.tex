@@ -39,30 +39,40 @@ the outcome is decided}. We call a step that decides the outcome a \emph{choke p
 whether errors and choke points coincide.
 
 We test both assumptions on ProcessBench~\cite{processbench}, which provides expert first-error
-labels for 3,400 solutions written by 12 open models, and we contribute:
+labels for 3,400 solutions written by 12 open models. We then measure commitment directly: we
+resample four open models from two families at every prefix of their own traces, scoring
+\TotalRollouts\ continuations. Every claim below carries its evidence level
+(Section~\ref{sec:evidence}): \textsc{pre} (preregistered before any data), \textsc{exp}
+(exploratory: found while looking at the data) or \textsc{conf} (a preregistered test on new
+data). Our contributions:
 \begin{enumerate}
-\item \textbf{A difficulty-controlled protocol for early failure detection.} A detector that reads
-only the question and the generator's identity reaches AUROC \aucQG; reading the first quarter of
-the reasoning on top of that adds \dIncA\ (n.s.), and within a problem the 25\% prefix is at chance
-(\wpPA). Reasoning text adds \dIncB--\dIncC\ AUROC only after half the chain.
-\item \textbf{Errors are not choke points, observationally.} \nonFatalPct\% of first errors are
-followed by a correct answer (\nonFatalOmniPct\% on Omni-MATH), and fatality does not depend on where
-the error occurs.
-\item \textbf{Failure detectors track error presence, not commitment.} They rank non-fatal errors as
-riskier than fatal ones (AUROC \twOutFR), and once an error has occurred its fatality is not
-predictable from the text.
-\item \textbf{A counterfactual measurement of commitment.} For traces written by three open models
-we resample the \emph{same} model from every prefix (\TotalRollouts\ scored continuations) and
-estimate the success probability $v_k$ after each step. \QwenSmallCapPct--\QwenMathCapPct\% of
-failures are capability-limited before the first step; when the outcome is still open, the annotated
-error is where success collapses in \QwenTwoDec--\QwenSmallDec\ of traces, against a
-position-matched null of \QwenMathDecNull--\QwenTwoDecNull\ (Section~\ref{sec:counterfactual}).
-\item \textbf{First-error backtracking loses to restarting.} With sample splitting, resampling from
-just before the expert-labelled first error succeeds less often than restarting from scratch in all
-three models (by \QwenMathBtRestErr\ to \QwenTwoBtRestErr), while resampling from just before the
-largest drop in $v$ matches restarting with \QwenTwoTokSave--\QwenMathTokSave\% fewer tokens. A
-simple supermartingale argument explains why restart is a strong baseline for any backtracking
-target that is not chosen with information about where success is lost.
+\item \textbf{Difficulty-controlled evaluation of early failure detection} (\textsc{exp}, CPU).
+A detector that reads only the question and the generator's identity reaches AUROC \aucQG.
+Adding the first quarter of the reasoning adds \dIncA\ (n.s.), and within a problem the 25\% prefix
+is at chance (\wpPA).
+\item \textbf{Errors are not choke points, observationally} (\textsc{exp}). \nonFatalPct\% of first
+errors are followed by a correct answer, fatality does not depend on where the error occurs, and
+failure detectors rank non-fatal errors as riskier than fatal ones (AUROC \twOutFR).
+\item \textbf{Reliable counterfactual value curves.} With up to 64 continuations per step, drawn as
+four independent batches, value curves replicate across batches ($r=\QwenSmallAllSplitR$). Decisive
+steps are stable under posterior resampling, so disagreement with human labels is not sampling
+noise.
+\item \textbf{Where failures are decided.} \QwenSmallAllCapPct--\QwenMathCapPct\% of failures are
+capability-limited before the first step. When the outcome is still open, the annotated error is
+where success collapses in \QwenTwoAllDec--\QwenSmallAllDec\ of traces, against a position-matched
+null of 0.16--0.20 (\textsc{pre} for the Qwen models; \textsc{conf} on Llama, \LlamaDec).
+\item \textbf{Backtracking to the human first error is model-dependent.} For three Qwen models,
+resampling from just before the annotated first error is worse than restarting, by
+\QwenMathBtRestErr\ to \QwenTwoAllBtRestErr\ per attempt (\textsc{exp}). The effect replicates on
+independent samples (\PooledNewBtRestErr, \textsc{conf}) but \emph{fails to generalize} to
+Llama-3.1-8B (\LlamaBtRestErr, \textsc{conf}, not confirmed). A short supermartingale argument
+shows that restart is a strong baseline for any restart point chosen without looking ahead.
+\item \textbf{No practical policy beats restart at matched compute.} We count every token,
+including the cost of finding the restart point. Under that accounting, backtracking guided by a
+validated process reward model (ProcessBench F1 \prmFOne) is worse than restart for Llama
+(\LlamaPolPrmDropFourDiff, \textsc{conf}) and for the 1.5B models. A learned target transferred
+across families is worse everywhere. Only for Qwen2.5-Math-7B with large budgets is there a small
+gain.
 \end{enumerate}
 All code, tables and the generator of every number in this paper are released.\footnote{\url{https://github.com/HarshDubey23/early-failure-detection-cot}}
 
@@ -91,7 +101,9 @@ fixed apart from the written reasoning, which our non-fatal errors echo.
 models can correct a mistake once told where it is~\cite{tyen2024}, which motivates verifier-guided
 search that returns to the first error. Independent resampling from scratch, as in
 self-consistency~\cite{wang2023sc}, is the natural baseline for any such scheme; we compare the two
-directly.
+directly. Compute-matched comparisons of verifier-guided search with independent sampling are
+known to depend on difficulty and budget~\cite{snell2024}; we add counterfactual ground truth on
+where the restart point should be.
 
 \section{Data and Definitions}
 \textbf{Data.} ProcessBench~\cite{processbench} contains 3,400 step-segmented solutions to GSM8K,
@@ -111,6 +123,21 @@ from $M$; $v_0$ is $M$'s from-scratch solve rate and $v_n$ is the observed outco
 $c=\min\{k : v_j\le\delta\ \forall j\ge k\}$. A failing trace is \emph{capability-limited} if
 $v_0\le\delta$, shows \emph{latent commitment} if $c<e$, \emph{commits at the error} if $c=e$, and
 has a \emph{recoverable error} if $c>e$.
+
+\textbf{Evidence levels.}\label{sec:evidence} The hypotheses H1--H4 of the counterfactual
+experiment (the commitment categories, the decisive step, sample-split backtracking, $\delta=1/8$ with
+1/16 and 1/4 as sensitivity) were committed before any rollout. Analyses added after seeing the
+Run A/B data (restart vs.\ first error, repeated splitting, the position-matched null) are
+\emph{exploratory}. Before the confirmatory run (Run C) we committed a second plan (git commit
+\texttt{459ff22}; \texttt{docs/PREREGISTRATION\_RUN\_C.md}). It specified:
+\begin{itemize}
+\item tests C1--C4 on Llama-3.1-8B, a new family whose traces cover \QuestionsLlamaNew\ new questions;
+\item measurement checks R1--R3 on three new independent sampling batches;
+\item the practical policies and their cost accounting.
+\end{itemize}
+Run C reached \LlamaN\ of 274 Llama fatal traces within its 11.5-hour limit. Traces were processed
+in a random order, and recovered and clean traces were scheduled after the fatal ones, so none
+of those were run. All Run C deviations are reported in the text.
 
 \textbf{Statistics.} Detectors are TF-IDF (uni+bigrams) or one-hot features with logistic
 regression~\cite{tfidf}, cross-fitted over 5 folds grouped by problem and repeated over 5 seeds.
@@ -199,47 +226,67 @@ Prefix 100\% (has error) & \twErrRC & \twErrFR & \twErrFC\\\bottomrule
 
 \input{counterfactual}
 
+\input{policies}
+
 \section{Discussion}
-\textbf{For early warning.} Reported AUROCs for early failure prediction should be accompanied by a
-question-only and a generator baseline, the increment over them, and a within-problem concordance;
-without them a detector of problem difficulty is indistinguishable from a detector of reasoning
-failure. On ProcessBench, text detectors pass this test only after half the chain.
+\textbf{For early warning.} Reported AUROCs for early failure prediction should come with a
+question-only baseline, a generator baseline, the increment over both, and a within-problem
+concordance. Without them, a detector of problem difficulty cannot be told apart from a detector of
+reasoning failure. On ProcessBench, text detectors pass this test only after half the chain. The
+counterfactual measurement explains why. Between \QwenSmallAllCapPct\% and \QwenMathCapPct\% of
+failures are fixed before the first step, so reading the trajectory can add little for them.
 
 \textbf{For process supervision.} Human first-error labels mark where reasoning first goes wrong,
-which is the right target for auditing reasoning. They are not, in general, where the outcome is
-decided, and as backtracking targets they are worse than no target at all: a perfect ProcessBench
-verifier used to choose where to resample loses to restarting. Verifier-guided search should report
-a restart baseline at matched compute, and verifiers meant to steer search should be trained on
-drops in the counterfactual value curve, which labels exactly the step where success is lost.
+which is the right target for auditing. They are also, more often than chance, where success
+collapses: \QwenMathDec--\QwenSmallAllDec\ of open failures, confirmed on a new model family. But using them as restart
+points depends on the model. Per attempt it was worse than restarting for three Qwen models and
+equal for Llama, and at matched compute it never clearly beat restarting. Verifier-guided
+backtracking should therefore always be reported against restart at matched end-to-end compute,
+with the verifier's own cost included.
 
-\textbf{What a trajectory can tell a detector.} For the capability-limited failures
-(\QwenSmallCapPct--\QwenMathCapPct\%), the model fails at least seven times in eight before writing a
-single step, so reading the trajectory can add little beyond the problem and the model. This is the
-counterfactual counterpart of the difficulty-controlled result of Section~4, and it explains why text
-detectors gain only late in the chain: the failures they could still catch are the minority whose
-outcome is open, and those commit at a specific step.
+\textbf{What would change the picture.} The oracle shows headroom: the best restart point in
+hindsight succeeds \QwenSmallAllBtOracle--\LlamaBtOracle\ per attempt, against
+\QwenMathBtRestart--\QwenTwoAllBtRestart\ for restart. A verifier that predicted the decisive step
+cheaply and accurately could exploit that headroom. Our learned predictor does not: transferred
+across families, it is worse than restart. The released value curves are labelled training data
+for such a predictor.
 
-\section{Limitations}
-ProcessBench balances answers within each tier, so absolute fatality rates describe the benchmark,
-not deployment. Human coding of recovered traces is not yet complete.
-Counterfactual continuations are sampled at temperature 0.7 from models whose original traces were
-re-segmented by ProcessBench, so prefixes are near- rather than exactly on-policy, and $v_k$
-describes the sampling distribution rather than the decode that produced the trace. Continuations of
-the 7B model are capped at 1,024 tokens, which counts truncated solutions as failures. The decisive
-step requires rollouts at every prefix and is an oracle target; we show where a verifier should point,
-not yet a cheap verifier that points there. Pools of non-capability-limited fatal traces are small
-(about 30 for each 1.5B model), and Qwen2-1.5B's clean traces are few, so its noise floor is high. We
-study mathematics only, and open models of at most 7B parameters.
+\section{Limitations and what remains unverified}
+\begin{itemize}
+\item \textbf{Coverage.}
+  \begin{itemize}
+  \item Four open models of at most 8B parameters, mathematics only.
+  \item Llama contributes \LlamaN\ fatal traces. Its recovered and clean traces were not run, so
+  Llama has no noise floor, no event study for those groups, and no answer-curve comparison by
+  rollout.
+  \item Qwen2.5-7B-Instruct and larger models were not run.
+  \end{itemize}
+\item \textbf{On-policy approximation.} ProcessBench re-segmented the original solutions, and the
+decoding settings that produced them are unknown. Prefixes are therefore near-, not exactly,
+on-policy, and the proposition holds only approximately for them.
+\item \textbf{Truncation.} For the larger models, \QwenMathTruncPct\% and \LlamaTruncPct\% of
+continuations hit the token cap without an answer. Treating them as missing changes no
+conclusion, but it lowers absolute success rates.
+\item \textbf{Equivalence.} Equivalence of decisive-step backtracking and restart at $\pm0.05$ is
+established only for Qwen2.5-1.5B and the pooled new batches. Elsewhere, including the
+preregistered Llama test, it is inconclusive.
+\item \textbf{Exploratory results.} The difficulty and fatality analyses, the answer curves, the
+shared-verifier accounting and all policy results on the Qwen models are exploratory.
+\item \textbf{Human coding.} The coding of recovered traces by two independent human coders has
+not been done. The protocol and blinded sheets are released, and no coding result is reported.
+\end{itemize}
 
 \section{Conclusion}
-Errors are where reasoning first goes wrong; choke points are where it stops being recoverable. On
-ProcessBench the two differ often enough, and text-based failure detectors confuse them with problem
-difficulty often enough, that both process supervision and early warning should measure the second
-directly. The counterfactual value curve does this at the cost of sampling. It shows that a third of
-failures or more are decided before the first step, that the annotated error is the choke point in
-about half of the rest, and that backtracking to it is worse than starting over, while backtracking
-to the drop in success matches a restart at lower cost. Its labels are the natural training target
-for verifiers that steer search.
+Errors are where reasoning first goes wrong; choke points are where it stops being recoverable.
+Measured counterfactually, on two model families with independent replication, three things hold.
+First, many failures are decided before the first step. Second, when the outcome is still open, the
+human-labelled error is a better-than-chance but far from perfect locator of the choke point.
+Third, neither human labels nor a strong process reward model provide a restart point that beats
+simply starting over at matched compute. Restart is the baseline that verifier-guided
+backtracking has to beat, and the counterfactual value curve is the ground truth for where a
+restart point should be.
 
 \input{refs}
+\onecolumn
+\input{appendix}
 \end{document}

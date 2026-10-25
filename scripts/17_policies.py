@@ -207,10 +207,13 @@ def main() -> None:
                                          float(sum(2 * g[k] for k in probes)))
             for pol, (k, oh_pre, oh_gen) in choice.items():
                 for b in args.budgets:
-                    for acct, wpf in [("flops", 1.0), ("decode_only", 0.0)]:
+                    for acct, wpf in [("flops", 1.0), ("decode_only", 0.0), ("flops_shared_verifier", 1.0)]:
                         C0 = wpf * P + g[0]
                         B = b * C0
                         oh = wpf * oh_pre + oh_gen  # decode-only view drops every prefill, including verifier passes
+                        if acct == "flops_shared_verifier" and pol in ("P1_prm_first_error", "P2_prm_largest_drop",
+                                                                       "P4_learned"):
+                            oh -= prm_pass  # the verifier pass is assumed to be paid anyway, to detect the failure
                         N = np.floor((B - oh - wpf * L[k]) / max(g[k], 1.0))
                         succ = float(jeffreys_pass(sd["cB"][k], sd["nB"], N))
                         rows.append({"trace_id": tid, "generator": gen, "split": s, "policy": pol, "budget": b,

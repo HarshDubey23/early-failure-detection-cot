@@ -32,7 +32,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from src.analysis import commitment as cm  # noqa: E402
 
 
-def load_curves(paths: list, batches: list | None = None) -> dict:
+def load_curves(paths: list, batches: list | None = None, drop_truncated: int | None = None) -> dict:
     """{trace_id: dict(meta, rows sorted by k)}; appends the observed outcome as k = n.
 
     Accepts several JSONL files (GPU shards and/or independent sampling batches). Rows are keyed by
@@ -52,6 +52,13 @@ def load_curves(paths: list, batches: list | None = None) -> dict:
             batch = row.get("batch_id") or f"seed{row.get('seed', 'na')}"
             if batches is not None and batch not in batches:
                 continue
+            if drop_truncated:  # sensitivity: a continuation cut at the token limit without an answer is missing, not wrong
+                keep = [i for i, (t, a) in enumerate(zip(row["new_tokens"], row["answers"]))
+                        if not (t >= drop_truncated and a is None)]
+                if len(keep) < 2:
+                    continue  # fewer than two usable continuations: the prefix (and its trace) is dropped
+                row = dict(row, correct=[row["correct"][i] for i in keep], new_tokens=[row["new_tokens"][i] for i in keep],
+                           answers=[row["answers"][i] for i in keep], m=len(keep))
             by_key.setdefault((row["trace_id"], row["k"], batch), row)
     by_trace: dict = defaultdict(lambda: defaultdict(dict))
     for (tid, k, batch), row in by_key.items():
@@ -113,13 +120,15 @@ def main() -> None:
     ap.add_argument("--primary-delta", type=float, default=0.125)
     ap.add_argument("--seed", type=int, default=42)
     ap.add_argument("--batches", nargs="*", default=None, help="use only these batch labels (default: all)")
+    ap.add_argument("--drop-truncated", type=int, default=None,
+                    help="sensitivity: drop continuations with >= this many new tokens and no answer")
     ap.add_argument("--n-splits", type=int, default=50,
                     help="random A/B splits of the m continuations; backtracking numbers average over them")
     args = ap.parse_args()
     out = Path(args.out)
     out.mkdir(parents=True, exist_ok=True)
 
-    curves = load_curves([Path(p) for p in args.rollouts], args.batches)
+    curves = load_curves([Path(p) for p in args.rollouts], args.batches, args.drop_truncated)
     backends = {c["backend"] for c in curves.values()}
     if "mock" in backends:
         print("WARNING: rollouts come from the MOCK backend; numbers are not results.")
@@ -152,10 +161,16 @@ def main() -> None:
             # and scored on the same continuations. Averaging over splits removes split luck.
             sp = {k: np.empty(args.n_splits) for k in ("sel", "restart", "err", "dec", "tok_dec")}
             for s_i in range(args.n_splits):
-                perm = split_rng.permutation(m)
-                a_idx, b_idx = np.sort(perm[: m // 2]), np.sort(perm[m // 2:])
-                v_a = v_from(c["correct"], c["observed"], a_idx)
-                v_b = v_from(c["correct"], c["observed"], b_idx)
+                if args.drop_truncated:  # unequal sample counts per prefix: split each prefix separately
+                    halves = [split_rng.permutation(len(x)) for x in c["correct"]]
+                    obs = 1.0 if c["observed"] else 0.0
+                    v_a = np.array([x[h[: len(x) // 2]].mean() for x, h in zip(c["correct"], halves)] + [obs])
+                    v_b = np.array([x[h[len(x) // 2:]].mean() for x, h in zip(c["correct"], halves)] + [obs])
+                else:
+                    perm = split_rng.permutation(m)
+                    a_idx, b_idx = np.sort(perm[: m // 2]), np.sort(perm[m // 2:])
+                    v_a = v_from(c["correct"], c["observed"], a_idx)
+                    v_b = v_from(c["correct"], c["observed"], b_idx)
                 d_a = cm.decisive_step(v_a) or 1
                 sp["sel"][s_i] = v_a[0] > args.primary_delta
                 sp["restart"][s_i], sp["err"][s_i], sp["dec"][s_i] = v_b[0], v_b[e - 1], v_b[d_a - 1]

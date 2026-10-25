@@ -130,3 +130,35 @@ position and step tokens.
   - first k with v_k ≤ δ thereafter;
   - first drop larger than the clean-trace noise floor.
 - PRM implementation check against the published ProcessBench F1.
+
+---
+
+## Outcomes (added after Run C; nothing above this line was changed)
+
+Run C: Kaggle version 5, started from `17c83cc`. Analysis: `bash scripts/run_c_analysis.sh` on the
+downloaded archive (`results/run_c/`).
+
+| ID | Estimate [95% CI] | Outcome |
+|---|---|---|
+| C1 restart − first error (Llama) | −0.022 [−0.090, +0.047], Holm p = 1.00 | **not confirmed** |
+| C2 decisive − first error (Llama) | +0.010 [−0.030, +0.058], Holm p = 1.00 | **not confirmed** |
+| C3 decisive share − position-matched null (Llama) | 0.633 − 0.187 = +0.447 [+0.328, +0.569], Holm p < 0.002 | **confirmed** |
+| C4 decisive ≡ restart within ±0.05 (Llama) | 90% CI [−0.008, +0.076] | **inconclusive** |
+| R1 restart − first error, new batches only, pooled 1.5B | +0.140 [+0.078, +0.202] | **confirmed** |
+| R2 batch-to-batch reliability of v_k | r = 0.985 (Qwen2.5-1.5B), 0.976 (Qwen2-1.5B) | **confirmed** |
+| R3 decisive step stable under posterior noise | modal ≥ 0.5 in 94% / 100% of traces | **confirmed** |
+| P2 PRM largest drop − restart, b = 4 (Llama) | −0.063 [−0.100, −0.024] | **worse than restart** |
+| P4 learned − restart, b = 4 (Llama) | −0.187 [−0.226, −0.148] | **worse than restart** |
+| PRM implementation check | ProcessBench F1 73.2 (published 73.5) | matches |
+
+Deviations from the plan:
+
+- The Llama run reached 1,280 of 3,504 prefixes in its 7.5-hour budget: 144 of 274 fatal traces,
+  complete and in a random order. The recovered and clean traces (scheduled after the fatal ones)
+  were not run, so Llama has no clean-trace noise floor and no recovered-trace event study.
+- PRM scoring of all of ProcessBench stopped at its time budget after 3,301 of 3,400 traces. The
+  four rolled-out generators were scored first and are complete.
+- Two analyses were added after seeing the Run C data and are exploratory:
+  - a truncation sensitivity that treats continuations hitting the token cap without an answer
+    as missing (stage 13 `--drop-truncated`, with per-prefix splitting);
+  - a "shared verifier" cost accounting in which the PRM pass is not charged.

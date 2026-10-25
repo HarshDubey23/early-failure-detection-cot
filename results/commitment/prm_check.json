@@ -1,0 +1,34 @@
+{
+  "gsm8k": {
+    "n": 400,
+    "acc_erroneous": 0.7101449275362319,
+    "acc_correct": 0.9637305699481865,
+    "f1": 0.8177291283477638
+  },
+  "math": {
+    "n": 1000,
+    "acc_erroneous": 0.6734006734006734,
+    "acc_correct": 0.9088669950738916,
+    "f1": 0.7736132876992343
+  },
+  "olympiadbench": {
+    "n": 1000,
+    "acc_erroneous": 0.5521936459909228,
+    "acc_correct": 0.8525073746312685,
+    "f1": 0.6702481859424838
+  },
+  "omnimath": {
+    "n": 974,
+    "acc_erroneous": 0.5522788203753352,
+    "acc_correct": 0.8421052631578947,
+    "f1": 0.6670714430277273
+  },
+  "all": {
+    "n": 3374,
+    "acc_erroneous": 0.5996376811594203,
+    "acc_correct": 0.888507718696398,
+    "f1": 0.716035823089564
+  },
+  "mean_f1_over_subsets": 0.7321655112543024,
+  "published_reference": "Qwen2.5-Math-PRM-7B ProcessBench average F1 73.5 (Zhang et al., 2025)"
+}

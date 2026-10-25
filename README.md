@@ -92,6 +92,27 @@ at ±0.05 passes. Details and every other number:
 - [`docs/RESULTS_DECOMPOSITION.md`](docs/RESULTS_DECOMPOSITION.md) (difficulty and fatality);
 - [`docs/NOVELTY_AUDIT.md`](docs/NOVELTY_AUDIT.md) (positioning).
 
+## In progress: recovering from hallucinations (Run R)
+
+The next step turns the commitment measurement into a system. It is a recovery controller for
+retrieval-augmented generation. When a hallucination detector flags a sentence, the controller
+chooses between:
+- **claim repair**;
+- **backtracking** to just before the flagged sentence;
+- **restarting**;
+- **abstaining** when the evidence is insufficient.
+
+It estimates online how recoverable the response still is from each boundary. It is evaluated on
+RAGTruth and on HotpotQA with controlled evidence. The comparisons are the base model,
+Chain-of-Verification and each fixed strategy, all at a matched compute budget.
+
+- Status: implemented and tested on CPU with fake models; **preregistered before any data**
+  ([`docs/PREREGISTRATION_RECOVERY.md`](docs/PREREGISTRATION_RECOVERY.md)). No result exists yet.
+- System, experiment and commands: [`docs/RECOVERY_SYSTEM.md`](docs/RECOVERY_SYSTEM.md).
+- Code: `src/recovery/`, `scripts/30_*`–`37_*`, `scripts/kaggle_recovery.sh`.
+- Tests: `tests/test_recovery.py`. They cover the cost model, every policy's logic, and
+  planted-effect simulations, including one checking that no gain is created where none exists.
+
 ## Reproducing the results
 
 ```bash

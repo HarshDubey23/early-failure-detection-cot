@@ -1,0 +1,191 @@
+{
+  "n_responses": 17790,
+  "n_good": 17617,
+  "A_test_rate_by_model": {
+    "gpt-3.5-turbo-0613": 0.104,
+    "gpt-4-0613": 0.093,
+    "llama-2-13b-chat": 0.46,
+    "llama-2-70b-chat": 0.381,
+    "llama-2-7b-chat": 0.503,
+    "mistral-7B-instruct": 0.576
+  },
+  "A_test_rate_by_task": {
+    "Data2txt": 0.643,
+    "QA": 0.183,
+    "Summary": 0.227
+  },
+  "A_test_rate_all": 0.353,
+  "B_auroc": {
+    "all": {
+      "generator+task": [
+        0.8302487799134008,
+        0.8239520698330984,
+        0.8365800773836516
+      ],
+      "other_generators_same_source": [
+        0.6592298702521255,
+        0.6494196500973014,
+        0.6695548547553903
+      ],
+      "generator+task+source": [
+        0.8462666612874288,
+        0.8408327561414046,
+        0.8517517997960194
+      ],
+      "n": 17616
+    },
+    "Data2txt": {
+      "generator+task": [
+        0.8278257935920186,
+        0.8146222513277882,
+        0.8408653051207041
+      ],
+      "other_generators_same_source": [
+        0.40872082385843855,
+        0.38546759235720945,
+        0.4293354151698116
+      ],
+      "generator+task+source": [
+        0.8453994242942596,
+        0.8330509013902863,
+        0.8567011063228261
+      ],
+      "n": 6195
+    },
+    "QA": {
+      "generator+task": [
+        0.7023514515560842,
+        0.6897804859852497,
+        0.712937361281137
+      ],
+      "other_generators_same_source": [
+        0.6263691895887595,
+        0.6042792159813906,
+        0.6471846748756929
+      ],
+      "generator+task+source": [
+        0.7776605605252975,
+        0.7654132447633085,
+        0.7893691952415665
+      ],
+      "n": 5766
+    },
+    "Summary": {
+      "generator+task": [
+        0.7746051988555986,
+        0.7623243980479951,
+        0.7878081727671196
+      ],
+      "other_generators_same_source": [
+        0.4858771222000836,
+        0.4618375337661952,
+        0.5097571619451841
+      ],
+      "generator+task+source": [
+        0.7643851713521607,
+        0.751775571553462,
+        0.7765789662774417
+      ],
+      "n": 5655
+    }
+  },
+  "C_structure": {
+    "n_hallucinated": 7641,
+    "n_with_3plus_sentences": 7539,
+    "share_one_sentence": [
+      0.5449548488417746,
+      0.5320509865525912,
+      0.5582370565520111
+    ],
+    "share_sentences_hallucinated": [
+      0.23337571441709798,
+      0.22922848793274933,
+      0.2376968433813286
+    ],
+    "share_at_most_half_sentences": [
+      0.9637482004973171,
+      0.9583442642585616,
+      0.9685362468934285
+    ],
+    "runs_test": {
+      "n": 7523,
+      "observed_mean_runs": 1.3424165891266782,
+      "null_mean_runs": 1.5727249767380036,
+      "p_sign_flip": 0.0
+    },
+    "first_onset_relative_position": {
+      "observed": 0.4655691375204462,
+      "null_given_count": 0.3734398433183101,
+      "p_sign_flip": 0.0
+    },
+    "by_task": {
+      "Data2txt": {
+        "n": 4251,
+        "share_one_sentence": 0.4730651611385556,
+        "mean_n_sent": 8.90919783580334,
+        "mean_n_hallucinated_sent": 1.8489767113620326
+      },
+      "QA": {
+        "n": 1706,
+        "share_one_sentence": 0.43669402110199296,
+        "mean_n_sent": 12.180539273153576,
+        "mean_n_hallucinated_sent": 2.9167643610785463
+      },
+      "Summary": {
+        "n": 1684,
+        "share_one_sentence": 0.836104513064133,
+        "mean_n_sent": 5.720902612826603,
+        "mean_n_hallucinated_sent": 1.2108076009501187
+      }
+    }
+  },
+  "D_insufficiency": {
+    "n_qa_sources": 989,
+    "n_insufficient_sources": 71,
+    "n_sufficient_by_wrong_refusal": 106,
+    "insufficient (a refusal was judged correct)": {
+      "n_answering_responses": 315,
+      "halluc_rate": [
+        0.4634920634920635,
+        0.39678848227693736,
+        0.5273058352167659
+      ]
+    },
+    "no refusal": {
+      "n_answering_responses": 4854,
+      "halluc_rate": [
+        0.2843016069221261,
+        0.2693650761044207,
+        0.3000551955481218
+      ]
+    },
+    "sufficient (a refusal was judged wrong)": {
+      "n_answering_responses": 488,
+      "halluc_rate": [
+        0.36885245901639346,
+        0.316375688206317,
+        0.4308132878706803
+      ]
+    },
+    "refusal_counts_by_model": {
+      "gpt-3.5-turbo-0613": {
+        "correct": 49,
+        "incorrect": 55
+      },
+      "gpt-4-0613": {
+        "correct": 33,
+        "incorrect": 27
+      },
+      "llama-2-70b-chat": {
+        "correct": 1,
+        "incorrect": 0
+      },
+      "mistral-7B-instruct": {
+        "correct": 27,
+        "incorrect": 49
+      }
+    },
+    "data2txt_hallucinated_responses_with_null_caused_span": 0.28205128205128205,
+    "share_spans_implicit_true": 0.13461268100660762
+  }
+}

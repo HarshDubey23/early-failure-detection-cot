@@ -191,6 +191,8 @@ def test_no_planted_effect_no_manufactured_gain():
 
 def test_holm_and_bootstrap():
     assert S.holm({"a": 0.01, "b": 0.04, "c": 0.03}) == {"a": 0.03, "c": 0.06, "b": 0.06}
+    h = S.holm({"a": 0.01, "b": float("nan"), "c": 0.03})
+    assert h["a"] == 0.02 and h["c"] == 0.03 and h["b"] != h["b"]
     m, lo, hi = S.boot_ci(np.r_[np.zeros(100), np.ones(100)], np.arange(200), n_boot=500)
     assert abs(m - 0.5) < 1e-9 and lo < 0.5 < hi
 

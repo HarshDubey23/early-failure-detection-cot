@@ -1,0 +1,817 @@
+{
+  "missing_evaluations": {
+    "E1": 533
+  },
+  "latency_rates": {
+    "source": "measured live, llama-2-7b-chat, batch size 1",
+    "prefill": 8204.627112887634,
+    "decode": 15.04134298259045,
+    "detector_seconds_per_call": 2.2503340244293213
+  },
+  "n_items": 750,
+  "primary_metric": {
+    "metric": "hall_E1",
+    "E1_response_level": {
+      "n": 449,
+      "precision": 0.5686813186813187,
+      "recall": 0.92,
+      "f1": 0.7028862478777588,
+      "accuracy": 0.6102449888641426,
+      "kappa": 0.21940970187063522,
+      "rate_pred": 0.8106904231625836,
+      "rate_true": 0.5011135857461024
+    },
+    "rule": "E1 primary unless F1 < 0.50 or kappa < 0.20 against human labels"
+  },
+  "families": {
+    "hotpot/llama-2-7b-chat": {
+      "sanity_care_vs_base": {
+        "a": "care@2",
+        "b": "base@0",
+        "metric": "hall_E1",
+        "n": 300,
+        "diff": -0.024499999999999997,
+        "lo": -0.044,
+        "hi": -0.005333333333333335,
+        "p": 0.014498550144985502
+      },
+      "confirmatory": {
+        "care_vs_restart_fb": {
+          "a": "care@2",
+          "b": "restart_fb@2",
+          "metric": "hall_E1",
+          "n": 300,
+          "diff": -0.0125,
+          "lo": -0.030004166666666665,
+          "hi": 0.003837499999999977,
+          "p": 0.14908509149085092,
+          "coverage": {
+            "a": "care@2",
+            "b": "restart_fb@2",
+            "metric": "covered",
+            "n": 300,
+            "diff": -0.021833333333333333,
+            "lo": -0.03816666666666666,
+            "hi": -0.0085,
+            "p": 0.0032996700329967
+          },
+          "cost_total": {
+            "a": "care@2",
+            "b": "restart_fb@2",
+            "metric": "cost_total",
+            "n": 300,
+            "diff": 143.89522119188922,
+            "lo": 95.43060944485659,
+            "hi": 201.5373205267062,
+            "p": 9.999000099990002e-05
+          },
+          "p_holm": 0.501949805,
+          "hall_lower": false,
+          "coverage_noninferior": false,
+          "verdict": "not shown"
+        },
+        "care_vs_backtrack_fb": {
+          "a": "care@2",
+          "b": "backtrack_fb@2",
+          "metric": "hall_E1",
+          "n": 300,
+          "diff": -0.0045000000000000005,
+          "lo": -0.025841666666666666,
+          "hi": 0.016666666666666666,
+          "p": 0.6970302969703029,
+          "coverage": {
+            "a": "care@2",
+            "b": "backtrack_fb@2",
+            "metric": "covered",
+            "n": 300,
+            "diff": -0.005166666666666667,
+            "lo": -0.025666666666666664,
+            "hi": 0.014499999999999999,
+            "p": 0.6282371762823717
+          },
+          "cost_total": {
+            "a": "care@2",
+            "b": "backtrack_fb@2",
+            "metric": "cost_total",
+            "n": 300,
+            "diff": 142.73598845202767,
+            "lo": 93.66123672910486,
+            "hi": 200.82738659000987,
+            "p": 9.999000099990002e-05
+          },
+          "p_holm": 1.0,
+          "hall_lower": false,
+          "coverage_noninferior": false,
+          "verdict": "not shown"
+        },
+        "care_vs_repairdel": {
+          "a": "care@2",
+          "b": "repairdel@0",
+          "metric": "hall_E1",
+          "n": 300,
+          "diff": -0.007833333333333333,
+          "lo": -0.018333333333333333,
+          "hi": 0.0006666666666666665,
+          "p": 0.1254874512548745,
+          "coverage": {
+            "a": "care@2",
+            "b": "repairdel@0",
+            "metric": "covered",
+            "n": 300,
+            "diff": -0.008499999999999999,
+            "lo": -0.021166666666666667,
+            "hi": 0.002833333333333333,
+            "p": 0.15958404159584041
+          },
+          "cost_total": {
+            "a": "care@2",
+            "b": "repairdel@0",
+            "metric": "cost_total",
+            "n": 300,
+            "diff": 18.299887908011883,
+            "lo": 7.986855257789313,
+            "hi": 30.634595418521283,
+            "p": 0.00039996000399960006
+          },
+          "p_holm": 0.501949805,
+          "hall_lower": false,
+          "coverage_noninferior": false,
+          "verdict": "not shown"
+        },
+        "care_vs_cove_all": {
+          "a": "care@2",
+          "b": "cove_all@0",
+          "metric": "hall_E1",
+          "n": 0,
+          "diff": NaN,
+          "lo": NaN,
+          "hi": NaN,
+          "p": NaN,
+          "coverage": {
+            "a": "care@2",
+            "b": "cove_all@0",
+            "metric": "covered",
+            "n": 0,
+            "diff": NaN,
+            "lo": NaN,
+            "hi": NaN,
+            "p": NaN
+          },
+          "cost_total": {
+            "a": "care@2",
+            "b": "cove_all@0",
+            "metric": "cost_total",
+            "n": 0,
+            "diff": NaN,
+            "lo": NaN,
+            "hi": NaN,
+            "p": NaN
+          },
+          "p_holm": NaN,
+          "hall_lower": false,
+          "coverage_noninferior": false,
+          "verdict": "not shown"
+        },
+        "care_vs_care@restart": {
+          "a": "care@2",
+          "b": "care@restart@2",
+          "metric": "hall_E1",
+          "n": 300,
+          "diff": 0.0014999999999999996,
+          "lo": -0.003666666666666667,
+          "hi": 0.006666666666666667,
+          "p": 0.6227377262273772,
+          "coverage": {
+            "a": "care@2",
+            "b": "care@restart@2",
+            "metric": "covered",
+            "n": 300,
+            "diff": -0.001,
+            "lo": -0.005504166666666667,
+            "hi": 0.0033333333333333335,
+            "p": 0.6222377762223777
+          },
+          "cost_total": {
+            "a": "care@2",
+            "b": "care@restart@2",
+            "metric": "cost_total",
+            "n": 300,
+            "diff": 1.0716365479723058,
+            "lo": -0.8416100686201763,
+            "hi": 3.0289726625865407,
+            "p": 0.29317068293170684
+          },
+          "p_holm": 1.0,
+          "hall_lower": false,
+          "coverage_noninferior": true,
+          "verdict": "not shown"
+        }
+      },
+      "E2_robustness": {
+        "care_vs_restart_fb": {
+          "a": "care@2",
+          "b": "restart_fb@2",
+          "metric": "hall_E2",
+          "n": 300,
+          "diff": -0.004166666666666667,
+          "lo": -0.014,
+          "hi": 0.005666666666666666,
+          "p": 0.4644535546445355
+        },
+        "care_vs_backtrack_fb": {
+          "a": "care@2",
+          "b": "backtrack_fb@2",
+          "metric": "hall_E2",
+          "n": 300,
+          "diff": -0.00033333333333333327,
+          "lo": -0.012833333333333332,
+          "hi": 0.011333333333333332,
+          "p": 0.9794020597940206
+        },
+        "care_vs_repairdel": {
+          "a": "care@2",
+          "b": "repairdel@0",
+          "metric": "hall_E2",
+          "n": 300,
+          "diff": -0.0075,
+          "lo": -0.023170833333333335,
+          "hi": 0.006337499999999978,
+          "p": 0.33836616338366166
+        },
+        "care_vs_cove_all": {
+          "a": "care@2",
+          "b": "cove_all@0",
+          "metric": "hall_E2",
+          "n": 0,
+          "diff": NaN,
+          "lo": NaN,
+          "hi": NaN,
+          "p": NaN
+        },
+        "care_vs_care@restart": {
+          "a": "care@2",
+          "b": "care@restart@2",
+          "metric": "hall_E2",
+          "n": 300,
+          "diff": -0.001166666666666667,
+          "lo": -0.005333333333333333,
+          "hi": 0.0029999999999999996,
+          "p": 0.7238276172382762
+        }
+      },
+      "oracle_headroom": {
+        "oracle_vs_restart_allocation": {
+          "a": "care@oracle@2",
+          "b": "care@restart@2",
+          "metric": "hall_E1",
+          "n": 300,
+          "diff": 0.0020000000000000005,
+          "lo": -0.006666666666666667,
+          "hi": 0.010837499999999979,
+          "p": 0.7501249875012499
+        },
+        "care_vs_restart_allocation": {
+          "a": "care@2",
+          "b": "care@restart@2",
+          "metric": "hall_E1",
+          "n": 300,
+          "diff": 0.0014999999999999996,
+          "lo": -0.003666666666666667,
+          "hi": 0.006666666666666667,
+          "p": 0.6227377262273772
+        }
+      },
+      "cost_view_nocache": {
+        "care_vs_restart_fb": {
+          "a": "care@2",
+          "b": "restart_fb@2",
+          "metric": "cost_total_nocache",
+          "n": 300,
+          "diff": 162.96655452522256,
+          "lo": 83.44370998392681,
+          "hi": 261.27437445783875,
+          "p": 9.999000099990002e-05
+        },
+        "care_vs_backtrack_fb": {
+          "a": "care@2",
+          "b": "backtrack_fb@2",
+          "metric": "cost_total_nocache",
+          "n": 300,
+          "diff": 161.80732178536104,
+          "lo": 80.19401271451534,
+          "hi": 259.8455057943868,
+          "p": 9.999000099990002e-05
+        },
+        "care_vs_repairdel": {
+          "a": "care@2",
+          "b": "repairdel@0",
+          "metric": "cost_total_nocache",
+          "n": 300,
+          "diff": 82.87788790801189,
+          "lo": 40.525478816765606,
+          "hi": 134.0994523466865,
+          "p": 0.00039996000399960006
+        },
+        "care_vs_cove_all": {
+          "a": "care@2",
+          "b": "cove_all@0",
+          "metric": "cost_total_nocache",
+          "n": 0,
+          "diff": NaN,
+          "lo": NaN,
+          "hi": NaN,
+          "p": NaN
+        },
+        "care_vs_care@restart": {
+          "a": "care@2",
+          "b": "care@restart@2",
+          "metric": "cost_total_nocache",
+          "n": 300,
+          "diff": 10.579636547972317,
+          "lo": 2.659977250247278,
+          "hi": 20.46160286968348,
+          "p": 0.012998700129987
+        }
+      },
+      "equivalence_care_vs_restart_fb": {
+        "mean": -0.0125,
+        "lo90": -0.027008333333333336,
+        "hi90": 0.0013333333333333326,
+        "margin": 0.03,
+        "verdict": "equivalent"
+      },
+      "hotpot": {
+        "behaviour_ok_care_vs_base": {
+          "a": "care@2",
+          "b": "base@0",
+          "metric": "behaviour_ok",
+          "n": 300,
+          "diff": 0.018333333333333333,
+          "lo": 0.0013250000000000009,
+          "hi": 0.038,
+          "p": 0.06129387061293871,
+          "p_holm": 0.0675932407
+        },
+        "behaviour_ok_care_vs_restart_fb": {
+          "a": "care@2",
+          "b": "restart_fb@2",
+          "metric": "behaviour_ok",
+          "n": 300,
+          "diff": 0.016166666666666666,
+          "lo": 0.0026625,
+          "hi": 0.03233333333333333,
+          "p": 0.0337966203379662,
+          "p_holm": 0.0675932407
+        },
+        "behaviour_ok_care_vs_cove_all": {
+          "a": "care@2",
+          "b": "cove_all@0",
+          "metric": "behaviour_ok",
+          "n": 0,
+          "diff": NaN,
+          "lo": NaN,
+          "hi": NaN,
+          "p": NaN,
+          "p_holm": NaN
+        },
+        "correct_care_vs_base": {
+          "a": "care@2",
+          "b": "base@0",
+          "metric": "correct",
+          "n": 300,
+          "diff": -0.007,
+          "lo": -0.016166666666666666,
+          "hi": -0.0005000000000000001,
+          "p": 0.126987301269873
+        },
+        "correct_care_vs_restart_fb": {
+          "a": "care@2",
+          "b": "restart_fb@2",
+          "metric": "correct",
+          "n": 300,
+          "diff": -0.0025,
+          "lo": -0.008000000000000002,
+          "hi": 0.002,
+          "p": 0.49995000499950004
+        },
+        "correct_care_vs_cove_all": {
+          "a": "care@2",
+          "b": "cove_all@0",
+          "metric": "correct",
+          "n": 0,
+          "diff": NaN,
+          "lo": NaN,
+          "hi": NaN,
+          "p": NaN
+        },
+        "abstain_ok_care_vs_base": {
+          "a": "care@2",
+          "b": "base@0",
+          "metric": "abstain_ok",
+          "n": 300,
+          "diff": 0.025333333333333333,
+          "lo": 0.010499999999999999,
+          "hi": 0.043666666666666666,
+          "p": 0.0017998200179982
+        },
+        "abstain_ok_care_vs_restart_fb": {
+          "a": "care@2",
+          "b": "restart_fb@2",
+          "metric": "abstain_ok",
+          "n": 300,
+          "diff": 0.018666666666666665,
+          "lo": 0.006166666666666667,
+          "hi": 0.034166666666666665,
+          "p": 0.0066993300669933005
+        },
+        "abstain_ok_care_vs_cove_all": {
+          "a": "care@2",
+          "b": "cove_all@0",
+          "metric": "abstain_ok",
+          "n": 0,
+          "diff": NaN,
+          "lo": NaN,
+          "hi": NaN,
+          "p": NaN
+        },
+        "covered_care_vs_base": {
+          "a": "care@2",
+          "b": "base@0",
+          "metric": "covered",
+          "n": 300,
+          "diff": -0.0285,
+          "lo": -0.047174999999999995,
+          "hi": -0.013162500000000023,
+          "p": 0.0007999200079992001
+        },
+        "covered_care_vs_restart_fb": {
+          "a": "care@2",
+          "b": "restart_fb@2",
+          "metric": "covered",
+          "n": 300,
+          "diff": -0.021833333333333333,
+          "lo": -0.03816666666666666,
+          "hi": -0.0085,
+          "p": 0.0032996700329967
+        },
+        "covered_care_vs_cove_all": {
+          "a": "care@2",
+          "b": "cove_all@0",
+          "metric": "covered",
+          "n": 0,
+          "diff": NaN,
+          "lo": NaN,
+          "hi": NaN,
+          "p": NaN
+        },
+        "hall_E1_care_vs_base": {
+          "a": "care@2",
+          "b": "base@0",
+          "metric": "hall_E1",
+          "n": 300,
+          "diff": -0.024499999999999997,
+          "lo": -0.044,
+          "hi": -0.005333333333333335,
+          "p": 0.014498550144985502
+        },
+        "hall_E1_care_vs_restart_fb": {
+          "a": "care@2",
+          "b": "restart_fb@2",
+          "metric": "hall_E1",
+          "n": 300,
+          "diff": -0.0125,
+          "lo": -0.030004166666666665,
+          "hi": 0.003837499999999977,
+          "p": 0.14908509149085092
+        },
+        "hall_E1_care_vs_cove_all": {
+          "a": "care@2",
+          "b": "cove_all@0",
+          "metric": "hall_E1",
+          "n": 0,
+          "diff": NaN,
+          "lo": NaN,
+          "hi": NaN,
+          "p": NaN
+        }
+      }
+    },
+    "ragtruth/llama-2-7b-chat": {
+      "sanity_care_vs_base": {
+        "a": "care@2",
+        "b": "base@0",
+        "metric": "hall_E1",
+        "n": 450,
+        "diff": -0.04733333333333334,
+        "lo": -0.07188888888888889,
+        "hi": -0.024775000000000016,
+        "p": 0.00029997000299970003
+      },
+      "confirmatory": {
+        "care_vs_restart_fb": {
+          "a": "care@2",
+          "b": "restart_fb@2",
+          "metric": "hall_E1",
+          "n": 450,
+          "diff": -0.005333333333333336,
+          "lo": -0.024113888888888893,
+          "hi": 0.013,
+          "p": 0.563943605639436,
+          "coverage": {
+            "a": "care@2",
+            "b": "restart_fb@2",
+            "metric": "covered",
+            "n": 450,
+            "diff": -0.024777777777777777,
+            "lo": -0.03877777777777778,
+            "hi": -0.011994444444444474,
+            "p": 9.999000099990002e-05
+          },
+          "cost_total": {
+            "a": "care@2",
+            "b": "restart_fb@2",
+            "metric": "cost_total",
+            "n": 450,
+            "diff": 383.7070004945599,
+            "lo": 331.24938340916583,
+            "hi": 435.8152061152325,
+            "p": 9.999000099990002e-05
+          },
+          "p_holm": 1.0,
+          "hall_lower": false,
+          "coverage_noninferior": false,
+          "verdict": "not shown"
+        },
+        "care_vs_backtrack_fb": {
+          "a": "care@2",
+          "b": "backtrack_fb@2",
+          "metric": "hall_E1",
+          "n": 450,
+          "diff": 0.0026666666666666653,
+          "lo": -0.01600277777777778,
+          "hi": 0.020891666666666652,
+          "p": 0.7935206479352065,
+          "coverage": {
+            "a": "care@2",
+            "b": "backtrack_fb@2",
+            "metric": "covered",
+            "n": 450,
+            "diff": -0.006000000000000001,
+            "lo": -0.021444444444444447,
+            "hi": 0.008561111111111082,
+            "p": 0.4597540245975402
+          },
+          "cost_total": {
+            "a": "care@2",
+            "b": "backtrack_fb@2",
+            "metric": "cost_total",
+            "n": 450,
+            "diff": 397.51215677546986,
+            "lo": 344.4366680654467,
+            "hi": 450.94077710929776,
+            "p": 9.999000099990002e-05
+          },
+          "p_holm": 1.0,
+          "hall_lower": false,
+          "coverage_noninferior": false,
+          "verdict": "not shown"
+        },
+        "care_vs_repairdel": {
+          "a": "care@2",
+          "b": "repairdel@0",
+          "metric": "hall_E1",
+          "n": 450,
+          "diff": -0.03844444444444445,
+          "lo": -0.057891666666666675,
+          "hi": -0.019550000000000033,
+          "p": 9.999000099990002e-05,
+          "coverage": {
+            "a": "care@2",
+            "b": "repairdel@0",
+            "metric": "covered",
+            "n": 450,
+            "diff": -0.033111111111111105,
+            "lo": -0.049888888888888885,
+            "hi": -0.017666666666666667,
+            "p": 9.999000099990002e-05
+          },
+          "cost_total": {
+            "a": "care@2",
+            "b": "repairdel@0",
+            "metric": "cost_total",
+            "n": 450,
+            "diff": 52.84936056709528,
+            "lo": 11.173003269452687,
+            "hi": 89.44676024398277,
+            "p": 0.007799220077992201
+          },
+          "p_holm": 0.00049995,
+          "hall_lower": true,
+          "coverage_noninferior": false,
+          "verdict": "not shown"
+        },
+        "care_vs_cove_all": {
+          "a": "care@2",
+          "b": "cove_all@0",
+          "metric": "hall_E1",
+          "n": 192,
+          "diff": -0.25234375,
+          "lo": -0.315625,
+          "hi": -0.18852864583333342,
+          "p": 9.999000099990002e-05,
+          "coverage": {
+            "a": "care@2",
+            "b": "cove_all@0",
+            "metric": "covered",
+            "n": 192,
+            "diff": -0.015104166666666669,
+            "lo": -0.03229817708333334,
+            "hi": -0.00234375,
+            "p": 0.056194380561943806
+          },
+          "cost_total": {
+            "a": "care@2",
+            "b": "cove_all@0",
+            "metric": "cost_total",
+            "n": 192,
+            "diff": -1932.7467643422353,
+            "lo": -2053.0870667897275,
+            "hi": -1814.130006861052,
+            "p": 9.999000099990002e-05
+          },
+          "p_holm": 0.00049995,
+          "hall_lower": true,
+          "coverage_noninferior": false,
+          "verdict": "not shown"
+        },
+        "care_vs_care@restart": {
+          "a": "care@2",
+          "b": "care@restart@2",
+          "metric": "hall_E1",
+          "n": 450,
+          "diff": -4.934324553889585e-19,
+          "lo": -0.005002777777777779,
+          "hi": 0.005333333333333332,
+          "p": 1.0,
+          "coverage": {
+            "a": "care@2",
+            "b": "care@restart@2",
+            "metric": "covered",
+            "n": 450,
+            "diff": -0.0025555555555555553,
+            "lo": -0.006777777777777777,
+            "hi": 0.0014444444444444442,
+            "p": 0.25997400259974
+          },
+          "cost_total": {
+            "a": "care@2",
+            "b": "care@restart@2",
+            "metric": "cost_total",
+            "n": 450,
+            "diff": 4.793952753049777,
+            "lo": -0.13677667284867098,
+            "hi": 10.077825341246283,
+            "p": 0.0780921907809219
+          },
+          "p_holm": 1.0,
+          "hall_lower": false,
+          "coverage_noninferior": true,
+          "verdict": "not shown"
+        }
+      },
+      "E2_robustness": {
+        "care_vs_restart_fb": {
+          "a": "care@2",
+          "b": "restart_fb@2",
+          "metric": "hall_E2",
+          "n": 450,
+          "diff": 0.02488888888888889,
+          "lo": 0.004444444444444446,
+          "hi": 0.04644444444444444,
+          "p": 0.022897710228977103
+        },
+        "care_vs_backtrack_fb": {
+          "a": "care@2",
+          "b": "backtrack_fb@2",
+          "metric": "hall_E2",
+          "n": 450,
+          "diff": 0.019888888888888887,
+          "lo": 0.003108333333333333,
+          "hi": 0.03788888888888888,
+          "p": 0.0314968503149685
+        },
+        "care_vs_repairdel": {
+          "a": "care@2",
+          "b": "repairdel@0",
+          "metric": "hall_E2",
+          "n": 450,
+          "diff": -0.035444444444444445,
+          "lo": -0.05544444444444445,
+          "hi": -0.01711111111111111,
+          "p": 0.00029997000299970003
+        },
+        "care_vs_cove_all": {
+          "a": "care@2",
+          "b": "cove_all@0",
+          "metric": "hall_E2",
+          "n": 192,
+          "diff": -0.5632812500000001,
+          "lo": -0.6343815104166667,
+          "hi": -0.49322265625,
+          "p": 9.999000099990002e-05
+        },
+        "care_vs_care@restart": {
+          "a": "care@2",
+          "b": "care@restart@2",
+          "metric": "hall_E2",
+          "n": 450,
+          "diff": 0.0028888888888888896,
+          "lo": -0.003888888888888888,
+          "hi": 0.010111111111111112,
+          "p": 0.44345565443455653
+        }
+      },
+      "oracle_headroom": {
+        "oracle_vs_restart_allocation": {
+          "a": "care@oracle@2",
+          "b": "care@restart@2",
+          "metric": "hall_E1",
+          "n": 450,
+          "diff": -0.01522222222222222,
+          "lo": -0.027227777777777774,
+          "hi": -0.0037777777777777788,
+          "p": 0.012898710128987101
+        },
+        "care_vs_restart_allocation": {
+          "a": "care@2",
+          "b": "care@restart@2",
+          "metric": "hall_E1",
+          "n": 450,
+          "diff": -4.934324553889585e-19,
+          "lo": -0.005002777777777779,
+          "hi": 0.005333333333333332,
+          "p": 1.0
+        }
+      },
+      "cost_view_nocache": {
+        "care_vs_restart_fb": {
+          "a": "care@2",
+          "b": "restart_fb@2",
+          "metric": "cost_total_nocache",
+          "n": 450,
+          "diff": 597.9415560501154,
+          "lo": 491.6293071319651,
+          "hi": 710.3315266967523,
+          "p": 9.999000099990002e-05
+        },
+        "care_vs_backtrack_fb": {
+          "a": "care@2",
+          "b": "backtrack_fb@2",
+          "metric": "cost_total_nocache",
+          "n": 450,
+          "diff": 611.7467123310255,
+          "lo": 507.13360539111443,
+          "hi": 719.5299403058028,
+          "p": 9.999000099990002e-05
+        },
+        "care_vs_repairdel": {
+          "a": "care@2",
+          "b": "repairdel@0",
+          "metric": "cost_total_nocache",
+          "n": 450,
+          "diff": 112.76836056709529,
+          "lo": -48.090145198236065,
+          "hi": 254.27136853939987,
+          "p": 0.1366863313668633
+        },
+        "care_vs_cove_all": {
+          "a": "care@2",
+          "b": "cove_all@0",
+          "metric": "cost_total_nocache",
+          "n": 192,
+          "diff": -5925.127753925568,
+          "lo": -6309.976209815081,
+          "hi": -5536.929393101663,
+          "p": 9.999000099990002e-05
+        },
+        "care_vs_care@restart": {
+          "a": "care@2",
+          "b": "care@restart@2",
+          "metric": "cost_total_nocache",
+          "n": 450,
+          "diff": 46.59517497527199,
+          "lo": 34.06048472016154,
+          "hi": 60.64480784042205,
+          "p": 9.999000099990002e-05
+        }
+      },
+      "equivalence_care_vs_restart_fb": {
+        "mean": -0.005333333333333336,
+        "lo90": -0.020999999999999998,
+        "hi90": 0.00978333333333333,
+        "margin": 0.03,
+        "verdict": "equivalent"
+      }
+    }
+  }
+}

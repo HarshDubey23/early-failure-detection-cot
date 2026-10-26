@@ -1,0 +1,14 @@
+{
+  "ours_vs_human": {
+    "n": 60,
+    "precision": 0.75,
+    "recall": 0.45,
+    "f1": 0.5625000000000001,
+    "accuracy": 0.7666666666666667,
+    "kappa": 0.41666666666666685,
+    "rate_pred": 0.2,
+    "rate_true": 0.3333333333333333
+  },
+  "truncated": 0,
+  "package_response_level_agreement": 1.0
+}

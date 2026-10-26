@@ -39,3 +39,5 @@ docs/explained/
 
 # External datasets cloned from GitHub (RAGTruth): fetched by scripts/30_ragtruth_label_analysis.py --fetch
 data/external/
+# Run R benchmark items contain dataset text (RAGTruth, HotpotQA); scripts/31_build_items.py recreates them
+data/recovery/

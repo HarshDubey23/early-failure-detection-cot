@@ -1,9 +1,8 @@
 # Recovering from hallucinations: system, experiment and how to run it
 
-Status: **built and tested on CPU with fake models; preregistered
-([`PREREGISTRATION_RECOVERY.md`](PREREGISTRATION_RECOVERY.md)); GPU run (Run R) not yet done.**
-No hallucination-reduction number exists yet. Everything below describes what will be measured
-and how.
+Status: **run on Kaggle (Llama-2-7B-chat, RAGTruth + HotpotQA), 2026-10-25/26.** Results, including
+what did not work: [`RESULTS_RECOVERY.md`](RESULTS_RECOVERY.md). Plan:
+[`PREREGISTRATION_RECOVERY.md`](PREREGISTRATION_RECOVERY.md).
 
 ## Why this follows from the math study
 

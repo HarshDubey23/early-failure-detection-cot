@@ -132,3 +132,6 @@ recovery-analysis:  # after extracting recovery_results.tar.gz here: replay, tes
 recovery-dual-judge:  # calibrate judge (kappa >= 0.60) and re-evaluate all policies
 	$(PY) scripts/43_calibrate_judge.py
 	$(PY) scripts/44_benchmark_dual_judge.py
+
+recovery-baselines:  # evaluate 6 matched-compute baselines on RAGTruth
+	$(PY) scripts/45_six_baselines_benchmark.py

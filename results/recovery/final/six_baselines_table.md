@@ -1,19 +1,18 @@
-# The 6 Matched-Compute Baselines vs. Our System (RAGTruth TEST)
+# Empirically Executed Recovery Policies on RAGTruth TEST
 
-All methods evaluated at matched compute (Budget $B=2$, $\le 2$ calls / completion) under the certified **Dual Consensus Judge** ($\kappa = 0.604$).
+> **Methodological Note**: Evaluated under the exploratory Dual Consensus Judge rule ($\kappa = 0.604$ on test drafts). All numbers reflect actual model outputs run in the repository; no synthetic or unrun baselines are included.
 
-| Rank | Method | Primary Mechanism | Hallucination Rate | 95% CI vs Restart | Coverage | Faithful Answer Rate | Token Cost |
-| :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| - | 0. Raw Generator (Llama-2-7B-chat) | None (zero-shot draft) | 49.8% | +0.309 [+0.249, +0.373] | 100.0% | 50.2% | 980 |
-| 1 | 1. Plain Restart (restart_fb) | Resample from k=0 on failure flag | 18.9% | +0.000 [+0.000, +0.000] | 99.6% | 80.8% | 1320 |
-| 2 | 2. Abstain-under-uncertainty | Refuse whenever detector flags | 12.0% | -0.069 [-0.103, -0.039] | 55.4% | 43.3% | 980 |
-| 3 | 3. Self-Consistency / Semantic Entropy | Multi-sample semantic entropy (Nature 2024) | 18.9% | +0.000 [+0.000, +0.000] | 92.6% | 74.8% | 1300 |
-| 4 | 4. Post-hoc Repair (CoVe clean) | Factored verify-and-revise | 42.9% | +0.235 [+0.153, +0.317] | 100.0% | 57.1% | 1804 |
-| 5 | 5. Detector-Only (LettuceDetect filter) | Pure discriminative filter without recovery | 12.0% | -0.069 [-0.103, -0.039] | 55.4% | 43.3% | 980 |
-| 6 | 6. Random-Triggered Repair (Ablation Control) | Intervene at random (rate matched to detector) | 33.0% | +0.142 [+0.099, +0.189] | 100.0% | 67.0% | 1153 |
-| **7** | **Our System: Task-Aware Early Recovery** | Detector-guided task-conditioned recovery | **17.2%** | -0.017 [-0.034, -0.004] | 88.4% | **71.2%** | 1249 |
+| Strategy | Hallucination Rate | 95% CI vs Restart (b=2) | Answer Coverage | Faithful Answers Delivered | Mean Token Cost |
+| :--- | :---: | :---: | :---: | :---: | :---: |
+| **Raw Generator (Llama-2-7B)** | 49.8% | +0.309 [+0.249, +0.373] | 100.0% | **50.2%** | 980 |
+| **Plain Restart (b=2)** | 18.9% | +0.000 [+0.000, +0.000] | 99.6% | **80.8%** | 1320 |
+| **Plain Restart (b=4)** | 18.9% | +0.000 [+0.000, +0.000] | 100.0% | **81.1%** | 1327 |
+| **CARE Controller (b=2)** | 24.9% | +0.060 [+0.017, +0.103] | 97.1% | **72.5%** | 1708 |
+| **Abstain on Flag (Pure Filter)** | 19.7% | +0.009 [-0.034, +0.052] | 88.4% | **68.7%** | 1001 |
+| **Task-Aware (Abstain QA / Restart Other)** | 17.2% | -0.017 [-0.034, -0.004] | 88.4% | **71.2%** | 1249 |
+| **Chain-of-Verification (Clean)** | 42.9% | +0.235 [+0.153, +0.317] | 100.0% | **57.1%** | N/A |
 
-### Key Statistical Proofs:
-1. **Proof of 'When to Intervene' (Random Control vs Our System)**: Intervening at random intervals only drops hallucinations to **35.0%**, whereas our detector-triggered system achieves **17.2%** (a **17.8-point advantage**, $p < 10^{-6}$). This proves that performance stems from detecting failure choke-points, not merely spending tokens.
-2. **Defeating Plain Restart**: Plain restart is the strongest competitor in literature (18.9%). Our task-conditioned system achieves **17.2%** ($p < 0.05$, CI $[-0.034, -0.004]$) while using **69 fewer tokens per query**.
-3. **Defeating Pure Abstention & Detector-Only**: Pure abstention drops coverage to 53.6%. Our system preserves **88.4% coverage** and delivers the highest overall faithful answer volume (**71.2%**).
+### Crucial Scientific Takeaways:
+1. **The Safety-Utility Trade-off**: The Task-Aware policy drops hallucination to **17.2%**, but does so by abstaining on flagged QA queries, which reduces coverage (88.4%) and delivers **fewer total faithful answers (71.2%)** than Plain Restart (**80.8%**).
+2. **Plain Restart is the Strongest Baseline**: Plain restart ($b=2$) achieves the highest proportion of delivered faithful answers (**80.8%**) with nearly complete coverage (99.6%).
+3. **Honest Negative Finding**: Just as in math reasoning, sophisticated controller routing does not unambiguously outperform plain restart once answer delivery and compute costs are properly accounted for.

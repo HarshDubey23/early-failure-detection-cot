@@ -208,59 +208,46 @@ verifier and the evaluation, not the resampling point (see the README's next ste
 - Latency comes from 16 items. The replay latency model uses rates measured in the same session.
 
 
-## Dual Consensus Judge and Verified Benchmark (κ = 0.604, `scripts/43_calibrate_judge.py`, `scripts/44_benchmark_dual_judge.py`)
+## Dual Consensus Judge Calibration (Exploratory, κ = 0.604, `scripts/43_calibrate_judge.py`)
 
-To resolve the evaluation bottleneck where the uncalibrated zero-shot LLM judge over-flagged faithful text (κ = 0.22, 157 false positives across 449 drafts), we calibrated and validated a **Dual Consensus Judge** ($E_{\text{dual}} = E_1 \land E_2[\tau \ge 0.3]$).
+To address the evaluation bottleneck where the uncalibrated zero-shot LLM judge over-flagged faithful text ($\kappa = 0.213$, 157 false positives across 449 drafts), we evaluated an exploratory **Dual Consensus Judge** ($E_{\text{dual}} = E_1 \land E_2[\tau \ge 0.3]$).
 
-### Evaluator Ground Truth Validation (449 RAGTruth Drafts)
+> **Methodological Boundary**: This decision rule was explored and calibrated on the 449 human-labelled RAGTruth test drafts. It filters zero-shot LLM judge false positives using ModernBERT token grounding. Independent human evaluation on held-out outputs is required before treating this rule as an independently verified confirmatory evaluator.
 
-| Evaluator | Cohen's $\kappa$ | Accuracy | Precision | Recall | Predicted Rate | Ground Truth |
+### Evaluator Calibration on 449 Human-Labelled RAGTruth Drafts
+
+| Evaluator Configuration | Cohen's $\kappa$ | Accuracy | Precision | Recall | Predicted Rate | Ground Truth |
 | :--- | :---: | :---: | :---: | :---: | :---: | :---: |
 | $E_1$ (Zero-Shot Qwen2.5-7B) | 0.213 | 60.8% | 56.9% | 91.6% | 81.1% | 50.3% |
 | $E_2$ (LettuceDetect-Large $\tau=0.5$) | 0.582 | 79.1% | 82.0% | 74.8% | 45.9% | 50.3% |
 | **Dual Consensus ($E_1 \land E_2[\tau \ge 0.3]$)** | **0.604** | **80.2%** | **81.3%** | **78.8%** | **48.8%** | **50.3%** |
 
-### Policy Re-Evaluation on RAGTruth TEST Under Dual Consensus Judge
+---
 
-| Policy | Hallucination Rate | 95% CI vs Restart | Coverage | Faithful Answered | Token Cost |
+## Empirically Executed Recovery Policies on RAGTruth TEST (`scripts/45_six_baselines_benchmark.py`)
+
+All comparisons below are conducted under the exploratory Dual Consensus Judge rule ($\kappa = 0.604$) on RAGTruth TEST (233 sources). Every row corresponds to an actually executed model policy; no unrun, simulated, or synthetic baselines are included.
+
+| Strategy | Hallucination Rate | 95% CI vs Restart ($b=2$) | Answer Coverage | Faithful Answers Delivered | Mean Token Cost |
 | :--- | :---: | :---: | :---: | :---: | :---: |
-| **base** | 49.8% | +0.309 [+0.249, +0.373] | 100.0% | 50.2% | 980 |
-| **restart_fb** | 18.9% | +0.000 [+0.000, +0.000] | 99.6% | 80.8% | 1320 |
-| **restart_fb_b4** | 18.9% | +0.000 [+0.000, +0.000] | 100.0% | 81.1% | 1327 |
-| **care** | 24.9% | +0.060 [+0.017, +0.103] | 97.1% | 72.5% | 1708 |
-| **task_aware** | **17.2%** | -0.017 [-0.034, -0.004] | 88.4% | **71.2%** | 1251 |
-| **cove_flag_clean** | **42.9%** | +0.235 [+0.153, +0.317] | 100.0% | **57.1%** | N/A |
+| **Raw Generator (Llama-2-7B)** | 49.8% | +0.309 [+0.249, +0.373] | 100.0% | **50.2%** | 980 |
+| **Plain Restart ($b=2$)** | 18.9% | +0.000 [+0.000, +0.000] | 99.6% | **80.8%** | 1320 |
+| **Plain Restart ($b=4$)** | 18.9% | +0.000 [+0.000, +0.000] | 100.0% | **81.1%** | 1327 |
+| **CARE Controller ($b=2$)** | 24.9% | +0.060 [+0.017, +0.103] | 97.1% | **72.5%** | 1708 |
+| **Abstain on Flag (Pure Filter)** | 19.7% | +0.009 [-0.034, +0.052] | 88.4% | **68.7%** | 1001 |
+| **Task-Aware (Abstain QA / Restart Other)** | 17.2% | -0.017 [-0.034, -0.004] | 88.4% | **71.2%** | 1249 |
+| **Chain-of-Verification (Clean)** | 42.9% | +0.235 [+0.153, +0.317] | 100.0% | **57.1%** | N/A |
 
-### What this establishes:
-1. **The True Baseline**: The uncalibrated 80.9% number was an evaluator artifact. Real ground truth baseline hallucination is **49.8%**, matching human annotations (50.3%).
-2. **True Hallucination Reduction**: Early failure detection with recovery cuts hallucinations from **49.8% down to 18.9%** (a **30.9-point absolute reduction**, or **62% relative reduction**), while lifting faithful answers from 50.2% to **80.8%**.
-3. **Task-Aware Dominance**: Abstaining on flagged QA while restarting on synthesis tasks drops hallucination further to **17.2%**, beating plain restart ($p < 0.05$).
+### Scientific Findings & Bounded Conclusions:
+1. **Plain Restart Remains the Strongest Baseline**: Plain restart ($b=2$) delivers the highest proportion of delivered faithful answers (**80.8%**) with virtually complete coverage (**99.6%**).
+2. **The Safety-Utility Trade-off**: The Task-Aware policy drops the apparent hallucination rate to **17.2%**, but does so strictly by refusing to answer flagged QA queries. This reduces answer coverage to **88.4%** and delivers **fewer faithful answers overall (71.2%)** than plain restart (**80.8%**). This is a tunable trade-off between risk-aversion and utility, not unambiguous Pareto dominance.
+3. **Controller Overhead**: The CARE controller ($b=2$) achieves 24.9% hallucination rate at 1,708 tokens, confirming the primary finding: granular boundary switching adds compute overhead without surpassing whole-sequence restart.
 
+---
 
-## The 6 Matched-Compute Baselines vs. Our System (`scripts/45_six_baselines_benchmark.py`)
+## Cross-Architecture Evaluation: Llama-2-7B vs. Llama-3.1-8B (`scripts/48_cross_model_generalization.py`)
 
-To ensure results cannot be dismissed by peer reviewers, we evaluate against all 6 major competitive baselines under matched compute (Budget $B = 2$, $\le 2$ calls / completion) under the certified **Dual Consensus Judge** ($\kappa = 0.604$) on RAGTruth TEST (233 sources).
-
-| Rank | Method | Primary Mechanism | Hallucination Rate | 95% CI vs Restart | Coverage | Faithful Answer Rate | Token Cost |
-| :---: | :--- | :--- | :---: | :---: | :---: | :---: | :---: |
-| - | 0. Raw Generator (Llama-2-7B-chat) | None (zero-shot draft) | 49.8% | +0.309 [+0.249, +0.373] | 100.0% | 50.2% | 980 |
-| 1 | 1. Plain Restart (restart_fb) | Resample from k=0 on failure flag | 18.9% | +0.000 [+0.000, +0.000] | 99.6% | 80.8% | 1320 |
-| 2 | 2. Abstain-under-uncertainty | Refuse whenever detector flags | 12.0% | -0.069 [-0.103, -0.039] | 53.6% | 43.3% | 980 |
-| 3 | 3. Self-Consistency / Semantic Entropy | Multi-sample semantic entropy (Nature 2024) | 18.9% | +0.000 [+0.000, +0.000] | 97.4% | 74.8% | 1300 |
-| 4 | 4. Post-hoc Repair (CoVe clean) | Factored verify-and-revise | 42.9% | +0.235 [+0.153, +0.317] | 100.0% | 57.1% | 1804 |
-| 5 | 5. Detector-Only (LettuceDetect filter) | Pure discriminative filter without recovery | 12.0% | -0.069 [-0.103, -0.039] | 53.6% | 43.3% | 980 |
-| 6 | 6. Random-Triggered Repair (Ablation Control) | Intervene at random (rate matched to detector) | 33.0% | +0.142 [+0.099, +0.189] | 100.0% | 67.0% | 1153 |
-| **★** | **Our System: Task-Aware Early Recovery** | **Detector-guided task-conditioned recovery** | **17.2%** | **-0.017 [-0.034, -0.004]** | **88.4%** | **71.2%** | **1249** |
-
-### Definitive Statistical Findings:
-1. **The Mechanism Proof (Ablation Control vs. Ours)**: Intervening randomly at equal compute yields a **33.0%** hallucination rate, whereas detector-targeted intervention achieves **17.2%** (a **15.8-point advantage**, $p < 10^{-6}$). This empirically proves that gains come from identifying failure choke-points, not merely spending compute.
-2. **Beating Plain Restart**: While plain restart dominates in pure math CoT, in grounded generation our task-conditioned recovery outperforms it (**17.2% vs 18.9%**, $p < 0.05$) while saving **71 tokens per request**.
-3. **Beating Naive Abstention & Detector Filtering**: Pure abstention collapses coverage to 53.6% and drops faithful answers to 43.3%. Our system retains **88.4% coverage** and delivers **71.2%** faithful answers.
-
-
-## Cross-Model Generalization: Llama-2-7B vs. Llama-3.1-8B (`scripts/48_cross_model_generalization.py`)
-
-A claim is a benchmark only if it survives changes in model generation. We evaluated 1,500 total generation items across two model architectures on the same RAGTruth (450 sources) and HotpotQA (300 items) benchmarks:
+To evaluate whether early failure detection transfers across model generations, we generated and scored 1,500 total outputs across two model families on the same RAGTruth (450 sources) and HotpotQA (300 items) benchmarks:
 
 | Model Architecture | Total Evaluated Items | Failure Choke-Points Flagged | Mean Detector Confidence |
 | :--- | :---: | :---: | :---: |
@@ -272,7 +259,6 @@ A claim is a benchmark only if it survives changes in model generation. We evalu
 - **QA**: Llama-2-7B: **20.2%** vs. Llama-3.1-8B: **1.8%**
 - **Summary**: Llama-2-7B: **23.3%** vs. Llama-3.1-8B: **16.0%**
 
-### Core Insights:
-1. **Architectural Scaling**: Modern instruction tuning sharply lowers baseline hallucination rates from 32.1% to 13.9%.
-2. **Persistent Choke-Points**: Even in Llama-3.1-8B, complex synthesis tasks (Data2txt and Summary) continue to experience substantial failure choke points (16%–48%).
-3. **Generalization Verified**: The detector cleanly separates faithful from unfaithful spans across both model generations without fine-tuning on the new model.
+### Core Observations:
+1. **Architectural Scaling**: Modern instruction tuning sharply reduces failure flags on short-form QA (20.2% $\rightarrow$ 1.8%) and overall failure rate (32.1% $\rightarrow$ 13.9%).
+2. **Persistent Synthesis Choke-Points**: Long-form structured generation (Data2txt: 48.0%, Summary: 16.0%) continues to exhibit substantial failure rates, demonstrating where early detection remains relevant in modern model architectures.

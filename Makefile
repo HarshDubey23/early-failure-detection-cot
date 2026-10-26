@@ -136,8 +136,8 @@ recovery-dual-judge:  # calibrate judge (kappa >= 0.60) and re-evaluate all poli
 recovery-baselines:  # evaluate 6 matched-compute baselines on RAGTruth
 	$(PY) scripts/45_six_baselines_benchmark.py
 
-proof:  # execute one-command verification of all five reviewer pillars
-	$(PY) scripts/47_proof.py
+audit:  # execute one-command reproducibility and statistical audit
+	$(PY) scripts/47_audit.py
 
 recovery-cross-model:  # evaluate cross-model generalization (Llama-2 vs Llama-3.1)
 	$(PY) scripts/48_cross_model_generalization.py

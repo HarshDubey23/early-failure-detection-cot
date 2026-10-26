@@ -223,3 +223,42 @@ It is not analysed.
 - **Scope.** This week's GPU quota covers the primary generator only. Llama-2-7B-chat (sections
   7-9) runs first. The secondary Llama-3.1-8B arm runs later with the same code and is reported
   as a separate run.
+
+## 13. Outcomes (added after the analysis, 2026-10-26)
+
+Full results: [`RESULTS_RECOVERY.md`](RESULTS_RECOVERY.md).
+
+**Evaluator check (section 7).** E1 response-level F1 0.703, κ 0.219, against human labels on the
+449 judged drafts. Above the bar, so E1 stays primary.
+
+**Confirmatory outcomes (RAGTruth, Llama-2-7B-chat, b = 2, E1).**
+
+| Test | Verdict |
+|---|---|
+| H0 vs base | supported: −0.047 [−0.072, −0.025] |
+| H1 vs restart | not shown (equivalent within ±0.03) |
+| H2 vs backtrack | not shown |
+| H3 vs repair + delete | not shown: hallucination lower, but the coverage loss of −0.033 exceeds the margin |
+| H4 vs CoVe | not shown, coverage |
+| H5 vs restart-only allocation | not shown |
+
+**Mechanism.**
+
+| Test | Verdict |
+|---|---|
+| M1 backtrack before first hallucination − restart | +0.024 [−0.002, +0.049], not significant |
+| M2 snowballing | not supported |
+| M3 restarts rarely clean | 0.115 |
+
+**Deviations.**
+- **The first full run was cut by its time limit** inside the sampling part, so repair and CoVe
+  did not run. A resume run (`7cc0d9e`) continued from the saved files.
+- **CoVe** reached 192 of 750 items before the GPU quota ran out. Its comparisons use those items
+  only, and HotpotQA has none.
+- **Replay fixes.** Two bugs in the analysis code were fixed after the data existed: CoVe items
+  without output had fallen back to the draft, and the Holm adjustment did not handle a NaN
+  p-value. Both fixes only remove invalid comparisons; no verdict changed.
+- **Exploratory analysis.** Llama-2 echoes the CoVe verification block in 89% of revisions.
+  `scripts/40_cove_sensitivity.py` scores CoVe on the sentences before the echoed block: 0.620,
+  better than CARE by 0.10 [0.03, 0.18].
+- **Llama-3.1-8B arm** not run.

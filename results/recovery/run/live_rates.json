@@ -1,0 +1,6 @@
+{
+  "source": "measured live, llama-2-7b-chat, batch size 1",
+  "prefill": 8204.627112887634,
+  "decode": 15.04134298259045,
+  "detector_seconds_per_call": 2.2503340244293213
+}

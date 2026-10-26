@@ -69,8 +69,9 @@ def holm(pvals: dict) -> dict:
         >>> holm({"a": 0.01, "b": 0.04, "c": 0.03})
         {'a': 0.03, 'c': 0.06, 'b': 0.06}
     """
-    items = sorted(pvals.items(), key=lambda kv: kv[1])
-    m, out, running = len(items), {}, 0.0
+    out = {k: float("nan") for k, p in pvals.items() if p != p}  # an empty comparison is not in the family
+    items = sorted(((k, p) for k, p in pvals.items() if p == p), key=lambda kv: kv[1])
+    m, running = len(items), 0.0
     for i, (k, p) in enumerate(items):
         running = max(running, min(1.0, (m - i) * p))
         out[k] = round(running, 10)

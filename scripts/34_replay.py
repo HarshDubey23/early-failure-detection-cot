@@ -242,6 +242,8 @@ def main() -> None:
         it = run["items"][iid]
         uses_d = lambda p: p not in ("base", "cove_all")  # noqa: E731
         for pol, b in policies:
+            if pol.startswith("cove") and ctx.cove_cid is None:
+                continue  # CoVe was not run on this item (time limit): leave it out, never substitute the draft
             n_rounds = args.rounds if pol in R.POLICIES_BUDGETED else 1
             acc, actions = [], Counter()
             for rnd in range(n_rounds):

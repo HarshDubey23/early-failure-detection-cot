@@ -1,9 +1,9 @@
 # Run R results: does commitment-aware recovery reduce hallucinations?
 
 Plan: [`PREREGISTRATION_RECOVERY.md`](PREREGISTRATION_RECOVERY.md), committed before any data.
-Code: `src/recovery/`, `scripts/30-40`. Raw outputs: `results/recovery/run/`. Every number below
+Code: `src/recovery/`, `scripts/30-42`. Raw outputs: `results/recovery/run/`. Every number below
 comes from `results/recovery/final/` (`summary.csv`, `tests.json`, `mechanism/summary.json`,
-`cove_sensitivity.json`). Generator: Llama-2-7B-chat. Kaggle, 2x T4, 2026-10-25/26.
+`cove_sensitivity.json`, `evaluator_ceiling.json`, `explore_improvements.json`). Generator: Llama-2-7B-chat. Kaggle, 2x T4, 2026-10-25/26.
 
 ## Short answer
 
@@ -32,7 +32,18 @@ comes from `results/recovery/final/` (`summary.csv`, `tests.json`, `mechanism/su
    fewer continuation tokens. No snowballing was found: keeping the hallucinated sentence does
    not raise the hallucination rate of the rest of the answer.
 
-Evidence levels: (1) and (2) are **preregistered**. (3) and the per-task split in (4) are
+5. **The primary judge probably understates the reduction (exploratory).** On the 450 human-labelled
+   drafts:
+   - people find a hallucination in 27% [21%, 32%] of the drafts the system's detector passes,
+     against 78% of the drafts it flags;
+   - yet the judge flags 76% of the continuations that the detector passes.
+
+   The judge over-flags faithful text, so the true reduction under human judgement is likely closer
+   to the detectors' estimate than to the judge's. This is inferred from labelled drafts, not
+   measured on the system's outputs. It does not change point (2): the controller ties plain restart
+   under every evaluator.
+
+Evidence levels: (1) and (2) are **preregistered**. (3), (5) and the per-task split in (4) are
 **exploratory**.
 
 ## Evaluators (checked against human labels before the comparison was read)
@@ -53,6 +64,23 @@ training data, so E2 favours outputs that D selected. That is why it is not the 
 Judge parse rate: 8,782 of 8,803 verdicts (99.8%). The 21 failures are verdicts cut off on very
 long outputs. Those outputs, together with a few too long for the judge's context (50 distinct
 outputs in total), use E2's verdict, as preregistered.
+
+### What the judge's disagreement with people implies (exploratory, `scripts/42_evaluator_ceiling.py`)
+
+| Quantity | Share [95% CI] | n |
+|---|---|---|
+| human-hallucinated, among drafts D passes | 0.266 [0.212, 0.320] | 241 |
+| human-hallucinated, among drafts D flags | 0.779 [0.726, 0.832] | 208 |
+| human-hallucinated, among drafts E1 passes | 0.214 [0.131, 0.310] | 84 |
+| human-hallucinated, among drafts E1 flags | 0.569 [0.516, 0.618] | 364 |
+| E1 flags, among resampled continuations D passes | 0.758 [0.744, 0.772] | 3,493 |
+| E1 flags, among resampled continuations D flags | 0.955 [0.949, 0.962] | 3,632 |
+
+D separates human-hallucinated from faithful drafts well (27% vs 78%). E1 calls three quarters of
+D-passed continuations hallucinated, about three times the human rate on D-passed drafts.
+Continuations are not drafts, but the gap is large. A stronger, human-validated judge and a direct
+human evaluation of the system's outputs (`scripts/38_human_eval_kit.py`) are needed before
+quoting a reduction under human judgement.
 
 ## Main results (budget b = 2, primary evaluator E1)
 
@@ -153,6 +181,22 @@ detector-triggered policy adds about 0.1 s.
   boundaries differs too little.
 - **CoVe, implemented correctly, is a stronger baseline than it first looked.** A fair comparison
   needs it re-judged with the echoed block removed, and run on all items.
+
+## Exploratory search for a better system (`scripts/41_explore_improvements.py`)
+
+Candidates were built only from existing outputs and compared on a development half of the
+RAGTruth sources, then checked on the other half:
+
+| Candidate | Change in hallucination vs restart (dev / test) | Coverage (dev / test) | Answered and faithful (dev / test) |
+|---|---|---|---|
+| abstain on any flagged QA draft, restart otherwise | −0.110 / −0.099 | 0.857 / 0.884 | 0.218 / 0.200 |
+| CoVe on flagged drafts, revised answer only | +0.036 / +0.025 (≈95 items each) | 1.000 / 1.000 | 0.255 / 0.286 |
+| restart with twice the budget | +0.008 / +0.004 | 0.991 / 1.000 | 0.233 / 0.213 |
+| restart (reference) | 0 / 0 | 0.982 / 0.996 | 0.239 / 0.215 |
+
+None of these clearly improves the share of answers that are both given and faithful. Lower
+hallucination from abstaining is paid for with coverage. The next run should therefore change the
+verifier and the evaluation, not the resampling point (see the README's next steps).
 
 ## Limitations and what is not verified
 

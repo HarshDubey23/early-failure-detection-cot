@@ -2,10 +2,16 @@
 
 > **Status: preprint draft, not peer-reviewed.** Every number is computed by the code here from
 > real data:
-> - 3,400 expert-annotated ProcessBench solutions (CPU);
-> - 125,832 model continuations sampled on GPU and committed as raw JSONL;
-> - 65,976 forced-answer probes;
-> - process-reward-model scores for 3,374 traces.
+> - Parts 1–2 (math reasoning):
+>   - 3,400 expert-annotated ProcessBench solutions;
+>   - 125,832 resampled continuations;
+>   - 65,976 forced-answer probes;
+>   - process-reward-model scores for 3,374 traces.
+> - Part 3 (hallucinations):
+>   - RAGTruth (450 human-labelled responses) and HotpotQA (300 controlled-evidence items);
+>   - 11,320 resampled continuations;
+>   - 12,985 detector scores per evaluator;
+>   - 8,803 LLM-judge verdicts.
 >
 > Claims carry an evidence level: **preregistered**, **exploratory** or **confirmatory** (a
 > preregistered test on new data). Results that did not confirm are reported as such. What remains
@@ -16,12 +22,39 @@
 ![Tests: pytest](https://img.shields.io/badge/tests-pytest-lightgrey)
 ![CI](https://github.com/HarshDubey23/early-failure-detection-cot/actions/workflows/ci.yml/badge.svg)
 
-Process supervision assumes that the first incorrect step of a reasoning trace is where it fails,
-and verifier-guided search backtracks to that step. This repository tests that assumption
-counterfactually. We resample four open models from two families at every step of their own
-ProcessBench traces and measure where success actually becomes unlikely. We then compare that
-point with the human-annotated first error, and backtracking policies with simply restarting, at a
-matched compute budget.
+## Abstract
+
+Two ideas guide how systems recover from mistakes in language-model generation:
+- **the annotated first error is where an output goes wrong**, so a verifier should backtrack to it;
+- **a partial output reveals whether it will fail**.
+
+We test both, then build and test a recovery system on the result.
+
+**Part 1 (detection).** On 3,400 ProcessBench solutions, early failure prediction is mostly a
+difficulty signal. The question and the generator's identity alone reach AUROC 0.588, and a
+quarter of the reasoning adds nothing.
+
+**Part 2 (commitment).** We resample four open models at every step of their own solutions
+(125,832 continuations) and measure where success becomes unlikely:
+- When the outcome is still open, the human-labelled first error is that point in 42–65% of
+  traces, against a null of 0.16–0.20; this is confirmed on a held-out model family.
+- Backtracking to it is worse than restarting for three of four models.
+- No practical backtracking policy beats restart at a matched compute budget.
+
+**Part 3 (recovery from hallucinations).** We turn this into a recovery controller for
+retrieval-augmented generation that chooses between claim repair, backtracking, restarting and
+abstaining by estimated recoverability. A preregistered test on RAGTruth and HotpotQA with
+Llama-2-7B-chat shows:
+- **It reduces hallucinations relative to the base model**: −4.7 points under a strict LLM judge,
+  46% → 15% under a held-out detector.
+- **It does not beat simply restarting until the detector passes**, at equal compute, and its
+  commitment-aware choice adds nothing (−0.0 [−0.5, +0.5] points).
+- Chain-of-Verification, once a formatting failure is removed, is a stronger baseline than it
+  first appears.
+
+Across both domains the same lesson holds: **restart is hard to beat, and the gains lie in the
+verifier, not in where you resample.** We release all rollouts, preregistrations and the code
+behind every number.
 
 **Paper:** [`paper/main.pdf`](paper/main.pdf) (10 pages; every number in it is generated from the
 result tables by `paper/make_values.py`).
@@ -39,6 +72,22 @@ is the outcome actually decided, and what should a system do about it?**
 
 Every claim is labelled **preregistered**, **exploratory** or **confirmed on new data**, and the
 negative results are reported as such.
+
+**Contributions:**
+1. **A difficulty-controlled protocol for early failure detection**: question-only and generator
+   baselines, incremental AUROC, and within-problem concordance.
+2. **Counterfactual commitment measurement** at scale, with reliability checks:
+   - four models, up to 64 continuations per step;
+   - independent sampling batches;
+   - posterior uncertainty of the decisive step.
+3. **Matched-compute evaluation of recovery policies** that charges every token, including verifier
+   passes, probes and prefills, in both math and RAG.
+4. **A working recovery system for RAG hallucinations** (`src/recovery/`). It has a live controller,
+   an offline replay of every policy over a shared sample bank, a resumable Kaggle pipeline and a
+   test suite with planted-effect simulations.
+5. **Preregistered negative results and two caught artifacts**:
+   - chat preambles that corrupted claim repairs;
+   - echoed verification blocks that made Chain-of-Verification look 25 points worse than it is.
 
 ## Key findings (Parts 1–2: math reasoning)
 
@@ -87,6 +136,12 @@ is FLOP-matched and every overhead is charged.
 | R2 / R3 measurement reliability | r = 0.985 / 0.976; stable decisive steps | confirmed |
 | P2 / P4 practical policies vs restart (Llama) | −0.063 / −0.187 | both worse than restart |
 
+Part 3 has its own plan, committed before any Run R data:
+[`docs/PREREGISTRATION_RECOVERY.md`](docs/PREREGISTRATION_RECOVERY.md). It covers H0–H5 at
+budget 2 with an LLM judge validated against human labels, and the mechanism tests M1–M3.
+Outcomes, deviations (a time-limited run resumed from saved files; CoVe on 192 of 750 items) and
+two analysis bug fixes are appended to that file.
+
 ## Per-model results
 
 | | Qwen2.5-1.5B | Qwen2-1.5B | Qwen2.5-Math-7B | Llama-3.1-8B |
@@ -130,6 +185,10 @@ another model family is the primary evaluator; it was validated against RAGTruth
 
 **Reading:**
 - A detector-triggered regenerate-or-abstain loop reduces hallucinations.
+- The judge is strict, so the true reduction is probably larger (exploratory). People find a
+  hallucination in 27% of the drafts the system's detector passes, but the judge flags 76% of the
+  continuations that detector passes. A human-validated evaluation is needed before quoting a
+  number under human judgement.
 - At equal compute, choosing *where* to resample by estimated recoverability does not beat simply
   restarting. The same "restart is hard to beat" result as the math study, now for
   hallucinations.
@@ -155,6 +214,15 @@ python -m pip install -r requirements.txt
 | `make choke-paper` | CPU | regenerates `paper/values.tex` and compiles `paper/main.pdf` |
 | `make test` | CPU | the test suite, including a planted-effect test of the commitment pipeline |
 | `bash scripts/kaggle_run_c.sh` | Kaggle 2x T4 | the full GPU run (~11.5 h; `scripts/run_c_mode` selects smoke or full) |
+| `make recovery-labels` | CPU | Part 3: what RAGTruth's human labels say (no model) |
+| `make recovery-mock` | CPU | Part 3: the whole Kaggle sequence with fake models (pipeline test, no results) |
+| `make recovery-analysis` | CPU | Part 3: replay of every policy, preregistered tests, mechanism study, from `results/recovery/run/` |
+| `python scripts/39_recovery_figures.py`, `40_*`, `41_*`, `42_*` | CPU | Part 3: figure, CoVe sensitivity, exploratory improvements, evaluator ceiling |
+| `bash scripts/kaggle_recovery.sh` | Kaggle 2x T4 | Part 3 GPU run (`scripts/recovery_mode` selects smoke, full or resume) |
+
+Part 3 needs the benchmark items, which are not committed because they contain dataset text:
+`python scripts/31_build_items.py --benchmark ragtruth --generator llama-2-7b-chat` (and
+`--benchmark hotpot`).
 
 GPU code paths: stage 12 (rollouts, vLLM), stage 14 (PRM and generator step signals), stage 15
 (forced-answer probes). T4s have no bfloat16, so everything runs in float16 with eager execution.
@@ -172,8 +240,8 @@ Every stage appends results as it goes and resumes after an interruption.
 | `scripts/12*`–`15` | GPU stages: rollouts, ProcessBench preparation, step signals, answer probes |
 | `scripts/13*`, `16`–`21` | analysis: commitment, robustness, policies, coding agreement, PRM check, answer curves, figures |
 | `scripts/kaggle_*.sh`, `run_c_analysis.sh` | GPU drivers and the Run C analysis runner |
-| `docs/` | PREREGISTRATION_RUN_C, COMMITMENT_EXPERIMENT, RESULTS_DECOMPOSITION, CODING_PROTOCOL, NOVELTY_AUDIT, METHODOLOGY, RESULTS |
-| `src/recovery/`, `scripts/30`–`40`, `scripts/kaggle_recovery.sh` | Part 3: hallucination-recovery system, generation, scoring, replay at matched budgets, mechanism study, figures |
+| `docs/` | PREREGISTRATION_RUN_C, COMMITMENT_EXPERIMENT, RESULTS_DECOMPOSITION, CODING_PROTOCOL, NOVELTY_AUDIT, METHODOLOGY, RESULTS; Part 3: PREREGISTRATION_RECOVERY, RECOVERY_SYSTEM, RESULTS_RECOVERY |
+| `src/recovery/`, `scripts/30`–`42`, `scripts/kaggle_recovery.sh` | Part 3: hallucination-recovery system, generation, scoring, replay at matched budgets, mechanism study, figures |
 | `results/recovery/` | Part 3: RAGTruth label analysis, raw generations and scores (`run/`), analysis outputs (`final/`) |
 | `src/`, `scripts/01-10`, `tests/` | the original pipeline (E1–E8) and its tests |
 
@@ -193,6 +261,25 @@ Every stage appends results as it goes and resumes after an interruption.
   protocol and blinded sheets are released, and no coding result is reported until it is complete.
 - **Exploratory results.** The CPU analyses, the answer curves, the shared-verifier accounting
   and all policy results on Qwen models are exploratory.
+
+- **Part 3 coverage.** One generator (Llama-2-7B-chat).
+  - The Llama-3.1-8B arm was not run, because of GPU quota.
+  - Chain-of-Verification ran on 192 of 750 items.
+  - Latency was measured live on 16 items only.
+- **Part 3 evaluation.** The primary judge agrees only moderately with people (κ = 0.22), and no
+  human evaluation of the system's outputs exists yet. The blinded kit is in
+  `scripts/38_human_eval_kit.py`.
+
+## Next steps
+
+1. **Evaluation people trust.** Choose a stronger judge by its agreement with human labels on
+   RAGTruth's training split, before any comparison. Have two people rate 80 blinded pairs of
+   system and baseline outputs.
+2. **A system built on what worked.** Detector gate, then Chain-of-Verification with clean output,
+   then restart, then abstain. Preregistered and tested on RAGTruth's untouched training sources
+   and on Llama-3.1-8B.
+3. **The math study.** Two-coder human coding of recovered traces, and Llama's remaining
+   traces.
 
 ## Original study (E1–E8)
 
@@ -223,8 +310,8 @@ hidden-state probes (E4) were not run, and the intervention policy (E8) was only
 
 ```bibtex
 @misc{dubey2026chokepoints,
-  title        = {Errors Are Not Choke Points: Difficulty, Error Onset and Counterfactual
-                  Commitment in {LLM} Reasoning Failures},
+  title        = {Errors Are Not Choke Points: Where {LLM} Failures Are Decided, and What
+                  Recovery Can Do About It},
   author       = {Dubey, Harsh and Saini, Harshit and Jain, Prashant and Kumar, Himanshu and
                   Kaushal, Gaurav and Chaudhary, Rohit},
   year         = {2026},
@@ -236,5 +323,5 @@ hidden-state probes (E4) were not run, and the intervention policy (E8) was only
 ## Acknowledgements
 
 Supervised by Dr. Rohit Chaudhary (KIET Group of Institutions). The GPU runs used free Kaggle
-notebooks. Thanks to the ProcessBench, BIG-Bench Mistake, Qwen and Llama teams for releasing data
-and weights.
+notebooks. Thanks to the ProcessBench, BIG-Bench Mistake, RAGTruth, HotpotQA, LettuceDetect, Qwen
+and Llama teams for releasing data, models and weights.

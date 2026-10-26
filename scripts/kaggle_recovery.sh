@@ -16,6 +16,7 @@ ITEMS=data/recovery
 mkdir -p "$RUN" "$ITEMS"
 START=$(date +%s)
 LIMIT=${LIMIT:-23400}            # 6.5 h for the whole run
+BANK_BUDGET=${BANK_BUDGET:-9000} # cap on the sampling part, so scoring and judging keep their time
 SMOKE=${SMOKE:-0}
 MOCK=${MOCK:-0}
 [ -f scripts/recovery_mode ] && [ "$MOCK" = 0 ] && . scripts/recovery_mode
@@ -43,6 +44,15 @@ part() {  # part NAME MAX_SECONDS COMMAND...
   tail -n "${TAIL:-8}" "$RUN/$name.out" | sed "s/^/    [$name] /" | tee -a "$RUN/run.log"
   pack
 }
+
+# Resume: when a previous run's output is attached as notebook input, continue from its files
+# (every stage skips work it finds already done).
+PREV=$(find /kaggle/input -path '*results/recovery/run/run.log' 2>/dev/null | head -1)
+if [ -n "$PREV" ] && [ ! -s "$RUN/scores_D.jsonl" ]; then
+  P=$(dirname "$PREV")
+  cp -rn "$P"/. "$RUN"/ && cp -rn "$P/../../../data/recovery"/. "$ITEMS"/
+  log "resumed from $P: $(cat "$RUN"/bank.*.jsonl 2>/dev/null | wc -l) bank rows"
+fi
 
 if [ "$MOCK" = 1 ]; then
   BK="--backend mock"; SBK="--backend mock"; LIM="--limit 12"; M="--m 4 --m-curve 4 --max-clean-curves 3"
@@ -76,7 +86,7 @@ part setup 1800 "
 # 1. Llama-2-7B-chat: drafts for HotpotQA (RAGTruth drafts are the released, human-labelled ones)
 part l2_drafts 1800 "$G --items $L2 --generator llama-2-7b-chat --stage drafts"
 part l2_flags 1200 "CUDA_VISIBLE_DEVICES=0 $SC --scorer D --items $L2 --kinds draft"
-part l2_bank 9000 "$G --items $L2 --generator llama-2-7b-chat --stage bank repair cove --flags $RUN/scores_D.jsonl $M"
+part l2_bank $BANK_BUDGET "$G --items $L2 --generator llama-2-7b-chat --stage bank repair cove --flags $RUN/scores_D.jsonl $M"
 part l2_score 3600 "
   CUDA_VISIBLE_DEVICES=0 $SC --scorer D --items $L2 --stage 1 &
   CUDA_VISIBLE_DEVICES=1 $SC --scorer E2 --items $L2 --stage 1 &

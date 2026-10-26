@@ -1,3 +1,6 @@
 # read by scripts/kaggle_recovery.sh (SMOKE=1: a few items per benchmark; SMOKE=0: the preregistered run)
+# resume of the Llama-2 run cut at the sampling step; live latency already done
 SMOKE=0
-PARTS="setup l2 live"
+PARTS="setup l2_drafts l2_flags l2_bank l2_score l2_judge"
+LIMIT=7800
+BANK_BUDGET=4200

@@ -135,3 +135,6 @@ recovery-dual-judge:  # calibrate judge (kappa >= 0.60) and re-evaluate all poli
 
 recovery-baselines:  # evaluate 6 matched-compute baselines on RAGTruth
 	$(PY) scripts/45_six_baselines_benchmark.py
+
+proof:  # execute one-command verification of all five reviewer pillars
+	$(PY) scripts/47_proof.py

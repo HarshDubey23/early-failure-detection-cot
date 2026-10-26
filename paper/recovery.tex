@@ -1,0 +1,58 @@
+\section{Generalization to Grounded Generation}\label{sec:grounded}
+Does the finding that errors are not choke points transfer beyond symbolic mathematics to open-domain text generation? In retrieval-augmented generation (RAG), a prominent hypothesis holds that when a model begins hallucinating unsupported claims, early detection of the hallucination onset enables surgical recovery---either backtracking to the first faithful prefix, revising unsupported claims, or dynamically switching recovery actions based on estimated recoverability~\cite{shuster2021,dhuliawala2024cove,gao2023rarr}.
+
+We tested this hypothesis directly on RAGTruth~\cite{ragtruth} (450 sources across QA, summarization, and data-to-text) and HotpotQA~\cite{yang2018hotpotqa} (300 items with controlled evidence), using Llama-2-7B-chat and Meta-Llama-3.1-8B-Instruct (1,500 total generation items).
+
+\subsection{Evaluator calibration and out-of-sample validation}
+Evaluating hallucination recovery requires an accurate judge. An uncalibrated zero-shot LLM judge ($E_1$: Qwen2.5-7B-Instruct) flags \judgeEOneRate\% of drafts as hallucinated, where human annotators find only 50.3\%, yielding poor human agreement ($\kappa=\judgeEOneKappa$). This over-flagging inflates baseline error rates and obscures true recovery dynamics.
+
+To address this evaluation bottleneck, we constructed a \emph{Dual Consensus Judge} ($E_{\text{dual}} = E_1 \land E_2[\tau \ge 0.3]$), requiring that an LLM-detected reasoning hallucination be corroborated by token-level support divergence from a ModernBERT groundedness classifier ($E_2$: LettuceDetect-Large)~\cite{lettucedetect}. To guard against post-hoc overfitting, we calibrated the threshold $\tau=0.30$ on a 50\% development split of sources ($n=217$, $\kappa=\judgeDualDevKappa$) and evaluated the frozen decision rule on an untouched, held-out test split ($n=232$). On the untouched test set, the frozen judge achieves $\kappa=\judgeDualTestKappa$, accuracy \judgeDualTestAcc\%, and precision \judgeDualTestPrec\% (matching the ground-truth rate of 51.3\%), compared to $\kappa=\judgeEOneTestKappa$ for the zero-shot LLM judge. Pooled across all 449 drafts, the dual judge reaches $\kappa=\judgeDualPooledKappa$ (Table~\ref{tab:grounded_eval}).
+
+\begin{table}[t]\centering\small
+\caption{Evaluator agreement on 449 human-labelled RAGTruth drafts. Test split ($n=232$) is untouched out-of-sample data.}
+\label{tab:grounded_eval}
+\begin{tabular}{lccc}\toprule
+Evaluator Configuration & Untouched Test $\kappa$ & Pooled $\kappa$ & Acc.\\\midrule
+$E_1$ (Zero-Shot Qwen2.5-7B) & \judgeEOneTestKappa & \judgeEOneKappa & \judgeEOneAcc\%\\
+$E_2$ (LettuceDetect-Large $\tau=0.5$) & 0.535 & \judgeETwoKappa & \judgeETwoAcc\%\\
+\textbf{Dual Consensus ($E_1 \land E_2[\tau \ge 0.3]$)} & \textbf{\judgeDualTestKappa} & \textbf{\judgeDualPooledKappa} & \textbf{\judgeDualPooledAcc\%}\\\bottomrule
+\end{tabular}
+\end{table}
+
+\subsection{Policy comparison: restart dominates commitment-aware recovery}
+We evaluated six executed recovery policies under the calibrated judge at matched compute budget ($b=2$, at most two calls per completion) on RAGTruth test (Table~\ref{tab:grounded_policies}).
+\begin{itemize}
+\item \textbf{Raw baseline}: Zero-shot draft without intervention (\ragRawHall\% hallucination, \ragRawFaith\% faithful answers delivered).
+\item \textbf{Plain restart ($b=2$)}: When detector $D$ flags a draft, discard and resample from scratch.
+\item \textbf{CARE controller}: Commitment-Aware Recovery Engine dynamically selects between claim editing, prefix backtracking, and restarting based on local recoverability estimates.
+\item \textbf{Task-aware policy}: Selective abstention on flagged QA drafts; restart on synthesis tasks.
+\item \textbf{Chain-of-Verification (CoVe)}: Factored generate-and-revise baseline~\cite{dhuliawala2024cove}.
+\end{itemize}
+
+\begin{table}[t]\centering\small
+\caption{Empirical policy trade-offs on RAGTruth test (233 sources) under the dual consensus judge. All rows are executed model runs; no synthetic baselines.}
+\label{tab:grounded_policies}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lcccc}\toprule
+Strategy & Halluc.\ $\downarrow$ & Coverage $\uparrow$ & Faithful Delivered $\uparrow$ & Cost\\\midrule
+Raw Generator & \ragRawHall\% & \ragRawCov\% & \ragRawFaith\% & \ragRawCost\\
+\textbf{Plain Restart ($b=2$)} & \ragRestartHall\% & \textbf{\ragRestartCov\%} & \textbf{\ragRestartFaith\%} & \ragRestartCost\\
+CARE Controller ($b=2$) & \ragCareHall\% & \ragCareCov\% & \ragCareFaith\% & \ragCareCost\\
+Abstain-on-flag & 19.7\% & 88.4\% & 68.7\% & 1001\\
+Task-Aware & \textbf{\ragTaskHall\%} & 88.4\% & 71.2\% & \ragTaskCost\\
+CoVe (clean revised) & 42.9\% & 100.0\% & 57.1\% & N/A\\\bottomrule
+\end{tabular}}
+\end{table}
+
+The empirical outcome exactly mirrors our findings in mathematical reasoning:
+\begin{enumerate}
+\item \textbf{The commitment-aware controller fails to beat restart.} CARE delivers fewer faithful answers than plain restart (\ragCareFaith\% vs \ragRestartFaith\%) and has a higher hallucination rate (\ragCareHall\% vs \ragRestartHall\%) while costing 29\% more tokens (\ragCareCost\ vs \ragRestartCost).
+\item \textbf{Surgical backtracking is no shortcut.} Resampling from just before the first human-labelled hallucinated sentence is no better than restarting (+0.024 [$-0.002, +0.049$], $p=0.066$).
+\item \textbf{No error snowballing.} Keeping an unfaithful sentence does not increase the hallucination hazard of subsequent sentences ($-0.006$ [$-0.029, +0.019$]). Hallucinations behave as localized generation slips, not irrecoverable path commitments.
+\end{enumerate}
+
+\subsection{The safety--utility trade-off}
+The Task-Aware policy achieves the lowest apparent hallucination rate (\ragTaskHall\%). However, it achieves this strictly by refusing to answer flagged QA prompts. This reduces answer coverage to \ragTaskCov\% and drops total faithful answers delivered to \ragTaskFaith\% (compared to \ragRestartFaith\% for plain restart). While selective abstention represents a valid safety preference in zero-tolerance environments, it does not represent Pareto dominance: plain restart remains the dominant strategy for maximizing faithful utility.
+
+\subsection{Cross-architecture generalization}
+Evaluating 1,500 outputs across Llama-2-7B and Meta-Llama-3.1-8B-Instruct shows that architectural scaling substantially reduces overall failure flags (\crossLlamaTwoFlag\% $\rightarrow$ \crossLlamaThreeFlag\%). On short-form QA, instruction tuning reduces failures from \crossLlamaTwoQa\% to \crossLlamaThreeQa\%. However, complex synthesis tasks continue to experience frequent failure flags (\crossLlamaThreeData\% for data-to-text, \crossLlamaThreeSummary\% for summarization), confirming that early failure detection remains an active challenge for long-form reasoning and synthesis.

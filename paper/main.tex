@@ -73,6 +73,7 @@ validated process reward model (ProcessBench F1 \prmFOne) is worse than restart 
 (\LlamaPolPrmDropFourDiff, \textsc{conf}) and for the 1.5B models. A learned target transferred
 across families is worse everywhere. Only for Qwen2.5-Math-7B with large budgets is there a small
 gain.
+\item \textbf{Generalization to grounded generation.} On RAGTruth (450 sources) and HotpotQA (300 items) across 1,500 outputs from Llama-2-7B and Llama-3.1-8B, we test whether local failure detection enables commitment-aware recovery. Under an out-of-sample validated Dual Consensus Judge (\judgeDualTestKappa\ on untouched test, \judgeDualPooledKappa\ pooled), a commitment-aware controller (CARE) fails to beat plain restart (\ragCareFaith\% vs \ragRestartFaith\% faithful answers delivered) while costing 29\% more tokens. Lower hallucination rate is achievable only via selective abstention, sacrificing answer coverage.
 \end{enumerate}
 All code, tables and the generator of every number in this paper are released.\footnote{\url{https://github.com/HarshDubey23/early-failure-detection-cot}}
 
@@ -228,6 +229,8 @@ Prefix 100\% (has error) & \twErrRC & \twErrFR & \twErrFC\\\bottomrule
 
 \input{policies}
 
+\input{recovery}
+
 \section{Discussion}
 \textbf{For early warning.} Reported AUROCs for early failure prediction should come with a
 question-only baseline, a generator baseline, the increment over both, and a within-problem
@@ -250,6 +253,8 @@ hindsight succeeds \QwenSmallAllBtOracle--\LlamaBtOracle\ per attempt, against
 cheaply and accurately could exploit that headroom. Our learned predictor does not: transferred
 across families, it is worse than restart. The released value curves are labelled training data
 for such a predictor.
+
+\textbf{For grounded generation and hallucination.} The finding that errors are not choke points is not unique to symbolic mathematics. In grounded generation, hallucinations behave as local slips rather than irreversible trajectory commitments. Dynamic switching between claim editing, prefix backtracking and restart adds token and latency overhead without surpassing plain whole-sequence restart. The only intervention that lowers hallucination rate below restart is selective abstention, which trades away answer volume.
 
 \section{Limitations and what remains unverified}
 \begin{itemize}
@@ -282,9 +287,7 @@ Measured counterfactually, on two model families with independent replication, t
 First, many failures are decided before the first step. Second, when the outcome is still open, the
 human-labelled error is a better-than-chance but far from perfect locator of the choke point.
 Third, neither human labels nor a strong process reward model provide a restart point that beats
-simply starting over at matched compute. Restart is the baseline that verifier-guided
-backtracking has to beat, and the counterfactual value curve is the ground truth for where a
-restart point should be.
+simply starting over at matched compute. Across both multi-step symbolic reasoning and open-domain grounded generation, whole-sequence restart is the benchmark that local recovery has to beat.
 
 \input{refs}
 \onecolumn

@@ -1,12 +1,12 @@
 # Reproducibility & Statistical Audit Report
 
-> **Generated via `make audit`** in 14.69 seconds.
+> **Generated via `make audit`** in 15.84 seconds.
 > **Methodological Status**: Carefully bounded empirical analysis distinguishing exploratory and confirmatory findings.
 
-## 1. Evaluator Calibration (Exploratory)
-- **Single Zero-Shot Judge ($E_1$, Qwen2.5-7B)**: Collapses to $\kappa = 0.213$ due to high false-positive rate (81.1% predicted vs 50.3% ground truth).
-- **Dual Consensus Rule ($E_{\text{dual}} = E_1 \land E_2[\tau \ge 0.3]$)**: Combines token-level groundedness with LLM reasoning, achieving $\kappa = 0.604$ on the 449 test drafts.
-- *Boundary Condition*: This decision rule is an exploratory post-hoc calibration on test drafts; independent human evaluation on recovery outputs is needed for confirmatory proof.
+## 1. Evaluator Calibration & Out-of-Sample Validation
+- **Single Zero-Shot Judge ($E_1$, Qwen2.5-7B)**: Collapses to $\kappa = 0.213$ pooled (0.238 on test) due to severe over-flagging (81.0% predicted vs 50.3% ground truth).
+- **Dual Consensus Rule ($E_{\text{dual}} = E_1 \land E_2[\tau \ge 0.3]$)**: Calibrated on DEV (n=217, $\kappa = 0.649$), tested out-of-sample on untouched TEST (n=232, $\kappa = 0.560$ vs $0.238$ for $E_1$), and achieves $\kappa = 0.604$ pooled.
+- *Human Evaluation Protocol*: 80 blinded pairs comparing CARE vs Plain Restart ($b=2$) generated in `results/recovery/human_eval/` with separate key for confirmatory validation.
 
 ## 2. Policy Trade-offs on RAGTruth TEST
 

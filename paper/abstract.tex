@@ -24,5 +24,12 @@ reliably. This includes backtracking guided by a validated process reward model 
 \prmFOne), which is worse than restart for Llama (\LlamaPolPrmDropFourDiff). A short
 supermartingale argument explains why restart is hard to beat.
 
+The finding that errors are not choke points generalizes to grounded text generation. On RAGTruth and
+HotpotQA across 1,500 outputs from Llama-2-7B and Llama-3.1-8B, under an out-of-sample validated dual
+consensus judge ($\kappa=\judgeDualPooledKappa$), a commitment-aware controller fails to beat
+whole-sequence restart (\ragCareFaith\% vs \ragRestartFaith\% faithful answers delivered), and no error
+snowballing is observed. Across symbolic reasoning and open-domain generation, whole-sequence restart is
+the benchmark that local recovery has to beat.
+
 We release all rollouts, the preregistration and the code behind every number.
 \end{abstract}

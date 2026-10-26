@@ -1,0 +1,146 @@
+{
+  "dev/base": {
+    "n": 217,
+    "hall": 0.811,
+    "covered": 1.0,
+    "faithful_answered": 0.189,
+    "cost": 914.0,
+    "hall_minus_restart_fb": [
+      0.062,
+      0.029,
+      0.096
+    ]
+  },
+  "dev/care": {
+    "n": 217,
+    "hall": 0.753,
+    "covered": 0.958,
+    "faithful_answered": 0.213,
+    "cost": 1642.0,
+    "hall_minus_restart_fb": [
+      0.004,
+      -0.025,
+      0.034
+    ]
+  },
+  "dev/cove_flag_clean": {
+    "n": 94,
+    "hall": 0.745,
+    "covered": 1.0,
+    "faithful_answered": 0.255,
+    "cost": null,
+    "hall_minus_restart_fb": [
+      0.036,
+      -0.019,
+      0.097
+    ]
+  },
+  "dev/restart_fb": {
+    "n": 217,
+    "hall": 0.749,
+    "covered": 0.982,
+    "faithful_answered": 0.239,
+    "cost": 1263.0,
+    "hall_minus_restart_fb": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "dev/restart_fb_b4": {
+    "n": 217,
+    "hall": 0.758,
+    "covered": 0.991,
+    "faithful_answered": 0.233,
+    "cost": 1279.0,
+    "hall_minus_restart_fb": [
+      0.008,
+      0.002,
+      0.016
+    ]
+  },
+  "dev/task_aware": {
+    "n": 217,
+    "hall": 0.639,
+    "covered": 0.857,
+    "faithful_answered": 0.218,
+    "cost": 1173.0,
+    "hall_minus_restart_fb": [
+      -0.11,
+      -0.152,
+      -0.074
+    ]
+  },
+  "test/base": {
+    "n": 233,
+    "hall": 0.807,
+    "covered": 1.0,
+    "faithful_answered": 0.193,
+    "cost": 980.0,
+    "hall_minus_restart_fb": [
+      0.024,
+      -0.001,
+      0.047
+    ]
+  },
+  "test/care": {
+    "n": 233,
+    "hall": 0.769,
+    "covered": 0.971,
+    "faithful_answered": 0.208,
+    "cost": 1708.0,
+    "hall_minus_restart_fb": [
+      -0.014,
+      -0.038,
+      0.007
+    ]
+  },
+  "test/cove_flag_clean": {
+    "n": 98,
+    "hall": 0.714,
+    "covered": 1.0,
+    "faithful_answered": 0.286,
+    "cost": null,
+    "hall_minus_restart_fb": [
+      0.025,
+      -0.033,
+      0.079
+    ]
+  },
+  "test/restart_fb": {
+    "n": 233,
+    "hall": 0.783,
+    "covered": 0.996,
+    "faithful_answered": 0.215,
+    "cost": 1320.0,
+    "hall_minus_restart_fb": [
+      0.0,
+      0.0,
+      0.0
+    ]
+  },
+  "test/restart_fb_b4": {
+    "n": 233,
+    "hall": 0.787,
+    "covered": 1.0,
+    "faithful_answered": 0.213,
+    "cost": 1327.0,
+    "hall_minus_restart_fb": [
+      0.004,
+      0.0,
+      0.011
+    ]
+  },
+  "test/task_aware": {
+    "n": 233,
+    "hall": 0.684,
+    "covered": 0.884,
+    "faithful_answered": 0.2,
+    "cost": 1251.0,
+    "hall_minus_restart_fb": [
+      -0.099,
+      -0.136,
+      -0.064
+    ]
+  }
+}

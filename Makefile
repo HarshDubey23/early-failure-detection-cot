@@ -128,3 +128,7 @@ recovery-mock:  # the whole Run R sequence on CPU with fake models; writes NO re
 recovery-analysis:  # after extracting recovery_results.tar.gz here: replay, tests, mechanism
 	$(PY) scripts/34_replay.py --items data/recovery/items.*.jsonl --out results/recovery/final
 	$(PY) scripts/35_mechanism.py --items data/recovery/items.ragtruth.llama-2-7b-chat.jsonl --out results/recovery/final/mechanism
+
+recovery-dual-judge:  # calibrate judge (kappa >= 0.60) and re-evaluate all policies
+	$(PY) scripts/43_calibrate_judge.py
+	$(PY) scripts/44_benchmark_dual_judge.py

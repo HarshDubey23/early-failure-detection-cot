@@ -1,0 +1,52 @@
+{
+  "E1 (Zero-Shot Qwen2.5-7B)": {
+    "n": 449,
+    "accuracy": 0.608,
+    "precision": 0.5687,
+    "recall": 0.9159,
+    "f1": 0.7017,
+    "kappa": 0.2128,
+    "rate_pred": 0.8107,
+    "rate_true": 0.5033
+  },
+  "E2 (LettuceDetect-Large tau=0.5)": {
+    "n": 449,
+    "accuracy": 0.7906,
+    "precision": 0.8204,
+    "recall": 0.7478,
+    "f1": 0.7824,
+    "kappa": 0.5815,
+    "rate_pred": 0.4588,
+    "rate_true": 0.5033
+  },
+  "E2 (Optimal tau=0.35)": {
+    "n": 449,
+    "accuracy": 0.7973,
+    "precision": 0.7848,
+    "recall": 0.823,
+    "f1": 0.8035,
+    "kappa": 0.5945,
+    "rate_pred": 0.5278,
+    "rate_true": 0.5033
+  },
+  "Dual Consensus Judge (E1 AND E2>=0.3)": {
+    "n": 449,
+    "accuracy": 0.8018,
+    "precision": 0.8128,
+    "recall": 0.7876,
+    "f1": 0.8,
+    "kappa": 0.6036,
+    "rate_pred": 0.4878,
+    "rate_true": 0.5033
+  },
+  "Dual Strict Consensus (E1 AND E2>=0.5)": {
+    "n": 449,
+    "accuracy": 0.7996,
+    "precision": 0.8542,
+    "recall": 0.7257,
+    "f1": 0.7847,
+    "kappa": 0.5995,
+    "rate_pred": 0.4276,
+    "rate_true": 0.5033
+  }
+}

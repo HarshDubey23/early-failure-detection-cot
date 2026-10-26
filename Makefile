@@ -138,3 +138,6 @@ recovery-baselines:  # evaluate 6 matched-compute baselines on RAGTruth
 
 proof:  # execute one-command verification of all five reviewer pillars
 	$(PY) scripts/47_proof.py
+
+recovery-cross-model:  # evaluate cross-model generalization (Llama-2 vs Llama-3.1)
+	$(PY) scripts/48_cross_model_generalization.py

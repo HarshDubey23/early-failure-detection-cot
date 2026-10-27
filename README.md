@@ -1,6 +1,6 @@
 # Detect, Restart, Abstain
 
-### Cheap mitigation of LLM failures and hallucinations, and why fixing the choke point does not pay
+### The cheapest way to fix LLM failures is to start over, and we can prove how good it gets
 
 **Harsh Dubey, Harshit Saini, Prashant Jain, Himanshu Kumar, Gaurav Kaushal, Rohit Chaudhary**
 · Dept. of CSE (AI&ML), KIET Group of Institutions · [Paper (PDF)](paper/main.pdf) ·
@@ -12,27 +12,43 @@
 ![CI](https://github.com/HarshDubey23/early-failure-detection-cot/actions/workflows/ci.yml/badge.svg)
 ![preregistered](https://img.shields.io/badge/claims-preregistered%20%2F%20exploratory%20labelled-8a2be2)
 
-> Language models fail mid-generation: a reasoning step goes wrong, or an answer drifts from its
-> source into hallucination. The popular fix is surgical: find the step that went wrong and repair or
-> regenerate from there. We asked **what actually mitigates these failures at the lowest cost**,
-> using **125,832 on-policy continuations** in maths and **11,320** in retrieval-augmented generation.
+## The finding in 30 seconds
+
+> **When a language model goes wrong, the field tries to find the broken step and repair it. We show
+> that this is the wrong place to spend compute.** Failures are usually not decided where anyone can
+> see them, and a failed partial answer is, on average, worth no more than a fresh start (we prove
+> this). So the cheapest effective fix is to **detect, restart and abstain**, and its quality is set by
+> one number: how often the detector lets a bad answer through (we prove this too).
 >
-> **The answer is simple: detect, restart, abstain.** Plain restarting recovers
-> **44–66%** of failed maths solutions within four attempts' compute. In RAG, the
-> detect–restart–abstain loop costs **1.36×** the base model (claim repair
-> 1.71×, a choke-point-aware controller 1.77×, Chain-of-Verification
-> 3.75×), and we **prove** its hallucination rate is set by the detector alone, which predicts
-> **50.2% → 26.6%** hallucinated answers for people. The surgical version does not pay: failures are
-> often decided before the first step, verifiers find the human-labelled error rather than the real
-> choke point, and even a free oracle for the choke point gains only about three points.
+> - **It works.** Restarting recovers **44–66%** of failed maths solutions within four attempts. In
+>   RAG it reduces hallucination (preregistered, p = 0.0003) at **1.36×** the base cost, cheaper than
+>   claim repair (1.71×), a choke-point-aware controller (1.77×) or Chain-of-Verification (3.75×).
+> - **It is predictable.** From human labels, our law predicts **50.2% → 26.6%** hallucinated answers at the
+>   setting we ran, and **12.7%** with a stricter gate at 4.4 generations per answer. Its key
+>   prediction holds in our replays: 4× more retries raise coverage by **+2.4** points while delivered
+>   hallucination moves by only **+0.6** to **+1.5** points.
+> - **The surgical alternative does not pay.** A process reward model finds **73%** of human-labelled
+>   errors but only **45%** of the steps where failures are actually decided, and even a free, perfect
+>   oracle for that step gains only **+0.028** over restart at the same budget.
 
-![Why surgical repair does not pay](results/figures/fig0_story.png)
+## Why it matters
 
-*Preprint, not peer-reviewed. Every number on this page and in the paper is computed by the code in
-this repository from committed data. Each claim is labelled **preregistered**, **exploratory** or
-**confirmatory** (a preregistered test on new data), and results that failed are reported as such.*
+| If you build ... | The evidence says |
+|---|---|
+| **Process reward models and verifier-guided search** | You are graded on the human-labelled error, but that is the decisive step only about half the time. Report results against restart at matched compute, charge the verifier's cost, and test on the choke point ([ChokeBench](#chokebench-a-new-benchmark)). |
+| **RAG and agent pipelines** | Put your budget into a precise detector and plain restarts, not into repair machinery. The detector's P(hallucinated &#124; pass) *is* your delivered hallucination rate; the retry budget only buys coverage. |
+| **Evaluations of such systems** | Never grade a detector-gated loop with a grader trained like the detector: the measured gain was **32.6** points under such a grader and **1.7** (n.s.) under an independent one. |
+| **Test-time compute research** | Restart is the baseline to beat. It is what randomised-search theory recommends (Luby et al. 1993), and our supermartingale bound says why it is so hard to beat for language models. |
 
----
+## Three results, each proved and each checked against data
+
+| | Statement | Proof | Checked against data |
+|---|---|---|---|
+| **1. A failed prefix is worth no more than a fresh start** | For any resampling point chosen without looking ahead, E[v &#124; fail] ≤ v<sub>0</sub>. | supermartingale, Appendix A | per attempt, every deployable resampling point loses to restart; a free oracle gains +0.028 at 4× budget |
+| **2. Its only advantage is shorter attempts** | A point no better per attempt than restart is worth at most restart with c<sub>0</sub>/c<sub>k</sub> times the budget (≈1.25–1.4×). | Appendix D | ChokeBench: the oracle's attempts are 0.76× as long as a restart's |
+| **3. A restart loop is exactly as faithful as its detector** | Delivered hallucination = h·β / (h·β + (1−h)(1−α)), independent of the retry budget. | Appendix D | 4× budget: coverage +2.4 pts, delivered hallucination +0.6 to +1.5 pts |
+
+![Checks of the restart-loop law](results/figures/fig28_law.png)
 
 ## The question, and the one quantity that answers it
 
@@ -48,7 +64,9 @@ where v collapses. An **error** is where a human annotator says reasoning first 
 This is the restart-versus-continue problem of randomised search (Luby, Sinclair and Zuckerman
 1993; Gomes et al. 2000), posed for language-model decoding, and the answer is the same: restart.
 
-## Findings
+![Why surgical repair does not pay](results/figures/fig0_story.png)
+
+## All findings
 
 | # | Finding | Key number | Evidence |
 |---|---|---|---|
@@ -250,6 +268,7 @@ make story          # CPU, ~1 min: ChokeBench, evaluator robustness, Fig. 0, pap
 | `bash scripts/run_c_analysis.sh` | CPU | every preregistered maths analysis from committed rollouts |
 | `make chokebench` | CPU | ChokeBench (finding 5) |
 | `make evaluator-robustness` | CPU | Part 3 under five graders (finding 7) |
+| `python scripts/53_law_tests.py` | CPU | budget-invariance check and operating curve of the restart-loop law |
 | `python scripts/52_mitigation_law.py` | CPU | mitigation costs, maths restart recovery, the restart-loop law (findings 1–2) |
 | `make choke-paper` | CPU | regenerates `paper/values.tex` from the result tables and compiles the PDF |
 | `make test` | CPU | test suite, including planted-effect tests of the estimators |

@@ -227,6 +227,48 @@ def fig_mitigation() -> None:
     plt.close(fig)
 
 
+def fig_law() -> None:
+    """Fig. 28: two checks of Proposition 3. Left: from budget 1 to 4, coverage rises and delivered
+    hallucination barely moves. Right: the predicted operating curve (hallucination of delivered
+    answers vs draws per answered input) for three gates, from human-labelled drafts."""
+    t = json.loads((ROOT / "results/recovery/final/law_tests.json").read_text())
+    fig, (a, b) = plt.subplots(1, 2, figsize=(14, 5.0), layout="constrained", gridspec_kw={"width_ratios": [1, 1.3]})
+    r = t["budget_invariance"]["restart_fb"]
+    items = [("coverage", r["coverage_diff"], AQUA), ("delivered hallucination\n(independent judge E1)", r["hall_E1_delivered_diff"], BLUE),
+             ("delivered hallucination\n(LettuceDetect-large E2)", r["hall_E2_delivered_diff"], ORANGE)]
+    y = np.arange(len(items))[::-1]
+    for yi, (lab, d, c) in zip(y, items):
+        a.barh(yi, 100 * d[0], height=0.55, color=c)
+        a.plot([100 * d[1], 100 * d[2]], [yi, yi], color=INK, lw=1.1)
+        _value(a, 100 * d[2], yi, f"{100 * d[0]:+.1f} pts")
+    a.axvline(0, color=INK, lw=0.9)
+    a.set_yticks(y, [lab for lab, _, _ in items])
+    a.set_xlim(-1, 4.5)
+    a.set_xlabel("change from budget 1 to budget 4 (percentage points, 95% CI)")
+    a.set_title("More retries buy coverage, not faithfulness")
+    cols = {"D (LettuceDetect-base)": BLUE, "E2 (LettuceDetect-large)": ORANGE, "D or E2 flags": AQUA}
+    for g, c in cols.items():
+        pts = [x for x in t["operating_curve"] if x["gate"] == g]
+        xs = [x["draws_per_answer"] for x in pts]
+        b.plot(xs, [100 * x["pi"] for x in pts], "-o", color=c, lw=2, ms=5, label=f"gate: {g}")
+        b.fill_between(xs, [100 * x["pi_lo"] for x in pts], [100 * x["pi_hi"] for x in pts], color=c, alpha=0.12, lw=0)
+    run = next(x for x in t["operating_curve"] if x["gate"].startswith("D (") and abs(x["tau"] - 0.5) < 1e-9)
+    b.scatter([run["draws_per_answer"]], [100 * run["pi"]], s=160, facecolor="none", edgecolor=INK, lw=1.5, zorder=5)
+    b.annotate("the setting used in our runs", (run["draws_per_answer"], 100 * run["pi"]), xytext=(18, 22),
+               textcoords="offset points", fontsize=8.5, arrowprops={"arrowstyle": "-", "color": MUTED})
+    b.axhline(100 * t["human_base_rate"], color=GREY, ls=(0, (4, 3)), lw=1.2)
+    b.text(4.45, 100 * t["human_base_rate"] - 2.5, "no mitigation", ha="right", fontsize=8.5, color=MUTED)
+    b.set_ylim(0, 55)
+    b.set_xlim(1.2, 4.6)
+    b.set_xlabel("generations per answered input (cost)")
+    b.set_ylabel("hallucinated delivered answers (%)")
+    b.set_title("Pick a hallucination rate, pay its price (predicted, human labels)")
+    b.legend(loc="upper left", bbox_to_anchor=(0.0, -0.17), ncol=3)
+    for ext in ("png", "pdf"):
+        fig.savefig(FIG / f"fig28_law.{ext}", dpi=200)
+    plt.close(fig)
+
+
 def main() -> None:
     S = pd.read_csv(ROOT / "results/chokebench/summary.csv")
     fig = plt.figure(figsize=(17, 10.5), layout="constrained")
@@ -254,7 +296,8 @@ def main() -> None:
     plt.close(fig)
     fig_tuning()
     fig_mitigation()
-    print("wrote fig27_mitigation, fig0_story, fig25_chokebench, fig26_learned_tuning")
+    fig_law()
+    print("wrote fig28_law, fig27_mitigation, fig0_story, fig25_chokebench, fig26_learned_tuning")
 
 
 if __name__ == "__main__":

@@ -398,6 +398,24 @@ if ml_file.exists():
         vals = [d[b][0] for d in rec.values()]
         put(f"recMin{nm}", f"{100 * min(vals):.0f}", "{}"); put(f"recMax{nm}", f"{100 * max(vals):.0f}", "{}")
 
+lt_file = RF / "law_tests.json"
+if lt_file.exists():
+    lt = json.loads(lt_file.read_text())
+    r = lt["budget_invariance"]["restart_fb"]
+    for key, name in [("coverage_diff", "Cov"), ("hall_E1_delivered_diff", "EOne"), ("hall_E2_delivered_diff", "ETwo")]:
+        v, lo, hi, _ = r[key]
+        put(f"inv{name}", f"{100 * v:+.1f}", "{}"); put(f"inv{name}Lo", f"{100 * lo:+.1f}", "{}")
+        put(f"inv{name}Hi", f"{100 * hi:+.1f}", "{}")
+    put("invCovOne", f"{100 * r['coverage_b1']:.1f}", "{}"); put("invCovFour", f"{100 * r['coverage_b4']:.1f}", "{}")
+    pick = {(c["gate"].split(" ")[0], round(c["tau"], 1)): c for c in lt["operating_curve"]}
+    for (g, t), name in [(("D", 0.5), "DFive"), (("E2", 0.3), "ETwoThree"), (("D", 0.1), "DOne"), (("E2", 0.1), "ETwoOne")]:
+        c = pick[(g, t)]
+        put(f"oc{name}Pi", f"{100 * c['pi']:.1f}", "{}"); put(f"oc{name}Draws", c["draws_per_answer"], "{:.1f}")
+        put(f"oc{name}Cov", f"{100 * c['coverage_two_draws']:.0f}", "{}")
+    c = next(c for c in lt["operating_curve"] if c["gate"].startswith("D or") and abs(c["tau"] - 0.1) < 1e-9)
+    put("ocUnionPi", f"{100 * c['pi']:.1f}", "{}"); put("ocUnionPiLo", f"{100 * c['pi_lo']:.1f}", "{}")
+    put("ocUnionPiHi", f"{100 * c['pi_hi']:.1f}", "{}"); put("ocUnionDraws", c["draws_per_answer"], "{:.1f}")
+
 rob_file = RF / "evaluator_robustness.json"
 if rob_file.exists():
     rob = json.loads(rob_file.read_text())

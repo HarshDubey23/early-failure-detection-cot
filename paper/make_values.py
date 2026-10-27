@@ -415,6 +415,21 @@ if lt_file.exists():
     c = next(c for c in lt["operating_curve"] if c["gate"].startswith("D or") and abs(c["tau"] - 0.1) < 1e-9)
     put("ocUnionPi", f"{100 * c['pi']:.1f}", "{}"); put("ocUnionPiLo", f"{100 * c['pi_lo']:.1f}", "{}")
     put("ocUnionPiHi", f"{100 * c['pi_hi']:.1f}", "{}"); put("ocUnionDraws", c["draws_per_answer"], "{:.1f}")
+    for pol, name in [("restart_fb", "Dra"), ("care", "Care")]:     # each loop vs base, same items (exploratory)
+        for g, gn in [("hall_E1", "EOne"), ("hall_E2", "ETwo")]:
+            v, lo, hi, _ = lt["vs_base_b2"][pol][g]
+            put(f"vb{name}{gn}", v, "{:+.3f}"); put(f"vb{name}{gn}Lo", lo, "{:+.3f}"); put(f"vb{name}{gn}Hi", hi, "{:+.3f}")
+
+val_file = ROOT / "results" / "chokebench" / "validity.json"
+if val_file.exists():                                               # stage 54: ChokeBench predictive validity
+    val = json.loads(val_file.read_text())
+    T, S = val["trace_level"], val["system_level"]
+    for key, name in [(T["choke_only"]["hit_d"], "valD"), (T["human_only"]["hit_e"], "valE"),
+                      (T["both"]["hit_d"], "valBothD"), (T["both"]["hit_e"], "valBothE"), (T["both"]["choke_minus_human"], "valDiff")]:
+        put(name, key[0], "{:+.2f}"); put(name + "Lo", key[1], "{:+.2f}"); put(name + "Hi", key[2], "{:+.2f}")
+    put("valRhoD", S["mean_rho_chokebench"], "{:+.2f}"); put("valRhoE", S["mean_rho_processbench"], "{:+.2f}")
+    put("valRhoDiff", S["mean_rho_diff"][0], "{:+.2f}"); put("valRhoDiffLo", S["mean_rho_diff"][1], "{:+.2f}")
+    put("valRhoDiffHi", S["mean_rho_diff"][2], "{:+.2f}"); put("valN", T["n_traces"], "{}")
 
 rob_file = RF / "evaluator_robustness.json"
 if rob_file.exists():

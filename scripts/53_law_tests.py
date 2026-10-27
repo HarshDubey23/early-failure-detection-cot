@@ -90,7 +90,15 @@ def main() -> None:
                           "pi_hi": float(np.nanquantile(bs, 0.975)), "q": float(q),
                           "draws_per_answer": float(1 / (1 - q)) if q < 1 else float("inf"),
                           "coverage_two_draws": float(1 - q ** 2)})
-    out = {"budget_invariance": inv, "operating_curve": curve, "human_base_rate": float(H.mean()), "n_drafts": int(len(H))}
+    # The preregistered H0 tested CARE against the base model; DRA against the base model is tested here
+    # directly (exploratory), on the same items, so the two are not conflated.
+    base = P[(P.policy == "base") & (P.budget == 0)].set_index("item_id").sort_index()
+    vs_base = {}
+    for pol in ("restart_fb", "care"):
+        x = P[(P.policy == pol) & (P.budget == 2)].set_index("item_id").loc[base.index]
+        vs_base[pol] = {g: boot_mean_diff(x[g].to_numpy(float), base[g].to_numpy(float), rng) for g in ("hall_E1", "hall_E2")}
+    out = {"budget_invariance": inv, "operating_curve": curve, "vs_base_b2": vs_base,
+           "human_base_rate": float(H.mean()), "n_drafts": int(len(H))}
     (FIN / "law_tests.json").write_text(json.dumps(out, indent=2), encoding="utf-8")
 
     fmt = lambda v: f"{v[0]:+.3f} [{v[1]:+.3f}, {v[2]:+.3f}]"  # noqa: E731
@@ -109,6 +117,10 @@ def main() -> None:
     for c in curve:
         L.append(f"| {c['gate']} | {c['tau']:.1f} | {c['pi']:.3f} [{c['pi_lo']:.3f}, {c['pi_hi']:.3f}] | {c['q']:.3f} | "
                  f"{c['draws_per_answer']:.2f} | {c['coverage_two_draws']:.3f} |")
+    L += ["", "## 3. Each loop against the base model, same items (budget 2; exploratory except CARE under E1, which is H0)", "",
+          "| Loop | change in hallucination, E1 judge | change, E2 |", "|---|---|---|"]
+    for pol, r in vs_base.items():
+        L.append(f"| {pol} | {fmt(r['hall_E1'])} | {fmt(r['hall_E2'])} |")
     (FIN / "law_tests.md").write_text("\n".join(L) + "\n", encoding="utf-8")
     print("\n".join(L))
 

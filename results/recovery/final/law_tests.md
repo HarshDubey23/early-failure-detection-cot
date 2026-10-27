@@ -40,3 +40,10 @@ RAGTruth, 450 sources, same items at budget 1 and budget 4 (paired). Delivered =
 | D or E2 flags | 0.7 | 0.242 [0.190, 0.294] | 0.448 | 1.81 | 0.800 |
 | D or E2 flags | 0.8 | 0.262 [0.213, 0.312] | 0.414 | 1.71 | 0.828 |
 | D or E2 flags | 0.9 | 0.292 [0.239, 0.351] | 0.367 | 1.58 | 0.865 |
+
+## 3. Each loop against the base model, same items (budget 2; exploratory except CARE under E1, which is H0)
+
+| Loop | change in hallucination, E1 judge | change, E2 |
+|---|---|---|
+| restart_fb | -0.042 [-0.063, -0.022] | -0.331 [-0.373, -0.291] |
+| care | -0.047 [-0.070, -0.024] | -0.307 [-0.351, -0.264] |

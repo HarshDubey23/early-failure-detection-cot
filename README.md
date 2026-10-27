@@ -1,11 +1,11 @@
-# Detect, Restart, Abstain
+# Errors Are Not Choke Points
 
-### The cheapest way to fix LLM failures is to start over, and we can prove how good it gets
+### Where LLM reasoning failures are actually decided, and why restart is hard to beat
 
 **Harsh Dubey, Harshit Saini, Prashant Jain, Himanshu Kumar, Gaurav Kaushal, Rohit Chaudhary**
 · Dept. of CSE (AI&ML), KIET Group of Institutions · [Paper (PDF)](paper/main.pdf) ·
 [The research story (PDF)](docs/story/story.pdf) ·
-[ChokeBench](#chokebench-a-new-benchmark) · [Reproduce](#reproduce-every-number)
+[ChokeBench](#chokebench-v1-a-new-benchmark-and-evaluation-protocol) · [Reproduce](#reproduce-every-number)
 
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
@@ -14,29 +14,33 @@
 
 ## The finding in 30 seconds
 
-> **When a language model goes wrong, the field tries to find the broken step and repair it. We show
-> that this is the wrong place to spend compute.** Failures are usually not decided where anyone can
-> see them, and a failed partial answer is, on average, worth no more than a fresh start (we prove
-> this). So the cheapest effective fix is to **detect, restart and abstain**, and its quality is set by
-> one number: how often the detector lets a bad answer through (we prove this too).
+> **Process reward models are trained and benchmarked to find the first wrong step, and
+> verifier-guided search goes back to that step to repair it. We measured where failures are actually
+> decided, and the assumption mostly fails.** For each failed trace we resample the generator from
+> every prefix and estimate v<sub>k</sub>, its own chance of success from step k.
 >
-> - **It works.** Restarting recovers **44–66%** of failed maths solutions within four attempts. In
->   RAG it reduces hallucination (preregistered, p = 0.0003) at **1.36×** the base cost, cheaper than
->   claim repair (1.71×), a choke-point-aware controller (1.77×) or Chain-of-Verification (3.75×).
-> - **It is predictable.** From human labels, our law predicts **50.2% → 26.6%** hallucinated answers at the
->   setting we ran, and **12.7%** with a stricter gate at 4.4 generations per answer. Its key
->   prediction holds in our replays: 4× more retries raise coverage by **+2.4** points while delivered
->   hallucination moves by only **+0.6** to **+1.5** points.
-> - **The surgical alternative does not pay.** A process reward model finds **73%** of human-labelled
->   errors but only **45%** of the steps where failures are actually decided, and even a free, perfect
->   oracle for that step gains only **+0.028** over restart at the same budget.
+> - **Many failures are decided before the first step:** 33–66% across four generators.
+> - **In the rest, the human-labelled error is the decisive step only 0.44–0.65 of the time**
+>   (chance: 0.16–0.20). This was preregistered and confirmed on a held-out model family.
+> - **Verifiers track the label, not the collapse.** A process reward model finds **73%** of human
+>   first errors but only **45%** of decisive steps (ChokeBench v1, 230 failed traces).
+> - **Repairing there does not beat restart at matched compute.** Even a free, perfect oracle for the
+>   decisive step gains only **+0.028** at four restarts' budget. Restart itself recovers **44–66%** of
+>   failed solutions within four attempts. A supermartingale bound explains why: a failed on-policy
+>   prefix is, in expectation, worth no more than a fresh start.
+>
+> **What this is not.** It is not a working early-failure detector: early signals mostly read problem
+> difficulty (AUROC 0.588 from the question and model alone; the first 25% of the trace adds +0.005,
+> n.s.). And it is not a demonstrated cut in human-rated hallucination. The RAG study below is
+> secondary. Its judge agrees only weakly with people (κ = 0.219), the choke-point-aware controller
+> is no better than plain restarting, and system outputs have not yet been rated by people.
 
 ## Why it matters
 
 | If you build ... | The evidence says |
 |---|---|
-| **Process reward models and verifier-guided search** | You are graded on the human-labelled error, but that is the decisive step only about half the time. Report results against restart at matched compute, charge the verifier's cost, and test on the choke point ([ChokeBench](#chokebench-a-new-benchmark)). |
-| **RAG and agent pipelines** | Put your budget into a precise detector and plain restarts, not into repair machinery. The detector's P(hallucinated &#124; pass) *is* your delivered hallucination rate; the retry budget only buys coverage. |
+| **Process reward models and verifier-guided search** | You are graded on the human-labelled error, but that is the decisive step only about half the time. Report results against restart at matched compute, charge the verifier's cost, and test on the choke point ([ChokeBench](#chokebench-v1-a-new-benchmark-and-evaluation-protocol)). |
+| **RAG and agent pipelines** (secondary study, LLM graders only) | Put your budget into a precise detector and plain restarts, not into repair machinery. The detector's P(hallucinated &#124; pass) *is* your delivered hallucination rate; the retry budget only buys coverage. |
 | **Evaluations of such systems** | Never grade a detector-gated loop with a grader trained like the detector: the measured gain was **32.6** points under such a grader and **1.7** (n.s.) under an independent one. |
 | **Test-time compute research** | Restart is the baseline to beat. It is what randomised-search theory recommends (Luby et al. 1993), and our supermartingale bound says why it is so hard to beat for language models. |
 
@@ -70,15 +74,17 @@ This is the restart-versus-continue problem of randomised search (Luby, Sinclair
 
 | # | Finding | Key number | Evidence |
 |---|---|---|---|
-| 1 | **Detect, restart, abstain is the cheapest mitigation that works.** In maths, restarting recovers most failed solutions; in RAG, a detector-gated restart loop reduces hallucination at the lowest cost of any resampling method. | maths: **44–66%** of failures recovered at 4 attempts, **56–77%** at 8; RAG: a detector-gated resampling loop cuts hallucination by 4.7 points (preregistered, p = 0.0003, LLM judge); plain DRA does the same at **1.36×** cost | preregistered (RAG reduction); exploratory (costs) |
+| 1 | **Restart is the baseline to beat.** In maths, restarting recovers most failed solutions. In RAG (secondary), a detector-gated loop lowers *judged* hallucination, and plain restarting matches the choke-point-aware controller at lower cost. | maths: **44–66%** of failures recovered at 4 attempts, **56–77%** at 8. RAG: −4.7 points under an LLM judge with κ = 0.219 (preregistered, p = 0.0003); plain DRA vs base, same items, −4.2 [−6.3, −2.2] (exploratory); CARE vs restart-only −0.5 [−2.4, +1.3]; DRA at **1.36×** cost vs CARE 1.77×; no human rating of outputs yet | preregistered (RAG reduction); exploratory (costs) |
 | 2 | **A law for restart loops (proved).** The hallucination rate of what the loop delivers equals the detector's P(hallucinated &#124; pass), whatever the retry budget; budget buys coverage, not faithfulness. | predicted for people: **50.2% [45.5, 54.9] → 26.6% [21.0, 32.2]** | theory + exploratory estimate |
 | 3 | **Early warning reads difficulty, not reasoning.** | AUROC **0.588** from question + model; +0.005 (n.s.) from 25% of the trace | exploratory |
 | 4 | **Many failures are decided before the first step**, and the rest are often (not always) decided at the labelled error. | **33–66%** decided before step 1; labelled error = choke point in **0.44–0.65** vs a null of 0.16–0.20 | preregistered; **confirmed** on Llama-3.1-8B |
-| 5 | **Verifiers find errors, not choke points** (new: ChokeBench). | a PRM finds **73%** of human first errors but **45%** of choke points; a localiser trained and tuned for it **39%** | exploratory |
+| 5 | **Verifiers find errors, not choke points** (new: ChokeBench). | a PRM finds **73%** of human first errors but **45%** of choke points; a localiser trained and tuned for it **39%**. The benchmark predicts real recovery: within a trace, naming the choke point raises the gain by **+0.40**, and the human label adds **+0.01** (n.s.) once the choke point is accounted for; on held-out models, ChokeBench scores rank localisers by gain with ρ = **0.52** vs **0.22** for first-error scores | exploratory |
 | 6 | **Fixing the choke point does not pay.** No deployable resampling point reliably beats restart at matched compute; a free choke-point oracle gains little. | PRM backtracking **−0.063** [−0.100, −0.024] (Llama); free oracle **+0.028**; in RAG, choosing where to resample adds **−0.000** | **confirmed** (Llama); preregistered (RAG) |
 | 7 | **The gate partly grades itself.** The measured gain of a detector-gated loop depends on whether the grader shares the detector's training data. | **+32.6** points (related grader) vs **+1.7** (independent, n.s.) | exploratory |
 
-## Mitigation at a glance
+## Secondary study: RAG mitigation at a glance
+
+*LLM graders only; human ratings of system outputs are pending (kit in [`results/recovery/human_eval/`](results/recovery/human_eval)).*
 
 ![What mitigation buys](results/figures/fig27_mitigation.png)
 
@@ -130,7 +136,7 @@ Qwen2.5-Math-7B at an 8× budget: +0.030 [+0.003, +0.057] (exploratory). Llama r
 **confirmatory**; the rest are exploratory. Details: [paper §6](paper/main.pdf),
 [`results/commitment/policies/`](results/commitment/policies).
 
-### ChokeBench: a new benchmark
+### ChokeBench v1: a new benchmark and evaluation protocol
 
 ProcessBench asks a verifier to find the human-labelled first error. **ChokeBench** also asks it to
 find the **choke point**, the step where the generator's own success probability collapses, and
@@ -165,6 +171,19 @@ human label and PRM scores. Name one step per trace and run
 [`results/chokebench/summary.md`](results/chokebench/summary.md).
 
 ![ChokeBench](results/figures/fig25_chokebench.png)
+
+**Does a ChokeBench score predict real recovery?** (exploratory; [`results/chokebench/validity.md`](results/chokebench/validity.md))
+Half of each prefix's continuations labels the choke point, and the other half scores the gain of
+resampling from the named step, so a hit cannot mechanically raise the gain.
+
+| Within a trace (trace fixed effects, 232 traces) | change in recovery gain per attempt |
+|---|---|
+| named step is the choke point | **+0.40** [+0.35, +0.44] |
+| named step is the human first error, once the choke point is accounted for | **+0.01** [−0.03, +0.05] |
+| **Held-out model:** rank localisers on 3 generators, predict gain on the 4th | Spearman **0.52** (ChokeBench) vs **0.22** (first-error score); difference +0.29 [+0.08, +0.46] |
+
+The human label is useful only where it coincides with the choke point. Even so, hitting the choke
+point avoids the loss other steps incur rather than beating restart.
 
 ### RAG: hallucination recovery under five graders
 
@@ -215,6 +234,8 @@ in [`results/recovery/human_eval/`](results/recovery/human_eval)).
 | Qin et al. 2025, *To backtrack or not to backtrack* | trained backtracking beats best-of-n on deep search trees, not shallow ones | an upper bound on backtracking gains for failed on-policy traces, and the theory behind it |
 | Snell et al. (ICLR 2025) | verifier search vs best-of-n depends on difficulty and budget | counterfactual ground truth for where a restart point should be |
 | CoVe, RARR, LettuceDetect, RAGTruth | detect-then-revise hallucination repair | a preregistered test of *where* to resample, and an evaluator-dependence check |
+
+**What is not new:** counterfactual resampling from prefixes (Thought Anchors, Thought Branches, *The Point of No Return*, Merrill and Srivastava 2026) and matched-budget prefix-vs-restart comparisons (Bulut 2026). The contribution is narrower: comparing counterfactual decision points with expert first-error labels on failed traces of several generators, with compute-matched tests of the recovery policies those labels motivate. ChokeBench v1 is built from this study's own rollouts. Whether its mismatch holds on new models and datasets, and whether it predicts which interventions work, is still open.
 
 Full positioning, with 2026 work: [`docs/RELATED_WORK.md`](docs/RELATED_WORK.md).
 
@@ -268,6 +289,7 @@ make story          # CPU, ~1 min: ChokeBench, evaluator robustness, Fig. 0, pap
 | `bash scripts/run_c_analysis.sh` | CPU | every preregistered maths analysis from committed rollouts |
 | `make chokebench` | CPU | ChokeBench (finding 5) |
 | `make evaluator-robustness` | CPU | Part 3 under five graders (finding 7) |
+| `python scripts/54_chokebench_validity.py` | CPU | does a ChokeBench score predict recovery gains? (held-out halves and models) |
 | `python scripts/53_law_tests.py` | CPU | budget-invariance check and operating curve of the restart-loop law |
 | `python scripts/52_mitigation_law.py` | CPU | mitigation costs, maths restart recovery, the restart-loop law (findings 1–2) |
 | `make choke-paper` | CPU | regenerates `paper/values.tex` from the result tables and compiles the PDF |
@@ -340,9 +362,9 @@ The paper never types a result by hand: every number is a macro written by
 ## Citation
 
 ```bibtex
-@misc{dubey2026detectrestart,
-  title        = {Detect, Restart, Abstain: Cheap Mitigation of {LLM} Failures and Hallucinations,
-                  and Why Fixing the Choke Point Does Not Pay},
+@misc{dubey2026chokepoints,
+  title        = {Errors Are Not Choke Points: Counterfactual Localisation of {LLM} Reasoning
+                  Failures, and Why Restart Is Hard to Beat},
   author       = {Dubey, Harsh and Saini, Harshit and Jain, Prashant and Kumar, Himanshu and
                   Kaushal, Gaurav and Chaudhary, Rohit},
   year         = {2026},

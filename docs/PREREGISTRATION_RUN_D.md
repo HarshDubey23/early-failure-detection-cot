@@ -51,6 +51,23 @@ will be reported as such.
 `scripts/61_reasoning_analysis.py`, committed with this file and tested on mock data, computes every
 quantity above. Any change after the data arrive will be listed here as a deviation.
 
-## 5. Outcomes
+## 5. Deviations, fixed before the confirmatory launch (no outcome data seen)
+
+- **Pilot facts used.** The pilot (Qwen3-1.7B, 8 problems, m = 4, 4,096-token budget) ran at about
+  130 generated tokens per second per T4 in eager mode. Both pilot failures hit the token budget, and
+  most continuations did too. No value curve from the pilot is used anywhere.
+- **m = 8.** This is the smallest value in the preregistered set. At the pilot's throughput, even m = 8
+  does not fit all 480 problems into one Kaggle session.
+- **Coverage set by time, not by outcome.** Each model runs in its own Kaggle session (2x T4, about
+  6.5 hours). Stage 1 (one trace per problem) covers all 480 problems. Stage 2 (value curves) then
+  processes failed traces in dataset order, 8 at a time, until the time limit. The analysed failures
+  are therefore the first failures in dataset order, not a selection by outcome. The number reached is
+  reported.
+- **Speed settings only.** CUDA graphs replace eager mode, with eager kept as the fallback, and memory
+  use is raised from 0.90 to 0.92. These change speed, not sampling.
+- The token budget stays at 6,144, and the cuts, sampling settings, hypotheses and analysis code are
+  unchanged.
+
+## 6. Outcomes
 
 To be appended after the run, including failures.

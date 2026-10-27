@@ -70,4 +70,23 @@ quantity above. Any change after the data arrive will be listed here as a deviat
 
 ## 6. Outcomes
 
-To be appended after the run, including failures.
+### 6.1 Qwen3-1.7B, first session (2026-10-27, 6.6 h on 2x T4): stage 1 complete, stage 2 empty
+
+- **Stage 1 (480 problems).** Accuracy 70.8% (340/480): by level 95%, 93%, 81%, 71%, 41%.
+  Correct traces used 3,008 tokens on average.
+- **Failures are almost all budget exhaustion.** Of 140 failures, 133 (95%) hit the 6,144-token
+  budget without closing the reasoning block. Only 7 ended with a wrong final answer, and two of
+  those are grading false negatives: the gold answer is a `pmatrix` vector and the model wrote the
+  same vector as a tuple.
+- **Stage 2 wrote no rows.** Throughput was about 92 generated tokens per second per T4, below the
+  pilot's eager-mode rate (TRITON attention, since FlashAttention 2 needs compute capability 8). The
+  first chunk (8 failed traces x 7 cuts x 8 continuations = 560 requests) was 61% done when the time
+  limit stopped it, and a chunk is written only when it completes, so nothing was kept.
+- **What this means for the hypotheses.** For a trace that fails by running out of budget, a later
+  cut leaves less budget for its continuations, so a fall in v_t is partly mechanical. D1 and D2 on
+  such traces test the budget more than the reasoning. D4 (wrong-answer failures only) is the
+  informative subgroup, but it has at most 7 traces for this model.
+- **Changes for the next session (before any stage-2 data).** Stage-1 traces are committed and
+  reused, so a session goes entirely to stage 2. Chunks are 2 failed traces, so a time-limit kill
+  loses at most one chunk.
+

@@ -41,8 +41,10 @@ sh("python -c \"import vllm, torch, transformers; print('vllm', vllm.__version__
 log(f"RUN {RUN} | {open('/tmp/versions.txt').read().strip()}")
 
 model, name = RUN["model"], RUN["model"].split("/")[-1]
+# Resume: stage-1 traces committed from an earlier session are reused, so the whole session goes to stage 2.
+sh(f"mkdir -p {OUT} && for f in {REPO}/results/run_d/traces.{name}.s*.jsonl; do [ -e \"$f\" ] && cp -n \"$f\" {OUT}/; done; true", check=False)
 left = int(RUN["limit_s"] - (time.time() - START) - 300)
-args = f"--model {model} --skip-problems {RUN['skip']} --n-problems {RUN['n']} --m {RUN['m']} --max-gen {RUN['max_gen']} --out {OUT}"
+args = f"--model {model} --skip-problems {RUN['skip']} --n-problems {RUN['n']} --m {RUN['m']} --max-gen {RUN['max_gen']} --chunk 2 --out {OUT}"  # small chunks: a time-limit kill loses at most one
 procs = [subprocess.Popen(f"cd {REPO} && CUDA_VISIBLE_DEVICES={g} timeout {left} python scripts/60_reasoning_rollouts.py "
                           f"{args} --shard {g}/2 > {OUT}/{name}.s{g}.out 2>&1", shell=True) for g in (0, 1)]
 while any(p.poll() is None for p in procs):

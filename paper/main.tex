@@ -13,7 +13,7 @@
 \graphicspath{{../results/figures/}}
 \input{values}
 
-\title{\Large\bfseries Detect, Restart, Abstain: Cheap Mitigation of LLM Failures and Hallucinations,\\and Why Fixing the Choke Point Does Not Pay}
+\title{\Large\bfseries Errors Are Not Choke Points: Counterfactual Localisation of\\LLM Reasoning Failures, and Why Restart Is Hard to Beat}
 \author{Harsh Dubey \quad Harshit Saini \quad Prashant Jain\\ Himanshu Kumar \quad Gaurav Kaushal \quad Rohit Chaudhary\\
 \small Dept.\ of CSE (AI\&ML), KIET Group of Institutions, Ghaziabad, India}
 \date{}
@@ -35,23 +35,21 @@ because it promises to keep the good part of a generation and pay only for the b
 on one assumption: a failure is \emph{decided} at an identifiable step, and resampling from just
 before that step beats resampling from scratch.
 
-This paper asks a practical question, \emph{what mitigates failures at the lowest cost}, and tests
-that assumption on the way, with one quantity throughout. For a trace written by model $M$, let
+This paper tests that assumption directly, with one quantity throughout. For a trace written by model $M$, let
 $v_k$ be $M$'s probability of reaching a correct (or faithful) output from the prefix ending at step
 $k$, estimated by sampling $M$'s own continuations. $v_0$ is the from-scratch solve rate, so
 \emph{restart} is resampling from $k=0$ and \emph{backtracking} to step $j$ is resampling from
 $k=j-1$. A \emph{choke point} is where $v$ collapses; an \emph{error} is where a human annotator says
 the reasoning first goes wrong.
 
-The answer is that the cheapest effective mitigation is not surgical. \emph{Detect} a failure with a
-cheap verifier, \emph{restart}, and \emph{abstain} if the output is still flagged. Restarting recovers
-\recMinFour--\recMaxFour\% of failed maths solutions within four attempts' compute; in RAG the
-detect--restart--abstain loop costs \costDra$\times$ the base model, less than every repair-based
-alternative, and its residual hallucination rate is set by the detector alone
-(Proposition~3 (Appendix~\ref{app:more})). The surgical version does not pay because failures are rarely decided
-where we can see them: many are decided before the first step, verifiers find the human label rather
-than the choke point, and even a free oracle for the choke point gains little, because a failed
-prefix is on average worth no more than a fresh start (Proposition~1 (Appendix~\ref{app:prop})). The question is
+The assumption mostly fails. Many failures are decided before the first step, verifiers find the
+human label rather than the choke point, and even a free oracle for the choke point gains little
+over restart at matched compute, because a failed on-policy prefix is on average worth no more than a
+fresh start (Proposition~1 (Appendix~\ref{app:prop})). Restarting itself recovers
+\recMinFour--\recMaxFour\% of failed maths solutions within four attempts' compute. A secondary
+study on RAG asks whether the same holds for hallucinations: there, plain detect--restart--abstain
+matches a choke-point-aware controller at lower cost, under graders whose limits we report
+(Section~\ref{sec:grounded}). The question is
 old in another guise: randomised search algorithms face the same choice between continuing a run and
 restarting it, and restarts are often optimal there~\cite{luby1993,gomes2000}. Language-model decoding
 is such a randomised search.
@@ -74,32 +72,32 @@ Every claim carries its evidence level (Section~\ref{sec:evidence}): \textsc{pre
 before any data), \textsc{exp} (exploratory) or \textsc{conf} (a preregistered test on new data).
 Our contributions:
 \begin{enumerate}
-\item \textbf{A cheap mitigation recipe that works, with its law.} Detect, restart, abstain
-(DRA). In maths, plain restarting recovers \recMinFour--\recMaxFour\% of failed solutions at four
-attempts and \recMinEight--\recMaxEight\% at eight. In RAG, a preregistered detect--resample controller
-reduces hallucination relative to the base model (\rrHZero, $p=\rrHZeroP$), DRA is equivalent to it
-(H1), at \costDra$\times$ the base cost (claim repair \costRep$\times$, the choke-point-aware controller CARE \costCare$\times$,
-Chain-of-Verification \costCove$\times$). We prove that DRA's residual hallucination rate is the
-detector's $P(\text{hallucinated}\mid\text{pass})$ whatever the retry budget, which predicts
-\lawH\% $\to$ \lawPi\% [\lawPiLo, \lawPiHi] with human labels, and gives an operating curve down to
-\ocUnionPi\% at \ocUnionDraws\ generations per answer; a four-fold retry budget raises coverage by
-\invCov\ points while delivered hallucination stays within \invEOne\ points, as predicted (\textsc{exp}).
 \item \textbf{Where failures are decided.} Early warning is a difficulty signal (question and
 model alone: AUROC \aucQG; the first quarter of the reasoning adds \dIncA, n.s., and is at chance
 within a problem). From \TotalRollouts\ on-policy continuations with replicated value curves
 ($r=\QwenSmallAllSplitR$), \QwenSmallAllCapPct--\QwenMathCapPct\% of failures are decided before the
 first step, and the labelled error is the choke point in \QwenTwoAllDec--\QwenSmallAllDec\ of the rest
 against a null of 0.16--0.20 (\textsc{pre}; \textsc{conf} on Llama-3.1-8B, \LlamaDec).
-\item \textbf{ChokeBench} (new benchmark). Step localisers graded on the human first error \emph{and}
+\item \textbf{ChokeBench v1}, a benchmark and evaluation protocol (\cbN\ failed traces, four generators). Step localisers graded on the human first error \emph{and}
 the counterfactual choke point. The best PRM rule finds \cbPrmDropAccHPct\% of human first errors but
 \cbPrmDropAccDPct\% of choke points; a localiser trained and tuned for the choke point does no
 better (\cbLearnedAccD).
-\item \textbf{Why surgery does not pay, proved and measured.} At matched compute, PRM-guided
+\item \textbf{Why surgery does not pay, proved and measured.} Restarting recovers \recMinFour--\recMaxFour\% of failed
+solutions at four attempts and \recMinEight--\recMaxEight\% at eight. At matched compute, PRM-guided
 backtracking loses to restart (\LlamaPolPrmDropFourDiff, \textsc{conf}); a free choke-point oracle
 gains \cbOracleGainB; and three short propositions explain the pattern: a failed prefix is worth no
 more than a fresh start in expectation, its only advantage is a bounded token saving, and a
 restart loop's quality is capped by its detector. In RAG, choosing where to resample adds
 \rrHFive\ (\textsc{pre}), and hallucinations do not snowball.
+\item \textbf{Secondary: a cheap recipe for RAG, with its law.} Detect, restart, abstain
+(DRA). A preregistered detect--resample controller
+reduces judged hallucination relative to the base model (\rrHZero, $p=\rrHZeroP$; the judge's agreement with people is $\kappa=\evEOneKappa$, and no human rating of outputs exists yet), DRA is equivalent to it
+(H1), at \costDra$\times$ the base cost (claim repair \costRep$\times$, the choke-point-aware controller CARE \costCare$\times$,
+Chain-of-Verification \costCove$\times$). We prove that DRA's residual hallucination rate is the
+detector's $P(\text{hallucinated}\mid\text{pass})$ whatever the retry budget, which predicts
+\lawH\% $\to$ \lawPi\% [\lawPiLo, \lawPiHi] with human labels, and gives an operating curve down to
+\ocUnionPi\% at \ocUnionDraws\ generations per answer; a four-fold retry budget raises coverage by
+\invCov\ points while delivered hallucination stays within \invEOne\ points, as predicted (\textsc{exp}).
 \item \textbf{A measurement caution} (\textsc{exp}). The gain of a detector-gated loop looks
 \robBaseETwoDiff\ under a grader trained like the detector and \robBaseEOneDiff\ (n.s.) under an
 independent judge: the gate partly grades itself.
@@ -150,6 +148,14 @@ Hallucinations can snowball when a model commits to an early claim~\cite{zhang20
 test for this with human span labels and find no excess hazard. Resampling-based interpretability
 measures the importance of reasoning steps counterfactually~\cite{bogdan2025,macar2025branches};
 we apply the same tool to human error labels, verifiers and recovery policies.
+
+\textbf{What is and is not new.} Counterfactual resampling from prefixes~\cite{bogdan2025,macar2025branches,merrill2026}
+and matched-budget comparisons of prefixes with restarts~\cite{bulut2026} already exist. Our
+contribution is narrower: a comparison of counterfactual decision points with expert first-error
+labels, on failed traces of several generators, together with compute-matched tests of the recovery
+policies those labels motivate. ChokeBench is an initial resource built from these experiments;
+whether its mismatch holds for new models and datasets, and whether it predicts which interventions
+work, is for others to test.
 
 \section{Data and Definitions}
 \textbf{Data.} ProcessBench~\cite{processbench} contains 3,400 step-segmented solutions to GSM8K,
@@ -353,15 +359,16 @@ Section~\ref{sec:policies} is the trained case).
 \end{itemize}
 
 \section{Conclusion}
-The cheapest mitigation of language-model failures we found is the simplest one: detect, restart,
-abstain. It recovers \recMinFour--\recMaxFour\% of failed maths solutions within four attempts and
-cuts RAG hallucination at \costDra$\times$ the base cost, with a quality that is provably set by the
-detector alone. The popular surgical alternative, finding the step where the output went wrong and
-repairing from there, does not pay: failures are often decided before the first step, the
-human-labelled error is a better-than-chance but imperfect locator of the choke point, reward models
-track the label rather than the choke point, and even a free oracle for the choke point buys about
-three points at four restarts' budget. Errors are not choke points, and the gains lie in the detector
-and in honest evaluation, not in where one resamples.
+Errors are not choke points. On failed reasoning traces from four generators, the human-labelled
+first error is a better-than-chance but imperfect locator of the step where success actually
+collapses; many failures are decided before the first step; reward models track the label rather
+than the collapse; and even a free oracle for the collapse buys about three points over restart at
+four restarts' budget, as a supermartingale bound says it should. Restart, which recovers
+\recMinFour--\recMaxFour\% of failed solutions within four attempts, is the baseline any
+localise-and-repair method must beat at matched compute. In a secondary RAG study the same pattern
+holds under the graders we have, but those graders agree only weakly with people, and human ratings
+of system outputs are the next test. Whether the gap between errors and choke points holds for new
+models and datasets is the question ChokeBench is released to answer.
 
 \input{refs}
 \onecolumn

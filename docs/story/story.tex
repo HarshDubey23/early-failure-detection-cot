@@ -21,16 +21,16 @@
 \newtcolorbox{plain}[1][]{colback=ok!6,colframe=ok,fonttitle=\bfseries,title={#1},left=6pt,right=6pt,top=4pt,bottom=4pt}
 \newtcolorbox{caution}[1][]{colback=warn!6,colframe=warn,fonttitle=\bfseries,title={#1},left=6pt,right=6pt,top=4pt,bottom=4pt}
 \pagestyle{fancy}\fancyhf{}
-\rhead{\small Detect, Restart, Abstain: the research story}\lhead{\small MSE-2 guide}\cfoot{\thepage}
+\rhead{\small Errors Are Not Choke Points: the research story}\lhead{\small MSE-2 guide}\cfoot{\thepage}
 \setlength{\parskip}{4pt}\setlength{\parindent}{0pt}
 
 \begin{document}
 \begin{titlepage}
 \centering
 \vspace*{2cm}
-{\Huge\bfseries Detect, Restart, Abstain\par}
+{\Huge\bfseries Errors Are Not Choke Points\par}
 \vspace{0.4cm}
-{\Large Cheap mitigation of LLM failures and hallucinations,\\[2pt] and why fixing the choke point does not pay\par}
+{\Large Counterfactual localisation of LLM reasoning failures,\\[2pt] and why restart is hard to beat\par}
 \vspace{1.2cm}
 {\Large\bfseries The research story, start to finish\par}
 {\large and a guide to the MSE-2 evaluation\par}
@@ -83,33 +83,34 @@ ends up correct. $v_0$ is ``solve from scratch''. Resampling from $k=0$ is a \em
 resampling from just before step $j$ is \emph{backtracking}. The step where $v$ collapses is the
 \emph{choke point}; the step a human marks as the first mistake is the \emph{error}.
 
-\textbf{What we found: the mitigation that works.}
+\textbf{Main finding: errors are not choke points, and restart is hard to beat.}
 \begin{enumerate}
-\item \textbf{Detect, restart, abstain (DRA) is the cheapest mitigation that works.} Plain restarting
-recovers \recMinFour--\recMaxFour\% of failed maths solutions within four attempts' compute
-(\recMinEight--\recMaxEight\% within eight). In RAG, a detector-gated resampling loop cuts hallucination
-by \rrHZero\ (preregistered, $p=\rrHZeroP$), and plain DRA does the same at \costDra$\times$ the base
-cost, cheaper than claim repair (\costRep$\times$), our choke-point-aware controller (\costCare$\times$) and
-Chain-of-Verification (\costCove$\times$).
-\item \textbf{A law, with proof.} A restart loop delivers answers whose hallucination rate equals the
-detector's $P(\text{hallucinated}\mid\text{pass})$, whatever the retry budget. With human labels this
-predicts \lawH\% $\to$ \lawPi\% hallucinated answers.
-\end{enumerate}
-\textbf{What we found: why the surgical version does not pay.}
-\begin{enumerate}[resume]
 \item Early-warning detectors mostly measure how hard the question is: question and model alone
 reach AUROC \aucQG; the first quarter of the reasoning adds \dIncA\ (not significant).
 \item \QwenSmallAllCapPct--\QwenMathCapPct\% of failures are decided before the first step. When the
 outcome is still open, the human-marked error is the choke point in \QwenTwoAllDec--\QwenSmallAllDec\
 of traces, against a chance level of about 0.18 (preregistered, confirmed on Llama-3.1-8B).
 \item A PRM finds the human-marked error \cbPrmDropAccHPct\% of the time but the choke point only
-\cbPrmDropAccDPct\% (our new benchmark, ChokeBench). A model we trained and tuned for the choke point
+\cbPrmDropAccDPct\% (ChokeBench v1, our new benchmark and evaluation protocol, \cbN\ failed traces). A model we trained and tuned for the choke point
 does no better (\cbLearnedAccD).
 \item No deployable choice of where to resample reliably beats a plain restart at equal compute. Even
 a free, perfect choke-point oracle gains only \cbOracleGainB\ at four restarts' budget; in RAG,
 choosing where to resample adds \rrHFive.
-\item The measured benefit of a detector-gated loop depends on who grades it: \robBaseETwoDiff\ by a
-grader trained like the detector, \robBaseEOneDiff\ (n.s.) by an independent one.
+\item Plain restarting recovers \recMinFour--\recMaxFour\% of failed maths solutions within four
+attempts' compute (\recMinEight--\recMaxEight\% within eight). It is the baseline any
+localise-and-repair method must beat.
+\end{enumerate}
+\textbf{Secondary study: RAG hallucinations (LLM graders only, human ratings pending).}
+\begin{enumerate}[resume]
+\item A detector-gated resampling loop lowers the \emph{judged} hallucination rate by \rrHZero\
+(preregistered, $p=\rrHZeroP$), but the judge agrees only weakly with people ($\kappa=\evEOneKappa$).
+Plain detect--restart--abstain matches the choke-point-aware controller (\rrHOne) at \costDra$\times$
+the base cost, against \costCare$\times$.
+\item A short proposition says a restart loop's delivered hallucination rate is the detector's
+$P(\text{hallucinated}\mid\text{pass})$, whatever the retry budget; from human labels of drafts it
+predicts \lawH\% $\to$ \lawPi\%. This is a prediction, not yet a measurement on outputs.
+\item The measured benefit depends on who grades it: \robBaseETwoDiff\ by a grader trained like the
+detector, \robBaseEOneDiff\ (n.s.) by an independent one.
 \end{enumerate}
 
 \begin{figure}[h]\centering
@@ -171,7 +172,14 @@ This is the version in the final draft.\\
 27 Oct (evening) & \textbf{Reframed around mitigation.} The results answer the original goal,
 reducing failures and hallucinations, more directly than the title said: detect, restart and abstain
 is the cheapest mitigation that works, and we added its law with a proof and a cost comparison of every
-mitigation. The paper is now titled \emph{Detect, Restart, Abstain}.\\\bottomrule
+mitigation. The paper was titled \emph{Detect, Restart, Abstain}.\\
+27 Oct (night) & \textbf{External review and refocus.} A critical review made five points, and we
+accepted them. Early detection is a negative result. The paper tried to sell five contributions at
+once. The RAG gain rests on an LLM judge with $\kappa=\evEOneKappa$ and has no human ratings yet.
+ChokeBench is a first resource, not an established standard. And counterfactual resampling itself
+is prior work. The main contribution is now the counterfactual localisation and compute-matched
+recovery result, and RAG is a clearly secondary study. The paper is now titled \emph{Errors Are Not
+Choke Points}.\\\bottomrule
 \end{longtable}
 
 \begin{plain}[Why the pivot matters (good viva point)]
@@ -650,7 +658,7 @@ smaller effect, but it agrees weakly with people, so neither number is the truth
 needed, and the blinded kit is ready.
 
 \subsection{Reading 6: what to do in practice}
-The cheapest effective mitigation is to gate every output with a cheap detector, restart only what it
+Under the graders we have (human ratings pending), the cheapest effective mitigation is to gate every output with a cheap detector, restart only what it
 flags, and abstain or delete flagged sentences when the budget runs out. Proposition 3 says where
 effort pays: the detector sets the hallucination rate of what is delivered, the budget sets how often
 the system answers, and the resampling point sets neither. So a better detector is worth more than a
@@ -702,9 +710,12 @@ continuations per prefix on Llama.
 %==========================================================================================
 \section{Viva questions with short answers}\label{sec:qa}
 \begin{description}[style=nextline]
-\item[Q1. What is new in your work?] Measuring, by on-policy resampling, where failures are decided
-and comparing that with human error labels and PRMs at scale; ChokeBench; a compute-matched test of
-recovery policies with a theoretical ceiling; and the same test, preregistered, for RAG hallucinations.
+\item[Q1. What is new in your work?] Not counterfactual resampling itself: Thought Anchors, Thought
+Branches and \emph{The Point of No Return} use it, and Bulut (2026) compares prefixes with matched
+restarts. What is new is comparing the counterfactual decision point with expert first-error labels,
+on failed traces of four generators, and testing the recovery policies those labels motivate at
+matched compute, with a bound that explains the result. ChokeBench packages this as a first
+benchmark; RAG is a secondary application.
 \item[Q2. Why not just train a bigger detector?] Because the limit is not the detector. Many failures
 are decided before step 1, and even a perfect choke-point oracle gains only \cbOracleGainB.
 \item[Q3. How do you know $v_k$ is not just noise?] Independent sampling batches agree ($r=\QwenSmallAllSplitR$),
@@ -737,11 +748,13 @@ before collecting data, so that results cannot be selected after the fact. Our c
 \texttt{a6fb04c} and \texttt{459ff22} predate the data they test.
 \item[Q14. What would you do with more compute?] Human ratings for Part 3, and the protocol on long
 reasoning models, to see where prefixes start to beat restarts.
-\item[Q15. So does your research reduce hallucination?] Yes. Detect--restart--abstain reduced
-hallucination significantly in a preregistered test (\rrHZero, $p=\rrHZeroP$), is the cheapest resampling
-mitigation (\costDra$\times$ the base cost), and is predicted to cut hallucinated answers from \lawH\% to
-\lawPi\% for people. Our contribution is to show that this simple recipe is the right one, prove what
-limits it, and show that the more complex surgical alternatives do not beat it.
+\item[Q15. So does your research reduce hallucination?] Not yet shown for people. Under the
+preregistered LLM judge, detect--resample lowers the judged rate (\rrHZero, $p=\rrHZeroP$), but that
+judge agrees only weakly with people ($\kappa=\evEOneKappa$) and flags 81\% of drafts where people
+flag 50\%. The choke-point-aware controller is no better than plain restarting (\rrHOne) and costs
+more (\costCare$\times$ against \costDra$\times$). Proposition~3 predicts \lawH\% $\to$ \lawPi\% for people, but
+that is a prediction from human labels of drafts, not a measurement of outputs. The human rating
+kit is the test.
 \item[Q16. State and explain Proposition 3.] The loop returns the first answer the detector passes.
 Each draw is passed-and-hallucinated with probability $h\beta$ or passed-and-faithful with
 $(1-h)(1-\alpha)$, so a returned answer is hallucinated with probability $h\beta/(h\beta+(1-h)(1-\alpha))$
@@ -753,7 +766,11 @@ change would have refuted it.
 \item[Q18. Can you beat Perplexity?] Not claimed. Perplexity is a web-search system judged on open-domain
 factuality (SimpleQA); our task is faithfulness to given sources. The fair test is to run its API on the
 same RAGTruth items and score it with the same graders, which we list as future work.
-\item[Q19. How can someone reproduce your numbers?] \texttt{make story} regenerates ChokeBench, the
+\item[Q19. Isn't this too many contributions for one paper?] It was, and a reviewer said so. We now
+lead with one claim: human-labelled errors are not where failures are decided, and so localising
+and repairing them does not beat restart at matched compute. The early-detection result is reported
+as a negative result that motivates it, and the RAG study as a secondary application.
+\item[Q20. How can someone reproduce your numbers?] \texttt{make story} regenerates ChokeBench, the
 grader analysis, the figures, every paper number and the PDF on a CPU in a few minutes; the GPU runs
 have resumable Kaggle scripts.
 \end{description}

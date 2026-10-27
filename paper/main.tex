@@ -15,8 +15,7 @@
 
 \title{\Large\bfseries Errors Are Not Choke Points: Where LLM Failures Are Decided,\\and Why Restarting Is Hard to Beat}
 \author{Harsh Dubey \quad Harshit Saini \quad Prashant Jain\\ Himanshu Kumar \quad Gaurav Kaushal \quad Rohit Chaudhary\\
-\small Dept.\ of CSE (AI\&ML), KIET Group of Institutions, Ghaziabad, India\\
-\small \texttt{harshimp123455@gmail.com}}
+\small Dept.\ of CSE (AI\&ML), KIET Group of Institutions, Ghaziabad, India}
 \date{}
 
 \begin{document}
@@ -45,6 +44,20 @@ randomised search algorithms face the same choice between continuing a run and r
 and restarts are often optimal there~\cite{luby1993,gomes2000}. Language-model decoding is such
 a randomised search, and we find that the same answer holds.
 
+Figure~\ref{fig:story} summarises the answer in five panels, one per section that follows.
+
+\begin{figure*}[t]\centering
+\includegraphics[width=\textwidth]{fig0_story.pdf}
+\caption{The study in one figure. (1) Early-warning detectors mostly read difficulty
+(Section~\ref{sec:obs}). (2) Where failures of four generators are decided, from resampling
+(Section~\ref{sec:counterfactual}). (3) Step localisers find human-labelled errors, not choke points
+(Section~\ref{sec:chokebench}). (4) No deployable resampling point beats restart at a matched budget,
+even with localisation free (Section~\ref{sec:chokebench}). (5) In RAG, the measured gain of a
+detector-gated loop depends on whether the grader shares the detector's training data
+(Section~\ref{sec:grounded}).}
+\label{fig:story}
+\end{figure*}
+
 Every claim carries its evidence level (Section~\ref{sec:evidence}): \textsc{pre} (preregistered
 before any data), \textsc{exp} (exploratory) or \textsc{conf} (a preregistered test on new data).
 Our contributions:
@@ -61,7 +74,8 @@ a null of 0.16--0.20 (\textsc{pre}; \textsc{conf} on Llama-3.1-8B, \LlamaDec).
 \item \textbf{ChokeBench} (new). A benchmark that grades step localisers on the human first error
 \emph{and} on the counterfactual choke point. The best PRM rule finds \cbPrmDropAccHPct\% of human
 first errors but \cbPrmDropAccDPct\% of choke points; on open failures no localiser, including the
-expert label, yields a better resampling point than the beginning.
+expert label or a localiser trained and tuned for the purpose, yields a better resampling point
+than the beginning.
 \item \textbf{Restart is hard to beat at matched compute.} Charging every token, including verifier
 passes, PRM-guided backtracking loses to restart (\LlamaPolPrmDropFourDiff, \textsc{conf}); a free
 oracle for the choke point gains at most \cbOracleGainB\ at four restarts' budget. A short
@@ -161,7 +175,7 @@ regression~\cite{tfidf}, cross-fitted over 5 folds grouped by problem and repeat
 Intervals are 95\% question-level cluster bootstrap intervals~\cite{field2007} (1,000 resamples);
 differences between detectors use a paired bootstrap on the same traces.
 
-\section{Observational Results}
+\section{Observational Results}\label{sec:obs}
 \subsection{Early failure prediction is a difficulty signal}
 Table~\ref{tab:difficulty} and Fig.~\ref{fig:difficulty} compare detectors that read the question,
 the generator and tier, the reasoning prefix, or combinations. The question alone reaches

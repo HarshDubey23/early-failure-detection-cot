@@ -305,7 +305,7 @@ if cb.exists():
     for loc, name in [("human_first_error", "Human"), ("prm_first_below_0.5", "PrmFirst"), ("prm_min", "PrmMin"),
                       ("prm_largest_drop", "PrmDrop"), ("gen_max_token_nll", "Nll"), ("gen_max_token_entropy", "Ent"),
                       ("first_step", "First"), ("last_step", "Last"), ("uniform_random", "Rand"),
-                      ("oracle_decisive_split", "Oracle")]:
+                      ("learned_localiser", "Learned"), ("oracle_decisive_split", "Oracle")]:
         r = P.loc[loc]
         for col, cn, f in [("acc_human", "AccH", "{:.2f}"), ("acc_decisive", "AccD", "{:.2f}"),
                            ("gain", "Gain", "{:+.3f}"), ("gain_b4_free", "GainB", "{:+.3f}")]:
@@ -326,6 +326,17 @@ if cb.exists():
                           ("prm_first_below_0.5", "PrmFirst"), ("oracle_decisive_split", "Oracle")]:
             put(f"cb{key}{name}AccD", G.loc[loc, "acc_decisive"], "{:.2f}") if not np.isnan(G.loc[loc, "acc_decisive"]) else None
             put(f"cb{key}{name}GainB", G.loc[loc, "gain_b4_free"], "{:+.3f}")
+
+lt = ROOT / "results" / "chokebench" / "learned_tuning.json"
+if lt.exists():
+    rep = json.loads(lt.read_text())
+    put("ltGrid", len(rep["grid"]), "{}")
+    for gen, key in [("Qwen2.5-1.5B-Instruct", "QwenSmall"), ("Qwen2-1.5B-Instruct", "QwenTwo"),
+                     ("Qwen2.5-Math-7B-Instruct", "QwenMath"), ("Llama-3.1-8B-Instruct", "Llama")]:
+        o = rep["outer"][gen]
+        put(f"lt{key}Inner", max(o["inner_scores"]), "{:.2f}")
+        put(f"lt{key}Test", o["test_acc_decisive"], "{:.2f}")
+        put(f"lt{key}Feat", o["selected"]["features"], "{}")
 
 # ---- Run R (Part 3): preregistered tests, mechanism, evaluator robustness ------------------
 RF = ROOT / "results" / "recovery" / "final"

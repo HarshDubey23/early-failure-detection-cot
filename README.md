@@ -4,6 +4,7 @@
 
 **Harsh Dubey, Harshit Saini, Prashant Jain, Himanshu Kumar, Gaurav Kaushal, Rohit Chaudhary**
 · Dept. of CSE (AI&ML), KIET Group of Institutions · [Paper (PDF)](paper/main.pdf) ·
+[The research story (PDF)](docs/story/story.pdf) ·
 [ChokeBench](#chokebench-a-new-benchmark) · [Reproduce](#reproduce-every-number)
 
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
@@ -49,7 +50,7 @@ This is the restart-versus-continue problem of randomised search (Luby, Sinclair
 |---|---|---|---|
 | 1 | **Early warning reads difficulty, not reasoning.** On 3,400 ProcessBench traces, the question and the generator's identity alone predict a wrong answer; the first quarter of the reasoning adds nothing and is at chance within a problem. | AUROC **0.588** from Q + model; +0.005 (n.s.) from 25% of the trace | exploratory |
 | 2 | **Many failures are decided before the first step, and the rest are often decided at the labelled error.** Value curves replicate across independent sampling batches. | **33–66%** decided before step 1; labelled error = choke point in **0.44–0.65** of open failures vs a null of 0.16–0.20; r = **0.985** | preregistered; **confirmed** on Llama-3.1-8B (0.633 vs 0.187, Holm p < 0.002) |
-| 3 | **Verifiers find errors, not choke points** (new: ChokeBench). | a validated PRM finds **73%** of human first errors but **45%** of choke points | exploratory |
+| 3 | **Verifiers find errors, not choke points** (new: ChokeBench). A localiser trained and tuned for the choke point does no better. | a validated PRM finds **73%** of human first errors but **45%** of choke points; tuned learned localiser **39%** | exploratory |
 | 4 | **No deployable resampling point reliably beats restart at matched compute.** Every token is charged, including verifier passes. The one exception is small: PRM backtracking on Qwen2.5-Math-7B at an 8× budget (+0.030, exploratory). Even a free oracle for the choke point gains little; a supermartingale argument explains why. | PRM-guided backtracking **−0.063** [−0.100, −0.024] vs restart (Llama); free oracle **+0.028** [+0.012, +0.046] | **confirmed** on Llama; theory in Appendix A |
 | 5 | **The same holds for hallucinations in RAG**, and the size of any gain depends on who grades it. | commitment-aware choice adds **−0.000** [−0.005, +0.005]; restart's gain is **+0.326** to a grader related to its detector, **+0.017** (n.s.) to an independent one | preregistered (choice); exploratory (graders) |
 
@@ -88,17 +89,21 @@ not counted as a miss; selection and scoring on independent halves of the contin
 
 | Localiser | finds human first error | finds choke point | Δ vs restart, per attempt | Δ vs restart at 4× budget, step found free |
 |---|---|---|---|---|
-| Human first error (expert label) | 1.00 | 0.51 [0.45, 0.56] | −0.066 [−0.102, −0.028] | −0.045 [−0.078, −0.013] |
-| PRM: first step < 0.5 | 0.68 | 0.38 [0.32, 0.44] | −0.077 [−0.113, −0.042] | −0.062 [−0.095, −0.030] |
-| PRM: largest drop | **0.73** | 0.45 [0.39, 0.51] | −0.103 [−0.143, −0.063] | −0.074 [−0.112, −0.039] |
-| PRM: minimum | 0.61 | 0.39 [0.34, 0.46] | −0.158 [−0.199, −0.116] | −0.121 [−0.162, −0.081] |
-| Generator: max token NLL | 0.27 | 0.26 [0.21, 0.31] | −0.097 [−0.134, −0.066] | −0.099 [−0.137, −0.064] |
-| Generator: max entropy | 0.30 | 0.28 [0.23, 0.33] | −0.178 [−0.220, −0.135] | −0.165 [−0.207, −0.120] |
-| Random step | 0.18 | 0.18 | −0.224 | −0.187 |
-| First step (= restart) | 0.15 | 0.28 | 0 | 0 |
-| *Oracle choke point (held-out rollouts)* | – | – | *+0.015 [−0.011, +0.040]* | ***+0.028 [+0.012, +0.046]*** |
+| Human first error (expert label) | 1.00 | 0.51 [0.45, 0.56] | -0.066 [-0.105, -0.029] | -0.045 [-0.077, -0.013] |
+| PRM: first step < 0.5 | 0.68 | 0.38 [0.32, 0.44] | -0.077 [-0.111, -0.043] | -0.062 [-0.094, -0.031] |
+| PRM: largest drop | **0.73** | 0.45 [0.39, 0.51] | -0.103 [-0.145, -0.061] | -0.074 [-0.111, -0.037] |
+| PRM: minimum | 0.61 | 0.39 [0.34, 0.45] | -0.158 [-0.201, -0.116] | -0.121 [-0.160, -0.085] |
+| Learned, tuned (nested CV, held-out model) | 0.68 | 0.39 [0.33, 0.44] | -0.085 [-0.120, -0.050] | -0.071 [-0.103, -0.035] |
+| Generator: max token NLL | 0.27 | 0.26 [0.21, 0.31] | -0.097 [-0.132, -0.063] | -0.099 [-0.137, -0.063] |
+| Generator: max entropy | 0.30 | 0.28 [0.22, 0.33] | -0.178 [-0.219, -0.136] | -0.165 [-0.208, -0.124] |
+| Random step | 0.18 | 0.18 | -0.224 | -0.187 |
+| First step (= restart) | 0.14 | 0.28 | 0 | 0 |
+| *Oracle choke point (held-out rollouts)* | – | – | *+0.015 [-0.010, +0.039]* | ***+0.028 [+0.012, +0.046]*** |
 
-The last row is the ceiling for **any** backtracking verifier on these traces before its own cost
+The learned localiser is trained for the choke point directly (soft posterior labels, 24
+configurations of logistic regression and boosted trees selected by nested leave-one-generator-out
+cross-validation) and still does no better than the fixed PRM rule: which step decides a failure is
+model-specific. The last row is the ceiling for **any** backtracking verifier on these traces before its own cost
 is paid: about three points. Before the choke point, a failed trace is worth about as much as a
 fresh start, so finding the choke point saves tokens, not successes.
 

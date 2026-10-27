@@ -44,3 +44,7 @@ data/recovery/
 
 # Blinding key of the human-evaluation kit: keep it off the repository (SHA-256 committed instead)
 results/recovery/human_eval/KEY*.csv
+*.fls
+*.fdb_latexmk
+*.toc
+*.out

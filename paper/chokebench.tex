@@ -31,6 +31,7 @@ Generator: max token NLL & \cbNllAccH & \cbNllAccD & \cbNllGain & \cbNllGainB\\
 Generator: max entropy & \cbEntAccH & \cbEntAccD & \cbEntGain & \cbEntGainB\\
 Random step & \cbRandAccH & \cbRandAccD & \cbRandGain & \cbRandGainB\\
 First step (= restart) & \cbFirstAccH & \cbFirstAccD & \cbFirstGain & \cbFirstGainB\\\midrule
+Learned, tuned (held-out model) & \cbLearnedAccH & \cbLearnedAccD & \cbLearnedGain & \cbLearnedGainB\\
 Oracle choke point (split) & -- & -- & \cbOracleGain & \cbOracleGainB\\\bottomrule
 \end{tabular}
 \end{table}
@@ -59,6 +60,29 @@ is still \cbHumanGainB\ [\cbHumanGainBLo, \cbHumanGainBHi] and the best PRM rule
 verifier on these traces, before its own cost is paid. It is small because, before the choke point,
 a failed trace is worth about as much as a fresh start (Appendix~\ref{app:prop}): finding the choke
 point saves tokens, not successes.
+
+\textbf{Can a localiser be learned?} We train one directly for the choke-point target. Each step
+of a failed trace becomes an example described by nine features (PRM score, PRM drop, first PRM
+score below 0.5, mean and maximum token NLL and entropy, step length, relative position), labelled
+softly with the posterior probability that it is the choke point. The model names the step with the
+highest predicted probability. Evaluation is leave-one-generator-out, with nested selection: for
+each held-out generator, \ltGrid\ configurations (logistic regression with $C\in\{0.01,0.1,1,10\}$ and
+gradient-boosted trees with depth $\in\{2,3\}$ and learning rate $\in\{0.05,0.2\}$, each on PRM,
+generator or all features) are scored by leave-one-generator-out cross-validation on the other three
+generators only, and the best is refit and tested once (Fig.~\ref{fig:tuning}). The tuned localiser
+finds the choke point with probability \cbLearnedAccD\ [\cbLearnedAccDLo, \cbLearnedAccDHi], no better
+than the fixed PRM rules, and its restart point is worth \cbLearnedGainB\ at a 4$\times$ budget.
+Inner-CV scores do not carry over to the held-out model (best inner score \ltQwenMathInner\ vs test
+\ltQwenMathTest\ for Qwen2.5-Math-7B): which step decides a failure is model-specific, as the
+transfer failure of the learned restart policy in Section~\ref{sec:policies} already suggested.
+
+\begin{figure*}[t]\centering
+\includegraphics[width=0.85\textwidth]{fig26_learned_tuning.pdf}
+\caption{Nested hyperparameter selection of the learned localiser. Each line is one outer fold
+(held-out generator); points are inner leave-one-generator-out scores of the 24 configurations;
+stars mark the selected configuration; the legend gives its score on the held-out generator.}
+\label{fig:tuning}
+\end{figure*}
 
 \textbf{Release.} \texttt{results/chokebench/chokebench\_v1.jsonl} holds, for every failed trace,
 the per-prefix success counts, continuation counts and lengths, the human label and the PRM scores.

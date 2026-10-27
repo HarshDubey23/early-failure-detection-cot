@@ -98,11 +98,114 @@ def localise(name: str, n: int, e: int, prm, gen) -> int | None:
     raise ValueError(name)
 
 
+FEATURE_SETS = {
+    "prm": ["prm", "prm_drop", "prm_first_below", "rel_pos"],
+    "generator": ["nll_mean", "nll_max", "ent_mean", "ent_max", "log_step_tokens", "rel_pos"],
+    "all": ["prm", "prm_drop", "prm_first_below", "nll_mean", "nll_max", "ent_mean", "ent_max", "log_step_tokens", "rel_pos"],
+}
+ALL_FEATURES = FEATURE_SETS["all"]
+GRID = ([{"model": "logreg", "C": C} for C in (0.01, 0.1, 1.0, 10.0)]
+        + [{"model": "gboost", "max_depth": dpt, "learning_rate": lr} for dpt in (2, 3) for lr in (0.05, 0.2)])
+
+
+def step_features(prm, gen, n: int) -> np.ndarray | None:
+    """(n, len(ALL_FEATURES)) step features, or None if a signal is missing (same signals as stage 17)."""
+    if prm is None or gen is None or len(prm) != n or len(gen["nll_max"]) != n:
+        return None
+    p = np.asarray(prm, dtype=float)
+    first = np.zeros(n)
+    below = np.nonzero(p < 0.5)[0]
+    if len(below):
+        first[below[0]] = 1.0
+    cols = {"prm": p, "prm_drop": np.concatenate([[1.0], p[:-1]]) - p, "prm_first_below": first,
+            "nll_mean": np.asarray(gen["nll_mean"], float), "nll_max": np.asarray(gen["nll_max"], float),
+            "ent_mean": np.asarray(gen["ent_mean"], float), "ent_max": np.asarray(gen["ent_max"], float),
+            "log_step_tokens": np.log1p(np.asarray(gen["step_tokens"], float)), "rel_pos": np.arange(1, n + 1) / n}
+    return np.column_stack([cols[c] for c in ALL_FEATURES])
+
+
+def _fit(traces: list, feats: list, hp: dict):
+    """Step-level classifier of 'this step is the choke point', trained on posterior soft labels.
+
+    Each step appears twice (label 1 with weight P(d=j), label 0 with weight 1-P(d=j)); weights are
+    divided by n so every trace counts once, and multiplied by the trace's split-selection share w.
+    """
+    from sklearn.ensemble import HistGradientBoostingClassifier
+    from sklearn.linear_model import LogisticRegression
+    from sklearn.pipeline import make_pipeline
+    from sklearn.preprocessing import StandardScaler
+    idx = [ALL_FEATURES.index(f) for f in feats]
+    X = np.vstack([t["F"][:, idx] for t in traces])
+    p = np.concatenate([t["post"] for t in traces])
+    tw = np.concatenate([np.full(len(t["post"]), t["w"] / len(t["post"])) for t in traces])
+    X2, y2, w2 = np.vstack([X, X]), np.r_[np.ones(len(p)), np.zeros(len(p))], np.r_[p * tw, (1 - p) * tw]
+    if hp["model"] == "logreg":
+        clf = make_pipeline(StandardScaler(), LogisticRegression(C=hp["C"], max_iter=2000))
+        return clf.fit(X2, y2, logisticregression__sample_weight=w2), idx
+    clf = HistGradientBoostingClassifier(max_depth=hp["max_depth"], learning_rate=hp["learning_rate"],
+                                         max_iter=200, random_state=0)
+    return clf.fit(X2, y2, sample_weight=w2), idx
+
+
+def _pick(model, idx, t) -> int:
+    """0-based step index the model names for trace t."""
+    return int(np.argmax(model.predict_proba(t["F"][:, idx])[:, 1]))
+
+
+def _score(traces: list, model, idx) -> float:
+    """Weighted mean posterior probability that the named step is the choke point."""
+    acc = np.array([t["post"][_pick(model, idx, t)] for t in traces])
+    w = np.array([t["w"] for t in traces])
+    return float((acc * w).sum() / w.sum())
+
+
+def learned_localiser(learn: list) -> list:
+    """Leave-one-generator-out training with nested hyperparameter selection.
+
+    Outer loop: hold out one generator. Inner loop: on the other generators only, leave each one out
+    in turn, fit every (feature set, model, hyperparameter) configuration and score it on the
+    left-out generator; pick the configuration with the best mean inner score; refit it on all
+    training generators; name one step per held-out trace. The held-out generator never influences
+    training or selection. Writes results/chokebench/learned_tuning.json.
+    """
+    gens = sorted({t["base"]["generator"] for t in learn})
+    configs = [dict(hp, features=fs) for fs in FEATURE_SETS for hp in GRID]
+    rows, report = [], {"grid": configs, "outer": {}}
+    for held in gens:
+        train = [t for t in learn if t["base"]["generator"] != held]
+        inner_gens = sorted({t["base"]["generator"] for t in train})
+        scores = []
+        for cfg in configs:
+            hp = {k: v for k, v in cfg.items() if k != "features"}
+            fold = []
+            for ig in inner_gens:
+                tr = [t for t in train if t["base"]["generator"] != ig]
+                va = [t for t in train if t["base"]["generator"] == ig]
+                model, idx = _fit(tr, FEATURE_SETS[cfg["features"]], hp)
+                fold.append(_score(va, model, idx))
+            scores.append(float(np.mean(fold)))
+        best = configs[int(np.argmax(scores))]
+        hp = {k: v for k, v in best.items() if k != "features"}
+        model, idx = _fit(train, FEATURE_SETS[best["features"]], hp)
+        test = [t for t in learn if t["base"]["generator"] == held]
+        report["outer"][held] = {"inner_scores": scores, "selected": best,
+                                 "test_acc_decisive": _score(test, model, idx), "n_test": len(test)}
+        for t in test:
+            k = _pick(model, idx, t)
+            j = k + 1
+            rows.append(dict(t["base"], localiser="learned_localiser", j=j, named=True,
+                             acc_human=float(j == t["e"]), acc_decisive=float(t["post"][k]),
+                             hit_decisive=float(j == t["d"]), gain=float(t["gain"][k]),
+                             gain_b4_free=float(t["gain_b4"][k]), token_ratio=float(t["tok_ratio"][k])))
+    (OUT / "learned_tuning.json").write_text(json.dumps(report, indent=2), encoding="utf-8")
+    return rows
+
+
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     rng = np.random.default_rng(49)
     prm_all = load_jsonl(R / "signals_prm.jsonl")
-    rows, release = [], []
+    rows, release, learn = [], [], []
     for gen, files in GENS.items():
         sig_gen = load_jsonl(R / f"signals_gen.{gen}.jsonl")
         curves = s13.load_curves(files)
@@ -190,11 +293,18 @@ def main() -> None:
                                  acc_human=float(named and j == e), acc_decisive=float(post[j - 1]) if named else 0.0,
                                  hit_decisive=float(named and j == d), gain=gain_at(k), gain_b4_free=gain_b4(k),
                                  token_ratio=float(tok[k] / max(tok[0], 1.0))))
+            F = step_features(prm, g, n)
+            if F is not None:
+                learn.append({"base": base, "F": F, "post": post, "e": e, "d": d, "w": w,
+                              "gain": np.array([gain_at(k) for k in range(n)]),
+                              "gain_b4": np.array([gain_b4(k) for k in range(n)]),
+                              "tok_ratio": tok / max(tok[0], 1.0)})
             rows.append(dict(base, localiser="oracle_decisive_split", j=np.nan, named=True, acc_human=np.nan,
                              acc_decisive=np.nan, hit_decisive=np.nan,
                              gain=float(np.mean(vB[np.arange(len(dA)), dA - 1] - vB[:, 0])),
                              gain_b4_free=gain_b4(dA - 1), token_ratio=float(np.mean(tok[dA - 1]) / max(tok[0], 1.0))))
 
+    rows += learned_localiser(learn)
     df = pd.DataFrame(rows)
     df.to_csv(OUT / "per_trace.csv", index=False)
     with open(OUT / "chokebench_v1.jsonl", "w", encoding="utf-8") as f:
@@ -223,7 +333,7 @@ def main() -> None:
     S = pd.DataFrame(summ)
     S.to_csv(OUT / "summary.csv", index=False)
 
-    order = LOCALISERS + ["oracle_decisive_split"]
+    order = LOCALISERS + ["learned_localiser", "oracle_decisive_split"]
     pooled = S[S.generator == "pooled"].set_index("localiser").reindex(order)
     lines = ["# ChokeBench v1: localising where failures are decided",
              "",

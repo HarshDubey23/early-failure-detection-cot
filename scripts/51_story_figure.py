@@ -28,7 +28,8 @@ MODELS = [("Qwen2.5-1.5B-Instruct", "Qwen2.5-1.5B", "_allbatches"), ("Qwen2-1.5B
           ("Qwen2.5-Math-7B-Instruct", "Qwen2.5-Math-7B", ""), ("Llama-3.1-8B-Instruct", "Llama-3.1-8B", "")]
 LOC_NAMES = {"human_first_error": "Human first error", "prm_largest_drop": "PRM: largest drop",
              "prm_first_below_0.5": "PRM: first step < 0.5", "gen_max_token_nll": "Generator: max NLL",
-             "uniform_random": "Random step", "oracle_decisive_split": "Oracle choke point"}
+             "uniform_random": "Random step", "oracle_decisive_split": "Oracle choke point",
+             "learned_localiser": "Learned (tuned, held-out model)"}
 
 
 def panel_difficulty(ax) -> None:
@@ -73,7 +74,8 @@ def panel_categories(ax) -> None:
 
 
 def panel_localise(ax, S: pd.DataFrame) -> None:
-    locs = ["human_first_error", "prm_largest_drop", "prm_first_below_0.5", "gen_max_token_nll", "uniform_random"]
+    locs = ["human_first_error", "prm_largest_drop", "prm_first_below_0.5", "learned_localiser", "gen_max_token_nll",
+            "uniform_random"]
     P = S[S.generator == "pooled"].set_index("localiser")
     y = np.arange(len(locs))[::-1]
     h = 0.36
@@ -93,8 +95,8 @@ def panel_localise(ax, S: pd.DataFrame) -> None:
 
 
 def panel_gain(ax, S: pd.DataFrame) -> None:
-    locs = ["oracle_decisive_split", "human_first_error", "prm_first_below_0.5", "prm_largest_drop", "gen_max_token_nll",
-            "uniform_random"]
+    locs = ["oracle_decisive_split", "human_first_error", "prm_first_below_0.5", "learned_localiser", "prm_largest_drop",
+            "gen_max_token_nll", "uniform_random"]
     P = S[S.generator == "pooled"].set_index("localiser")
     y = np.arange(len(locs))[::-1]
     for yi, k in zip(y, locs):
@@ -131,6 +133,30 @@ def panel_rag(ax) -> None:
     ax.set_title("5. RAG: gains are visible only to the gate's relatives")
 
 
+def fig_tuning() -> None:
+    """Fig. 26: nested hyperparameter selection of the learned localiser (inner-CV score per configuration)."""
+    rep = json.loads((ROOT / "results/chokebench/learned_tuning.json").read_text())
+    grid = rep["grid"]
+    lab = [(f"{g['features']}: logreg C={g['C']}" if g["model"] == "logreg"
+            else f"{g['features']}: boost d={g['max_depth']} lr={g['learning_rate']}") for g in grid]
+    fig, ax = plt.subplots(figsize=(10.5, 4.2))
+    x = np.arange(len(grid))
+    cols = [BLUE, ORANGE, AQUA, YELLOW]
+    for c, (held, r) in zip(cols, rep["outer"].items()):
+        sel = grid.index(r["selected"])
+        ax.plot(x, r["inner_scores"], "-o", color=c, lw=1.5, ms=4,
+                label=f"held out {held.replace('-Instruct', '')}: test {r['test_acc_decisive']:.2f}")
+        ax.plot(sel, r["inner_scores"][sel], "*", color=c, ms=14, mec=INK, mew=0.6)
+    ax.set_xticks(x, lab, rotation=70, ha="right", fontsize=7)
+    ax.set_ylabel("inner-CV score\n(P(named step = choke point))")
+    ax.set_title("Learned localiser: nested hyperparameter search (★ = selected configuration)")
+    ax.legend(frameon=False, fontsize=7.5, loc="lower left")
+    fig.tight_layout()
+    for ext in ("png", "pdf"):
+        fig.savefig(FIG / f"fig26_learned_tuning.{ext}", dpi=200)
+    plt.close(fig)
+
+
 def main() -> None:
     S = pd.read_csv(ROOT / "results/chokebench/summary.csv")
     fig = plt.figure(figsize=(15, 7.6))
@@ -146,7 +172,7 @@ def main() -> None:
         fig.savefig(FIG / f"fig0_story.{ext}", dpi=200)
     plt.close(fig)
 
-    fig, axs = plt.subplots(1, 2, figsize=(10.5, 3.3), gridspec_kw={"wspace": 0.75, "left": 0.15, "right": 0.97,
+    fig, axs = plt.subplots(1, 2, figsize=(10.5, 3.7), gridspec_kw={"wspace": 0.75, "left": 0.15, "right": 0.97,
                                                                      "bottom": 0.2, "top": 0.88})
     panel_localise(axs[0], S)
     panel_gain(axs[1], S)
@@ -155,7 +181,8 @@ def main() -> None:
     axs[1].set_xlabel("P(solved) − restart, 4× budget, step found free")
     for ext in ("png", "pdf"):
         fig.savefig(FIG / f"fig25_chokebench.{ext}", dpi=200)
-    print("wrote fig0_story and fig25_chokebench")
+    fig_tuning()
+    print("wrote fig0_story, fig25_chokebench, fig26_learned_tuning")
 
 
 if __name__ == "__main__":

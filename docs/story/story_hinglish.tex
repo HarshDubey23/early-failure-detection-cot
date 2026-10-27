@@ -1,0 +1,239 @@
+\documentclass[10pt,a4paper]{article}
+\usepackage[margin=1.5cm,top=1.3cm,bottom=1.5cm]{geometry}
+\usepackage{times}
+\usepackage{amsmath,amssymb}
+\usepackage{booktabs,tabularx}
+\usepackage[hidelinks]{hyperref}
+\usepackage{enumitem}
+\usepackage[most]{tcolorbox}
+\usepackage{titlesec}
+\usepackage{xcolor}
+\setlist{itemsep=1pt,topsep=2pt,leftmargin=*}
+\input{../../paper/values}
+\definecolor{acc}{HTML}{2a78d6}
+\definecolor{warn}{HTML}{eb6834}
+\definecolor{ok}{HTML}{1baf7a}
+\titleformat{\section}{\large\bfseries\color{acc}}{\thesection}{0.5em}{}
+\titlespacing*{\section}{0pt}{7pt}{3pt}
+\setlength{\parskip}{3pt}\setlength{\parindent}{0pt}
+\newtcolorbox{idea}[1][]{colback=acc!5,colframe=acc,fonttitle=\bfseries\small,title={#1},left=4pt,right=4pt,top=2pt,bottom=2pt,boxsep=2pt}
+\newtcolorbox{dhyan}[1][]{colback=warn!6,colframe=warn,fonttitle=\bfseries\small,title={#1},left=4pt,right=4pt,top=2pt,bottom=2pt,boxsep=2pt}
+\renewcommand{\arraystretch}{1.12}
+
+\begin{document}
+\begin{center}
+{\LARGE\bfseries Errors Are Not Choke Points: poori research ek kahani mein}\\[3pt]
+{\small Harsh Dubey, Harshit Saini, Prashant Jain, Himanshu Kumar, Gaurav Kaushal, Rohit Chaudhary (supervisor) \;·\; KIET, CSE (AI\&ML)}\\[1pt]
+{\small Simple Hinglish guide. Ise padhne ke baad paper (\texttt{paper/main.pdf}) ek baar padho, sab samajh aa jayega.}
+\end{center}
+
+\section{Shuruaat: problem kya tha?}
+LLM (jaise Qwen, Llama) maths ka sawaal step-by-step solve karta hai. Isko \textbf{chain of thought (CoT)}
+ya \textbf{trace} kehte hain. Kabhi beech mein ek step galat ho jaata hai aur final answer galat aa jaata hai.
+Poori field ka common idea yeh hai:
+\begin{enumerate}
+\item Pehla galat step dhundho (isko \textbf{first error} kehte hain; human annotators isko mark karte hain).
+\item Wahan tak wapas jao aur wahan se dobara generate karo (\textbf{backtracking / repair}).
+\end{enumerate}
+Process Reward Models (PRMs) isi kaam ke liye train hote hain, aur ProcessBench jaise benchmarks isi ko grade
+karte hain: ``kya tumne pehla galat step pakda?'' Hamara original aim tha \textbf{early failure detection}:
+kya hum trace ke shuru mein hi bata sakte hain ki yeh fail hoga, taaki jaldi intervene kar sakein?
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+Phase & Kahani ek nazar mein \\
+\midrule
+1. Early detection & detector bana, par woh sirf sawaal ki difficulty padh raha tha (negative result) \\
+2. Naya sawaal, $v_k$ & failure kahan decide hota hai, model ke apne continuations se mapa \\
+3. Main result & error $\ne$ choke point; repair, restart ko same compute par nahi harata; theory se proof \\
+4. ChokeBench & naya benchmark; check kiya ki yeh asli recovery predict karta hai \\
+5. RAG (secondary) & hallucination par same idea; result grader par depend karta hai, human rating baaki \\
+6. Review aur refocus & do reviews ke baad claims narrow kiye, kamzor hisse imaandari se likhe \\
+7. Run D & reasoning models (Qwen3, R1) par exact on-policy test, Kaggle par chal raha hai \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Phase 1: early detection, aur pehla jhatka}
+ProcessBench (3,400 solutions, 12 models, har solution mein human-marked first error) par humne detectors
+banaye. Number achhe lag rahe the, lekin phir humne ek simple \textbf{baseline} lagaya: sirf sawaal ka text
+aur kaunsa model hai, trace ka ek bhi step dekhe bina.
+
+\begin{center}\small
+\begin{tabular}{lcl}
+\toprule
+Detector ko kya diya & AUROC & Matlab \\
+\midrule
+Sirf sawaal + model (koi step nahi) & \aucQG & sawaal kitna mushkil hai, bas itna pata \\
++ trace ke pehle 25\% steps & \dIncA\ (n.s.) & early steps se lagbhag kuch nahi milta \\
++ poora trace & \dIncC & thoda signal, par tab tak bahut der ho chuki \\
+\bottomrule
+\end{tabular}
+\end{center}
+\begin{dhyan}[Seekh (negative result)]
+Early detector asal mein \emph{``sawaal mushkil hai''} padh raha tha, \emph{``yeh attempt fail hoga''} nahi.
+Isko \textbf{difficulty confound} kehte hain. Yahi hamara pehla pivot tha: naya sawaal poocho.
+\end{dhyan}
+
+\section{Phase 2: naya sawaal, aur ek hi measurement $v_k$}
+Naya sawaal: \textbf{failure asal mein kahan ``decide'' hota hai, aur kya wahan se repair karna restart se behtar hai?}
+Iske liye ek quantity:
+\[ v_k = P(\text{sahi answer} \mid \text{sawaal} + \text{pehle } k \text{ steps}) \]
+Isko estimate karne ka tareeka: trace ko step $k$ par kaato, \emph{usi model} se wahan se 8--16 baar aage
+likhwao (\textbf{continuations / rollouts}), aur gino kitni baar answer sahi aaya. Total \TotalRollouts\
+continuations chalaye (Kaggle ke free T4 GPUs par).
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+Term & Simple matlab \\
+\midrule
+$v_0$ & bilkul shuru se solve karne ka chance. Yahan se dobara likhna = \textbf{restart}. \\
+Backtrack to step $j$ & step $j$ se just pehle tak rakho, wahan se dobara likho (yaani $v_{j-1}$ wala point). \\
+\textbf{Choke point} (decisive step) & woh step jahan $v$ sabse zyada girta hai. Yahan failure asal mein decide hota hai. \\
+\textbf{First error} & woh step jahan human kehta hai ``yahan galti hui''. \\
+Capability-limited & $v_0 \le 1/8$: model ke liye sawaal shuru se hi lagbhag namumkin. \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{Example:} $v = [0.6, 0.6, 0.1, 0.0]$. Step 2 par $v$ 0.6 se 0.1 gira, toh choke point step 2 hai.
+Agar human ne step 3 ko galat mark kiya, toh \emph{error} aur \emph{choke point} alag hain.
+
+\section{Phase 3: kya mila (main results, maths)}
+\begin{center}\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{5.3cm}>{\raggedright\arraybackslash}p{4.6cm}X}
+\toprule
+Sawaal & Jawab (number) & Matlab \\
+\midrule
+Kitne failures step 1 se pehle hi decide? & \QwenSmallAllCapPct--\QwenMathCapPct\% (4 models) & repair karne ko koi step hi nahi \\
+Baaki mein human error = choke point? & \QwenTwoAllDec--\QwenSmallAllDec\ (chance 0.16--0.20) & chance se behtar, par aadha hi sahi \\
+Naye model (Llama-3.1-8B) par confirm? & haan, \LlamaDec\ & preregistered test, pass \\
+PRM kya pakadta hai? (ChokeBench) & human error \cbPrmDropAccHPct\%, choke point sirf \cbPrmDropAccDPct\% & verifier label pakadta hai, asli point nahi \\
+Choke point ke liye train kiya model? & \cbLearnedAccDPct\% & better nahi hua \\
+Restart kitna bachata hai? (4 attempts) & \recMinFour--\recMaxFour\% failures solve & simple restart bahut strong \\
+PRM backtracking vs restart (same compute, Llama) & \LlamaPolPrmDropFourDiff\ (confirmed) & repair, restart se \emph{haara} \\
+Free perfect oracle vs restart (4$\times$ budget) & sirf \cbOracleGainB & jaadu ki chhadi bhi bas thoda jeetti \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{Matched compute} ka matlab: har method ko barabar GPU budget (tokens, PRM ki cost sab gini gayi).
+Tabhi comparison fair hai.
+
+\begin{idea}[Kyun? (theory, Proposition 1: supermartingale)]
+Ek failed trace ka koi bhi point, jo aage dekhe bina chuna gaya ho, average mein shuru se behtar nahi hota:
+$E[v_\tau \mid \text{fail}] \le v_0$. Simple bhasha: \emph{jo trace fail hua, uska aadha hissa ek fresh start
+se zyada keemti nahi hota}. Isliye choke point dhundhne se tokens bachte hain, success nahi badhti.
+(Proposition 2: iska fayda bas chhote attempts hai, budget ka lagbhag 1.25--1.4$\times$.)
+\end{idea}
+
+\section{ChokeBench: hamara naya benchmark}
+ProcessBench poochta hai ``pehla galat step pakda?''. \textbf{ChokeBench v1} (\cbN\ failed traces, 4 models)
+\emph{dono} poochta hai: human error pakda, \emph{aur} choke point pakda? Aur woh step resampling ke liye kitna keemti hai?
+Sabse important check: \textbf{kya ChokeBench score asli recovery predict karta hai?} (circular na ho, isliye samples ke
+aadhe hisse se choke point label kiya, baaki aadhe se gain mapa.)
+\begin{center}\small
+\begin{tabular}{lc}
+\toprule
+Check (exploratory) & Result \\
+\midrule
+Named step = choke point: recovery gain mein badhat & \valBothD \\
+Named step = human error, choke point ko control karne ke baad & \valBothE\ (n.s.) \\
+Naye (held-out) model par ranking, Spearman $\rho$: ChokeBench vs ProcessBench-style & \valRhoD\ vs \valRhoE \\
+\bottomrule
+\end{tabular}
+\end{center}
+Matlab: human label tabhi kaam aata hai jab woh choke point se match kare. ChokeBench asli fayde ko behtar predict karta hai.
+
+\section{Phase 4 (secondary): hallucination wala RAG study}
+RAG mein model ko ek source diya jaata hai aur answer source se hi aana chahiye. Source mein jo nahi hai
+woh likh diya toh \textbf{hallucination}. Data: RAGTruth (human labels), model Llama-2-7B. Detector $D$ =
+LettuceDetect (har sentence ko score karta hai).
+\begin{center}\small
+\begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{5.6cm}cX}
+\toprule
+Method & Cost (base = 1$\times$) & Judged hallucination change vs base (E1 judge) \\
+\midrule
+DRA: detect, restart, abstain & \costDra$\times$ & \vbDraEOne\ (exploratory) \\
+CARE (choke-point-aware controller) & \costCare$\times$ & \rrHZero\ ($p=\rrHZeroP$, preregistered) \\
+CARE vs plain restart & -- & \rrHOne\ (koi fark nahi) \\
+Chain-of-Verification & \costCove$\times$ & mehenga, aur behtar nahi \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{Proposition 3 (law):} restart loop jo answer deta hai, uski hallucination rate = detector ka
+$P(\text{hallucinated}\mid\text{pass})$, retries kitne bhi ho. Retries sirf coverage badhaate hain. Human
+labels se prediction: \lawH\% $\to$ \lawPi\%. Check: 4$\times$ retries par coverage \invCov\ points, hallucination
+lagbhag same (\invETwo\ se \invEOne). Prediction sahi nikli.
+\begin{dhyan}[Imaandari: yeh part kamzor kyun hai]
+(1) Judge E1 humans se kam agree karta hai ($\kappa=\evEOneKappa$; 81\% drafts flag karta hai jab humans 50\%).
+(2) Grader badlo toh result badal jaata hai: detector jaisa grader \robBaseETwoDiff, independent judge \robBaseEOneDiff\ (n.s.).
+Gate khud ko grade kar raha tha. (3) Outputs ko abhi tak humans ne rate nahi kiya. Isliye RAG
+\emph{secondary} hai, aur hum ``hallucination solve'' ka claim \textbf{nahi} karte.
+\end{dhyan}
+
+\section{Imaandari ke kadam (reviewers yahi dekhte hain)}
+\begin{center}\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+Kya kiya & Kyun \\
+\midrule
+\textbf{Preregistration} & hypotheses data se pehle git mein commit kiye, taaki baad mein result chun na sakein \\
+\textsc{pre} / \textsc{exp} / \textsc{conf} tags & har claim ke saath likha: pehle se plan tha, baad mein dekha, ya naye data par confirm hua \\
+Sample splitting & ek half se chuno, doosre se score karo; warna restart nakli tareeke se achha dikhta \\
+Bootstrap CIs, Holm correction & har number ke saath uncertainty; kai tests ki galti control \\
+Mistakes withdraw kiye & ``dual judge'' aur ``1,500-item'' table galat the, hata diye, corrections log mein likha \\
+Blinded human kits & base vs DRA ke 80 pairs, 2 raters; key ka hash pehle commit, key repo se bahar \\
+External review & do reviews ke baad focus narrow kiya: main claim maths wala, RAG secondary \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
+\section{Run D: naya bada experiment (abhi Kaggle par chal raha hai)}
+\textbf{Kyun?} Pichhle traces ProcessBench ke the, kisi aur ne likhe the, isliye sirf ``near on-policy'' the.
+Proposition 1 exactly on-policy traces par hold karti hai. Aur aaj ki field ka sawaal \emph{reasoning models}
+ka hai (jo hazaaron tokens sochte hain, \texttt{<think>} ke andar khud backtrack karte hain). Run D yahi test karta hai.
+\begin{center}\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+Setting & Value \\
+\midrule
+Models & Qwen3-1.7B (thinking mode), DeepSeek-R1-Distill-Qwen-1.5B \\
+Data & MATH-500, problems 21--500 (480; pehle 20 sirf pilot ke liye, analysis se bahar) \\
+Stage 1 & har problem ka ek trace, max 6,144 tokens; math-verify se grade \\
+Stage 2 & har failed trace ko 9 jagah kaato: 0, 256, 512, 1024, 1536, 2048, 3072, 4096, 5120 tokens
+(paragraph break par snap, taaki cut sirf past par depend kare); har cut se $m=8$ continuations \\
+Hardware & Kaggle, 2$\times$ T4 GPU, vLLM; har model ka $\sim$6.5 ghante ka session \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\begin{center}\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+Hypothesis (preregistered) & Test \\
+\midrule
+D1: Proposition 1 exact on-policy par & har cut $t$ par $v_t - v_0 \le 0$? Agar kisi cut par significantly positive (Holm $p<0.05$), toh theory refute \\
+D2: koi cut restart ko 5 points se nahi harata & same token budget par best cut (half A se chuna, half B par score) minus restart; 4$\times$ par upper CI $< +0.05$ \\
+D3: descriptive & kitne failures shuru se decided ($v_0 \le 1/8$), aur $v$ sabse zyada kahan girta hai \\
+D4: sensitivity & D1, D2 bina un traces ke jo token limit par kat gaye \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{Ab tak:} pilot (8 problems) mein pipeline sahi chali; 6/8 sahi, dono failures token limit par kate.
+Speed kam thi ($\sim$130 tokens/s per GPU), isliye fast CUDA-graph mode lagaya, $m=8$ rakha, aur problems dataset
+order mein time tak process honge. Yeh sab \textbf{deviations data aane se pehle} preregistration doc mein likhe.
+Qwen3 ka run chal raha hai (raat ~2:40 baje khatam), uske baad R1 shuru hoga (Kaggle ek waqt mein ek hi slot de raha hai).
+Result jo bhi aaye (theory sahi ya galat), paper mein waise hi jayega. Agar D2 mein koi cut restart ko
+harata hai, toh hum likhenge ki reasoning models conclusion badalte hain.
+
+\section{Ant mein: ek line mein research}
+\begin{idea}[Final takeaway]
+\textbf{Errors are not choke points.} Jahan human galti dikhata hai, failure aksar wahan decide nahi hota;
+bahut failures shuru se hi decided hote hain; verifiers label pakadte hain, asli point nahi; aur us point se
+repair karna, same compute par, simple restart ko nahi harata. Isliye restart woh baseline hai jise har
+localise-and-repair method ko harana chahiye. Hamara naya ChokeBench yeh test karne ka tool hai.
+\end{idea}
+\small\textbf{Abhi baaki:} (1) Run D ke results; (2) human ratings (base vs DRA, 2 log, ~2--3 ghante each);
+(3) doosre researchers ka replication. \textbf{Paper padhne ka order:} Abstract $\to$ Intro ke 5 contributions $\to$
+Sec.~5--7 (counterfactual, policies, ChokeBench) $\to$ Sec.~8--9 (RAG) $\to$ Limitations $\to$ Appendix (proofs).
+\end{document}

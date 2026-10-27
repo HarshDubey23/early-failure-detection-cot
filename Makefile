@@ -147,3 +147,4 @@ story:  # every CPU analysis above, the figures, the paper numbers, the paper PD
 	$(PY) scripts/51_story_figure.py
 	$(MAKE) choke-paper
 	cd docs/story && pdflatex -interaction=nonstopmode story.tex > /dev/null && pdflatex -interaction=nonstopmode story.tex > /dev/null
+	cd docs/story && pdflatex -interaction=nonstopmode story_hinglish.tex > /dev/null && pdflatex -interaction=nonstopmode story_hinglish.tex > /dev/null

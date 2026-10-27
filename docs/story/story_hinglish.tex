@@ -100,6 +100,70 @@ Capability-limited & $v_0 \le 1/8$: model ke liye sawaal shuru se hi lagbhag nam
 \textbf{Example:} $v = [0.6, 0.6, 0.1, 0.0]$. Step 2 par $v$ 0.6 se 0.1 gira, toh choke point step 2 hai.
 Agar human ne step 3 ko galat mark kiya, toh \emph{error} aur \emph{choke point} alag hain.
 
+\section{Basics: choke point kaise dhundhte hain (step by step)}
+\begin{center}\small
+\begin{tabularx}{\textwidth}{clX}
+\toprule
+\# & Kya karte hain & Detail \\
+\midrule
+1 & Failed trace lo & ProcessBench solution, steps mein toota hua (step 1, 2, \dots, $n$), final answer galat \\
+2 & Har prefix banao & $k=0$: sirf sawaal. $k=1$: sawaal + step 1. \dots\ $k=n-1$: sawaal + pehle $n-1$ steps \\
+3 & Usi model se aage likhwao & har prefix se $m$ baar (8--16) continuation, temperature ke saath (har baar alag) \\
+4 & Grade karo & har continuation ka final answer gold answer se match? Haan = 1, nahi = 0 \\
+5 & $v_k$ nikalo & $v_k$ = sahi continuations / $m$. Trace fail hua tha, isliye $v_n = 0$ \\
+6 & Drop nikalo & step $j$ ka drop = $v_{j-1} - v_j$ (step $j$ likhne se chance kitna gira) \\
+7 & Choke point & jis step ka drop sabse bada, wahi choke point \\
+8 & Pehle filter & agar $v_0 \le 1/8$: model shuru se hi fail, koi choke point nahi (``capability-limited'') \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{Worked example} ($m=8$, 4 steps, human ne step 4 ko galat mark kiya):
+\begin{center}\small
+\begin{tabular}{lccccc}
+\toprule
+Prefix $k$ & 0 (sirf sawaal) & 1 & 2 & 3 & 4 (poora trace) \\
+\midrule
+8 mein se sahi & 5 & 5 & 4 & 1 & -- \\
+$v_k$ & 0.625 & 0.625 & 0.500 & 0.125 & 0 \\
+Step $j$ ka drop $v_{j-1}-v_j$ & & step 1: 0 & step 2: 0.125 & \textbf{step 3: 0.375} & step 4: 0.125 \\
+\bottomrule
+\end{tabular}
+\end{center}
+Choke point = \textbf{step 3}, human error = step 4. Yahi ``errors are not choke points''. Step 3 ne chance
+0.5 se 0.125 gira diya, jabki human ko galti step 4 mein dikhi. Step 3 se pehle ($v_2 = 0.5$) se resample karna,
+restart ($v_0 = 0.625$) se behtar nahi hai. Yahi Proposition 1 average mein kehti hai.
+
+\textbf{Noise ka kya?} 8 samples se $v$ thoda noisy hota hai, isliye teen safety checks:
+(i) \emph{Bayesian posterior}: har step ke liye ``yeh choke point hone ka probability'', sirf ek winner nahi;
+(ii) \emph{sample splitting}: aadhe samples se choke point chuno, baaki aadhe se score karo;
+(iii) do alag batches ke $v$ curves match karte hain ($r=\QwenSmallAllSplitR$).
+\textbf{PRM choke point kaise guess karta hai?} PRM har step ko 0--1 score deta hai. ``Largest drop'' rule:
+jahan PRM score sabse zyada gire, woh step. Isko hum ChokeBench par check karte hain.
+\textbf{Run D mein farq:} wahan steps nahi, \emph{token positions} par cut (0, 256, \dots, 5120), kyunki reasoning
+models ke traces lambe aur bina clear steps ke hote hain.
+
+\begin{center}\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+Zaroori shabd & Asaan matlab \\
+\midrule
+On-policy & continuation \emph{usi} model se jisne trace likha; tabhi $v_k$ us model ka asli chance hai \\
+Restart & $k=0$ se dobara; har attempt ka success chance $v_0$ \\
+Matched compute & sabko barabar GPU budget; PRM chalane ki cost bhi gini. ``4$\times$'' = 4 restarts jitna budget \\
+P(solved) in $N$ tries & $1-(1-p)^N$; ek point jiska $p$ zyada ya attempts chhote ho, woh budget mein jeetega \\
+AUROC & 0.5 = coin toss, 1.0 = perfect. Detector fail/pass ko kitna alag kar pata hai \\
+95\% CI [a, b] & asli value lagbhag is range mein; agar range mein 0 hai toh fark pakka nahi (n.s.) \\
+$p$-value & itna bada fark sirf luck se aane ka chance; $<0.05$ = significant \\
+Bootstrap & data ko baar-baar resample karke CI nikalna \\
+Holm correction & kai tests ek saath, toh false alarm rokne ke liye $p$ ko adjust karna \\
+Preregistration & plan aur hypotheses data se pehle git mein commit; baad mein badal nahi sakte \\
+Cohen's $\kappa$ & do graders kitna agree karte hain (0 = random, 1 = perfect; 0.2 = kamzor) \\
+Spearman $\rho$ & do rankings kitni match karti hain ($-1$ se $1$) \\
+Supermartingale & ``fair game'': fail hone wale khel ka beech ka state, average mein, shuruaat se behtar nahi hota \\
+\bottomrule
+\end{tabularx}
+\end{center}
+
 \section{Phase 3: kya mila (main results, maths)}
 \begin{center}\small
 \begin{tabularx}{\textwidth}{>{\raggedright\arraybackslash}p{5.3cm}>{\raggedright\arraybackslash}p{4.6cm}X}

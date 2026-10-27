@@ -1,0 +1,89 @@
+\section{ChokeBench: Grading Localisers on the Target That Matters}\label{sec:chokebench}
+ProcessBench grades a verifier by whether it finds the human-labelled first error. The value curves
+make a second target measurable: the \emph{choke point}, the step where $v$ falls most. ChokeBench
+grades step localisers on both, and on what the named step is worth as a resampling point. It uses
+the \cbN\ fatal traces whose outcome is still open ($v_0>\delta$; effective $n=\cbNeff$ after sample
+splitting) and the released step signals; no model is re-run.
+
+\textbf{Protocol.} A localiser names one step $j$ of a failed trace. We report (i) whether $j$ is
+the human first error; (ii) the posterior probability that $j$ is the choke point (Jeffreys
+posterior on every $v_k$, 2,000 draws), so sampling noise is not counted as a miss; (iii) the
+per-attempt success of resampling from just before $j$, minus restart; and (iv) the same difference
+in P(solved) at a FLOP-matched budget of four restart attempts, \emph{charging nothing for finding
+$j$}. Item (iv) is an upper bound on any verifier that uses the localiser; Table~\ref{tab:policies}
+charges the verifier. Half of each prefix's continuations select the open traces (and the oracle's
+choke point), the other half score them, over 50 splits; the estimator reproduces the per-model
+values of Table~\ref{tab:backtrack} within sampling error.
+
+\begin{table}[t]\centering\small
+\caption{ChokeBench, pooled over four generators. Accuracy on the human first error (Human) and on
+the choke point (Choke, posterior); success minus restart per attempt and at a 4$\times$ budget
+with free localisation. 95\% trace-bootstrap CIs in Fig.~\ref{fig:chokebench}.}
+\label{tab:chokebench}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lcccc}\toprule
+Localiser & Human & Choke & $\Delta$/attempt & $\Delta$ at 4$\times$\\\midrule
+Human first error & 1.00 & \cbHumanAccD & \cbHumanGain & \cbHumanGainB\\
+PRM: first step $<0.5$ & \cbPrmFirstAccH & \cbPrmFirstAccD & \cbPrmFirstGain & \cbPrmFirstGainB\\
+PRM: largest drop & \cbPrmDropAccH & \cbPrmDropAccD & \cbPrmDropGain & \cbPrmDropGainB\\
+PRM: minimum & \cbPrmMinAccH & \cbPrmMinAccD & \cbPrmMinGain & \cbPrmMinGainB\\
+Generator: max token NLL & \cbNllAccH & \cbNllAccD & \cbNllGain & \cbNllGainB\\
+Generator: max entropy & \cbEntAccH & \cbEntAccD & \cbEntGain & \cbEntGainB\\
+Random step & \cbRandAccH & \cbRandAccD & \cbRandGain & \cbRandGainB\\
+First step (= restart) & \cbFirstAccH & \cbFirstAccD & \cbFirstGain & \cbFirstGainB\\\midrule
+Learned, tuned (held-out model) & \cbLearnedAccH & \cbLearnedAccD & \cbLearnedGain & \cbLearnedGainB\\
+Oracle choke point (split) & -- & -- & \cbOracleGain & \cbOracleGainB\\\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{figure*}[t]\centering
+\includegraphics[width=0.9\textwidth]{fig25_chokebench.pdf}
+\caption{ChokeBench. Left: PRM rules find human-labelled errors far more often than choke points.
+Right: P(solved) minus restart at a budget of four restart attempts when finding the step is free.}
+\label{fig:chokebench}
+\end{figure*}
+
+\textbf{Localisers find errors, not choke points} (Table~\ref{tab:chokebench},
+Fig.~\ref{fig:chokebench}). The PRM's largest-drop rule names the human first error in
+\cbPrmDropAccHPct\% of open failures, consistent with its ProcessBench F1, but the choke point in
+only \cbPrmDropAccDPct\% [\cbPrmDropAccDLo, \cbPrmDropAccDHi]. The expert label itself is the choke
+point with probability \cbHumanAccD. Generator uncertainty (maximum token NLL or entropy) is far
+below the PRM on both targets, though above a random step. The beginning of the trace is the choke point
+in \cbFirstAccDPct\% of open failures: many of them go wrong on the first step.
+
+\textbf{Even a perfect localiser buys little.} Per attempt, every deployable localiser is worse than
+restart, from \cbPrmFirstGain\ to \cbEntGain, and so is the human label (\cbHumanGain). With the
+step found for free and the shorter continuations converted into extra attempts, the human label
+is still \cbHumanGainB\ [\cbHumanGainBLo, \cbHumanGainBHi] and the best PRM rule
+\cbPrmFirstGainB. An oracle that knows the choke point from held-out rollouts reaches
+\cbOracleGainB\ [\cbOracleGainBLo, \cbOracleGainBHi]. That is the ceiling for any backtracking
+verifier on these traces, before its own cost is paid. It is small because, before the choke point,
+a failed trace is worth about as much as a fresh start (Appendix~\ref{app:prop}): finding the choke
+point saves tokens, not successes.
+
+\textbf{Can a localiser be learned?} We train one directly for the choke-point target. Each step
+of a failed trace becomes an example described by nine features (PRM score, PRM drop, first PRM
+score below 0.5, mean and maximum token NLL and entropy, step length, relative position), labelled
+softly with the posterior probability that it is the choke point. The model names the step with the
+highest predicted probability. Evaluation is leave-one-generator-out, with nested selection: for
+each held-out generator, \ltGrid\ configurations (logistic regression with $C\in\{0.01,0.1,1,10\}$ and
+gradient-boosted trees with depth $\in\{2,3\}$ and learning rate $\in\{0.05,0.2\}$, each on PRM,
+generator or all features) are scored by leave-one-generator-out cross-validation on the other three
+generators only, and the best is refit and tested once (Fig.~\ref{fig:tuning}). The tuned localiser
+finds the choke point with probability \cbLearnedAccD\ [\cbLearnedAccDLo, \cbLearnedAccDHi], no better
+than the fixed PRM rules, and its restart point is worth \cbLearnedGainB\ at a 4$\times$ budget.
+Inner-CV scores do not carry over to the held-out model (best inner score \ltQwenMathInner\ vs test
+\ltQwenMathTest\ for Qwen2.5-Math-7B): which step decides a failure is model-specific, as the
+transfer failure of the learned restart policy in Section~\ref{sec:policies} already suggested.
+
+\begin{figure*}[t]\centering
+\includegraphics[width=0.85\textwidth]{fig26_learned_tuning.pdf}
+\caption{Nested hyperparameter selection of the learned localiser. Each line is one outer fold
+(held-out generator); points are inner leave-one-generator-out scores of the 24 configurations;
+stars mark the selected configuration; the legend gives its score on the held-out generator.}
+\label{fig:tuning}
+\end{figure*}
+
+\textbf{Release.} \texttt{results/chokebench/chokebench\_v1.jsonl} holds, for every failed trace,
+the per-prefix success counts, continuation counts and lengths, the human label and the PRM scores.
+A new localiser is graded by naming one step per trace (\texttt{scripts/49\_chokebench.py}).

@@ -1,0 +1,87 @@
+\section{The Same Question for Hallucinations}\label{sec:grounded}
+Retrieval-augmented generation (RAG) offers what mathematics lacks: a detector can check, while the
+system runs, whether each sentence is supported by the source. If hallucinations were choke points,
+a controller that estimates $v_k$ online and resamples from the most recoverable boundary should
+beat plain restarting. We built such a controller and preregistered its test
+(\texttt{docs/PREREGISTRATION\_RECOVERY.md}, committed before any data).
+
+\textbf{Setup.} RAGTruth~\cite{ragtruth} test sources (450; QA, summarisation, data-to-text), whose
+Llama-2-7B-chat responses carry human span labels, and 300 HotpotQA~\cite{yang2018hotpotqa}
+items with controlled evidence (half with the answer removed). The gate $D$ is LettuceDetect-base~\cite{lettucedetect}.
+When $D$ flags a sentence, the controller (CARE) tries claim repair, then resamples, choosing
+between restarting and backtracking to just before the flagged sentence by Thompson sampling on
+each boundary's estimated recoverability per token, then abstains (QA) or deletes what is still
+flagged. Every policy replays the same bank of on-policy continuations (\mechCont\ in the mechanism
+study alone), under a budget cap of $b=2$ draft-equivalents; tokens actually spent are reported.
+The preregistered primary evaluator $E_1$ is an LLM judge from another family (Qwen2.5-7B-Instruct;
+$\kappa=\evEOneKappa$ with RAGTruth's human labels, passing the preregistered bar of 0.20); $E_2$
+(LettuceDetect-large) is secondary because it shares training data with $D$.
+
+\textbf{Preregistered results (RAGTruth).}
+\begin{itemize}
+\item \emph{H0, sanity:} CARE reduces hallucination relative to the base model,
+\rrHZero\ [\rrHZeroLo, \rrHZeroHi] ($p=\rrHZeroP$).
+\item \emph{H1, versus restart until $D$ passes:} \rrHOne\ [\rrHOneLo, \rrHOneHi]; equivalent within
+$\pm$0.03 (TOST 90\% CI [\rrTostLo, \rrTostHi]). Restart spends \rrRestartTok\ tokens per item
+against \rrCareTok\ for CARE.
+\item \emph{H5, does the commitment-aware choice add anything?} CARE minus the same controller
+restricted to restarts: \rrHFive\ [\rrHFiveLo, \rrHFiveHi] under $E_1$ and \rrHFiveEtwo\
+[\rrHFiveEtwoLo, \rrHFiveEtwoHi] under $E_2$. An oracle that knows each boundary's true
+recoverability gains \rrOracle\ [\rrOracleLo, \rrOracleHi]: there was little to choose between.
+\item \emph{Mechanism, with human span labels:} over \mechN\ human-hallucinated drafts, resampling
+from just before the first hallucinated sentence is no better than restarting (\mechDiff\
+[\mechDiffLo, \mechDiffHi], $p=\mechP$; \mechSum\ for summaries, exploratory). Keeping a
+hallucinated sentence does not raise the hazard of later ones relative to a placebo (\mechSnow\
+[\mechSnowLo, \mechSnowHi]): no snowballing~\cite{zhang2024snowball}.
+\end{itemize}
+HotpotQA agrees: H0 holds and no comparison against an alternative strategy is significant.
+
+\textbf{Who grades the loop matters} (exploratory). Detector-gated policies resample until $D$ is
+satisfied, so an evaluator that resembles $D$ will tend to agree that they succeeded. We score
+every RAGTruth policy on the \robNTest\ sources of a held-out half under five evaluators
+(Table~\ref{tab:evaluators}). One of them never reads a LettuceDetect score: $E_1$ with a threshold on
+the share of sentences it calls unsupported (\robFstar\%), chosen on the other \robNDev\ drafts from a
+grid fixed in advance. Its human agreement is weak ($\kappa=\robKEOneCal$ on the held-out drafts),
+like $E_1$'s (\robKEOne); $E_2$, the ``dual'' rule $E_1\wedge E_2{\ge}0.3$ and $D$ agree better
+(\robKETwo, \robKDual, \robKD) but share training data with the gate ($E_2$ agrees with $D$ on
+\robAgreeETwoD\% of drafts, $E_1$-calibrated on \robAgreeEOneD\%). The threshold 0.3 of the dual rule was
+chosen on all drafts, so its held-out $\kappa$ is not an out-of-sample estimate.
+
+\begin{table}[t]\centering\small
+\caption{Hallucination rate (\%) on the held-out half of RAGTruth under five evaluators. $D$-family
+evaluators share LettuceDetect's training data with the gate. Differences from restart with 95\%
+CIs: \texttt{results/recovery/final/evaluator\_robustness.md}.}
+\label{tab:evaluators}
+\setlength{\tabcolsep}{2.5pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccccc}\toprule
+& & & \multicolumn{2}{c}{independent of $D$} & \multicolumn{3}{c}{$D$-family}\\\cmidrule(lr){4-5}\cmidrule(lr){6-8}
+Policy & Cov. & Tokens & $E_1$ & $E_1$-cal. & $E_2$ & dual & $D$\\\midrule
+Base model & \robBaseCov & \robBaseTok & \robBaseEOne & \robBaseEOneCal & \robBaseETwo & \robBaseDual & \robBaseD\\
+Restart until $D$ passes & \robRestartCov & \robRestartTok & \robRestartEOne & \robRestartEOneCal & \robRestartETwo & \robRestartDual & \robRestartD\\
+Backtrack until $D$ passes & \robBackCov & \robBackTok & \robBackEOne & \robBackEOneCal & \robBackETwo & \robBackDual & \robBackD\\
+CARE & \robCareCov & \robCareTok & \robCareEOne & \robCareEOneCal & \robCareETwo & \robCareDual & \robCareD\\
+CARE, restarts only & \robCareRCov & \robCareRTok & \robCareREOne & \robCareREOneCal & \robCareRETwo & \robCareRDual & \robCareRD\\
+Abstain if flagged (QA) & \robAbstCov & \robAbstTok & \robAbstEOne & \robAbstEOneCal & \robAbstETwo & \robAbstDual & \robAbstD\\
+CoVe, revised answer ($n$=\robCoveN) & \robCoveCov & -- & \robCoveEOne & \robCoveEOneCal & \robCoveETwo & \robCoveDual & \robCoveD\\\bottomrule
+\end{tabular}}
+\end{table}
+
+Two conclusions survive the change of evaluator: CARE beats restart under none of the five, and
+it matches its restart-only ablation under both preregistered evaluators (H5). Everything else depends on the evaluator. Restarting until $D$ passes
+lowers the hallucination rate by \robBaseETwoDiff\ according to $E_2$ and \robBaseDualDiff\ according to
+the dual rule, but by \robBaseEOneDiff\ [\robBaseEOneDiffLo, \robBaseEOneDiffHi] according to $E_1$ and
+\robBaseEOneCalDiff\ [\robBaseEOneCalDiffLo, \robBaseEOneCalDiffHi] according to its calibrated
+version. Chain-of-Verification~\cite{dhuliawala2024cove}, which never consults $D$, looks far worse
+than restart to the $D$-family (\robCoveDualDiff\ under the dual rule) and indistinguishable from it
+to the independent judges (\robCoveEOneDiff\ [\robCoveEOneDiffLo, \robCoveEOneDiffHi]). The independent
+judges are weak, so they cannot rule out a real reduction; but the $D$-family numbers are partly
+the gate grading itself. Gains of a verifier loop should be measured by an evaluator that shares
+no training data with the verifier, and ultimately by people (a blinded two-rater kit is
+released; Section~\ref{sec:limits}).
+
+\textbf{Reading.} As in mathematics, the step where the output first goes wrong is a fine but not a
+better place to resume than the beginning, and an online estimate of recoverability does not
+change that. Hallucinations here behave like local errors rather than commitments:
+detecting and resampling them reduces hallucination by an amount the evaluators disagree on, and
+choosing where to resample adds nothing.

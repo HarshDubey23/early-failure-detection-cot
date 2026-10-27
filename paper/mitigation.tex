@@ -1,0 +1,69 @@
+\section{What Mitigates Failures, and at What Cost}\label{sec:mitigation}
+The previous sections asked where failures are decided. This one collects what the same data say
+about mitigating them cheaply (Fig.~\ref{fig:mitigation}, Table~\ref{tab:mitigation}).
+
+\textbf{Maths: restarting recovers most failures.} For the failed ProcessBench solutions of the four
+generators, plain restarting (independent attempts from the question, FLOP-matched, every token
+counted) solves \recMinOne--\recMaxOne\% of them with one attempt, \recMinFour--\recMaxFour\% within
+four and \recMinEight--\recMaxEight\% within eight. No surgical policy in Table~\ref{tab:policies}
+does better at any of these budgets, except PRM backtracking for Qwen2.5-Math-7B at eight attempts
+(\QwenMathPolPrmDropEightDiff, exploratory).
+
+\textbf{RAG: detect, restart, abstain.} The detector $D$ is a 150M-parameter token classifier, so
+checking a draft costs little; only flagged drafts are resampled, and what is still flagged after
+the budget is withheld (QA) or deleted (other tasks). This loop (DRA, ``restart until $D$ passes'' in
+Section~\ref{sec:grounded}) is the cheapest mitigation that resamples: \tokDra\ tokens per item against
+\tokBase\ for the base model (\costDra$\times$), while claim repair costs \costRep$\times$, the
+choke-point-aware controller \costCare$\times$ and Chain-of-Verification \costCove$\times$. Deleting
+flagged sentences costs almost nothing (\costDel$\times$) but changes the content of the answer;
+abstaining on flagged QA gives the lowest hallucination under every grader at a coverage of
+\covAbst\%.
+
+\begin{table}[t]\centering\small
+\caption{Mitigation on RAGTruth (450 sources, Llama-2-7B-chat). Tokens per item, every call counted;
+hallucination rate (\%) under the independent judge $E_1$ and the detector-family grader $E_2$.
+CoVe: raw outputs on 192 items (the echoed verification block inflates both graders,
+Section~\ref{sec:grounded}).}
+\label{tab:mitigation}
+\setlength{\tabcolsep}{3pt}
+\resizebox{\columnwidth}{!}{%
+\begin{tabular}{lccccc}\toprule
+Mitigation & Tokens & Cost & $E_1$ & $E_2$ & Coverage\\\midrule
+None (base model) & \tokBase & 1.00$\times$ & \hallEOneBase & \hallETwoBase & \covBase\\
+Delete flagged sentences & \tokDel & \costDel$\times$ & \hallEOneDel & \hallETwoDel & \covDel\\
+\textbf{Detect, restart, abstain (DRA)} & \tokDra & \costDra$\times$ & \hallEOneDra & \hallETwoDra & \covDra\\
+Detect, backtrack, abstain & \tokBack & \costBack$\times$ & \hallEOneBack & \hallETwoBack & \covBack\\
+Claim repair, then delete & \tokRep & \costRep$\times$ & \hallEOneRep & \hallETwoRep & \covRep\\
+CARE (choke-point-aware) & \tokCare & \costCare$\times$ & \hallEOneCare & \hallETwoCare & \covCare\\
+Abstain on flagged QA & \tokAbst & \costAbst$\times$ & \hallEOneAbst & \hallETwoAbst & \covAbst\\
+Chain-of-Verification & \tokCove & \costCove$\times$ & \hallEOneCove & \hallETwoCove & \covCove\\\bottomrule
+\end{tabular}}
+\end{table}
+
+\begin{figure*}[t]\centering
+\includegraphics[width=0.95\textwidth]{fig27_mitigation.pdf}
+\caption{What mitigation buys. Left: share of failed maths solutions solved by plain restarting, by
+budget (95\% CIs). Right: hallucination after each RAG mitigation under the independent judge
+($E_1$) and the detector-family grader ($E_2$), with the human base rate and the human-scale
+prediction of Proposition~3 (Appendix~\ref{app:more}) for DRA; cost relative to no mitigation in brackets.}
+\label{fig:mitigation}
+\end{figure*}
+
+\textbf{How much does DRA reduce hallucination for people?} The two graders disagree by an order of
+magnitude, and no human rating of system outputs exists yet. Proposition~3 (Appendix~\ref{app:more}) gives a
+principled estimate. If the system returns the first independent draw that $D$ passes, the share
+of returned answers that are hallucinated is $P(\text{hallucinated}\mid D\text{ passes})$, whatever
+the retry budget. RAGTruth's human labels on the drafts measure exactly this quantity: $D$ misses
+\lawBeta\% of hallucinated drafts and flags \lawAlpha\% of faithful ones, so the predicted rate among
+DRA's answers is \lawPi\% [\lawPiLo, \lawPiHi], against \lawH\% [\lawHLo, \lawHHi] for the base model:
+a reduction of \lawRed\ points [\lawRedLo, \lawRedHi]. Two assumptions carry this estimate (draws
+independent given the input, and the detector's error rates on resampled answers equal those on
+drafts), and with per-item variation in hallucination rates it is optimistic, so we read it as an
+upper bound on the reduction and report it as exploratory. An attempt to confirm it by inverting the
+independent judge's own error rates was consistent (\lawInv\%) but too imprecise to be informative
+([\lawInvLo, \lawInvHi]); the human rating kit is released for that purpose.
+
+\textbf{What the law says about cost.} The retry budget only buys coverage: abstentions fall
+geometrically with more attempts, but the hallucination rate of delivered answers stays at the
+detector's floor. The lever is therefore the detector, not the budget and not the resampling point:
+a better detector lowers the floor, and restarting is the cheapest way to cash it in.

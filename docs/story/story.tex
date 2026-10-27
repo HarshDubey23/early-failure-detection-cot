@@ -21,16 +21,16 @@
 \newtcolorbox{plain}[1][]{colback=ok!6,colframe=ok,fonttitle=\bfseries,title={#1},left=6pt,right=6pt,top=4pt,bottom=4pt}
 \newtcolorbox{caution}[1][]{colback=warn!6,colframe=warn,fonttitle=\bfseries,title={#1},left=6pt,right=6pt,top=4pt,bottom=4pt}
 \pagestyle{fancy}\fancyhf{}
-\rhead{\small Errors Are Not Choke Points: the research story}\lhead{\small MSE-2 guide}\cfoot{\thepage}
+\rhead{\small Detect, Restart, Abstain: the research story}\lhead{\small MSE-2 guide}\cfoot{\thepage}
 \setlength{\parskip}{4pt}\setlength{\parindent}{0pt}
 
 \begin{document}
 \begin{titlepage}
 \centering
 \vspace*{2cm}
-{\Huge\bfseries Errors Are Not Choke Points\par}
+{\Huge\bfseries Detect, Restart, Abstain\par}
 \vspace{0.4cm}
-{\Large Where LLM failures are decided, and why restarting is hard to beat\par}
+{\Large Cheap mitigation of LLM failures and hallucinations,\\[2pt] and why fixing the choke point does not pay\par}
 \vspace{1.2cm}
 {\Large\bfseries The research story, start to finish\par}
 {\large and a guide to the MSE-2 evaluation\par}
@@ -67,11 +67,14 @@ the guide and the paper cannot disagree. Blue boxes give the one-line answer to 
 %==========================================================================================
 \section{The whole project in one page}\label{sec:onepage}
 
-\textbf{The question.} When a large language model (LLM) solves a problem step by step and gets it
-wrong, \emph{where} did it go wrong, and what should a system do about it? Many methods assume the
-answer: find the first wrong step, go back to just before it, and try again from there. Process
-reward models (PRMs) are trained to find that step; hallucination-repair systems do the same for
-unsupported sentences. We tested that assumption.
+\textbf{The goal.} Reduce the failures of large language models (LLMs): wrong answers in
+step-by-step maths and hallucinations (claims not supported by the source) in retrieval-augmented
+generation (RAG), at the lowest possible cost.
+
+\textbf{The popular idea we tested.} Most methods are \emph{surgical}: find the step where the output
+went wrong, go back to just before it, and repair or regenerate from there. Process reward models
+(PRMs) are trained to find that step; hallucination-repair systems do the same for unsupported
+sentences. It sounds efficient, because it keeps the good part of the answer.
 
 \textbf{The one quantity.} For a solution written by model $M$, let
 \[ v_k = P_M(\text{correct final answer} \mid \text{question and the first } k \text{ steps}). \]
@@ -80,33 +83,51 @@ ends up correct. $v_0$ is ``solve from scratch''. Resampling from $k=0$ is a \em
 resampling from just before step $j$ is \emph{backtracking}. The step where $v$ collapses is the
 \emph{choke point}; the step a human marks as the first mistake is the \emph{error}.
 
-\textbf{The answer, in five findings.}
+\textbf{What we found: the mitigation that works.}
 \begin{enumerate}
+\item \textbf{Detect, restart, abstain (DRA) is the cheapest mitigation that works.} Plain restarting
+recovers \recMinFour--\recMaxFour\% of failed maths solutions within four attempts' compute
+(\recMinEight--\recMaxEight\% within eight). In RAG, a detector-gated resampling loop cuts hallucination
+by \rrHZero\ (preregistered, $p=\rrHZeroP$), and plain DRA does the same at \costDra$\times$ the base
+cost, cheaper than claim repair (\costRep$\times$), our choke-point-aware controller (\costCare$\times$) and
+Chain-of-Verification (\costCove$\times$).
+\item \textbf{A law, with proof.} A restart loop delivers answers whose hallucination rate equals the
+detector's $P(\text{hallucinated}\mid\text{pass})$, whatever the retry budget. With human labels this
+predicts \lawH\% $\to$ \lawPi\% hallucinated answers.
+\end{enumerate}
+\textbf{What we found: why the surgical version does not pay.}
+\begin{enumerate}[resume]
 \item Early-warning detectors mostly measure how hard the question is: question and model alone
 reach AUROC \aucQG; the first quarter of the reasoning adds \dIncA\ (not significant).
 \item \QwenSmallAllCapPct--\QwenMathCapPct\% of failures are decided before the first step. When the
 outcome is still open, the human-marked error is the choke point in \QwenTwoAllDec--\QwenSmallAllDec\
 of traces, against a chance level of about 0.18 (preregistered, confirmed on Llama-3.1-8B).
-\item A process reward model finds the human-marked error \cbPrmDropAccHPct\% of the time but the
-choke point only \cbPrmDropAccDPct\% (our new benchmark, ChokeBench). A model we trained and tuned
-for the choke point does no better (\cbLearnedAccD).
-\item No deployable choice of where to resample reliably beats a plain restart at equal compute.
-Even a free, perfect choke-point oracle gains only \cbOracleGainB\ at four restarts' budget.
-\item The same is true for hallucinations in retrieval-augmented generation (RAG): choosing where
-to resample adds \rrHFive. And the measured benefit of a detector-gated loop depends on who grades
-it: \robBaseETwoDiff\ by a grader trained like the detector, \robBaseEOneDiff\ (n.s.) by an
-independent one.
+\item A PRM finds the human-marked error \cbPrmDropAccHPct\% of the time but the choke point only
+\cbPrmDropAccDPct\% (our new benchmark, ChokeBench). A model we trained and tuned for the choke point
+does no better (\cbLearnedAccD).
+\item No deployable choice of where to resample reliably beats a plain restart at equal compute. Even
+a free, perfect choke-point oracle gains only \cbOracleGainB\ at four restarts' budget; in RAG,
+choosing where to resample adds \rrHFive.
+\item The measured benefit of a detector-gated loop depends on who grades it: \robBaseETwoDiff\ by a
+grader trained like the detector, \robBaseEOneDiff\ (n.s.) by an independent one.
 \end{enumerate}
 
 \begin{figure}[h]\centering
+\includegraphics[width=\textwidth]{fig27_mitigation.pdf}
+\caption{What mitigation buys: failed maths solutions recovered by restarting (left) and
+hallucination after each RAG mitigation, with its cost (right).}
+\end{figure}
+
+\begin{figure}[h]\centering
 \includegraphics[width=\textwidth]{fig0_story.pdf}
-\caption{The study in one figure. Each panel is one of the five findings above.}
+\caption{Why the surgical version does not pay. Each panel is one of findings 3--7.}
 \end{figure}
 
 \begin{viva}[If you get one sentence]
-``We measured, by resampling the model itself, where its failures are actually decided; the step a
-human or a reward model calls the first error is often not that point, and at equal compute no
-practical way of choosing where to resume beats simply starting over, in maths and in RAG.''
+``To reduce LLM failures and hallucinations cheaply, detect them and restart, abstaining if still
+unsafe; we prove the result is only as good as the detector, and show by resampling the model itself
+that the popular alternative, finding the bad step and repairing from there, does not beat
+restarting at equal compute, because failures are rarely decided where we can see them.''
 \end{viva}
 
 %==========================================================================================
@@ -146,7 +167,11 @@ were added in a hurry. They looked impressive but were not sound (Section~\ref{s
 27 Oct & \textbf{Corrections and the final contributions.} We withdrew those claims, rebuilt the
 paper from the tables, fixed the references, and added three CPU analyses on the existing data:
 ChokeBench, a learned and tuned choke-point localiser, and a five-grader robustness check of Part 3.
-This is the version in the final draft.\\\bottomrule
+This is the version in the final draft.\\
+27 Oct (evening) & \textbf{Reframed around mitigation.} The results answer the original goal,
+reducing failures and hallucinations, more directly than the title said: detect, restart and abstain
+is the cheapest mitigation that works, and we added its law with a proof and a cost comparison of every
+mitigation. The paper is now titled \emph{Detect, Restart, Abstain}.\\\bottomrule
 \end{longtable}
 
 \begin{plain}[Why the pivot matters (good viva point)]
@@ -251,7 +276,8 @@ sign-flip permutation p-values with Holm correction for multiple tests; TOST for
 (``no difference'' is never written as ``equal'' unless TOST passes). Every claim carries a label:
 \textsc{pre} (preregistered), \textsc{exp} (exploratory), \textsc{conf} (preregistered test on new data).
 
-\subsection{Theory: why restart is hard to beat}
+\subsection{Theory: three propositions}
+\textbf{Proposition 1 (a failed prefix is worth no more than a fresh start).}
 Under the model's own sampling, $v_k$ is a martingale (on average it neither rises nor falls). For
 any rule that picks the restart point by reading the trace only up to that point,
 \[ \mathbb{E}[v_\tau \mid \text{fail}] = \frac{\mathbb{E}[v_\tau(1-v_\tau)]}{1-v_0} \le v_0 , \]
@@ -260,6 +286,28 @@ chosen without looking ahead is worth no more than a fresh start. Backtracking c
 looking ahead (e.g.\ resampling from \emph{before} a flagged step) or by saving tokens.
 
 %==========================================================================================
+\textbf{Proposition 2 (shorter attempts are the only advantage).} If resampling from point $k$
+succeeds no more often per attempt than restarting ($v_k\le v_0$), then with any budget it is worth at
+most a restart given $c_0/c_k$ times the budget, where $c$ is the length of one attempt. Measured
+lengths give $c_k/c_0\approx0.7$--$0.8$, so the best such point is worth at most 1.25--1.4 restarts'
+budgets, before paying to find it.
+
+\textbf{Proposition 3 (a restart loop is exactly as faithful as its detector).} Suppose the system
+draws independent answers and returns the first one the detector passes, abstaining after $K+1$
+flagged draws. With $h$ the hallucination rate of a draw, $\beta$ the detector's miss rate and
+$\alpha$ its false-alarm rate,
+\[ P(\text{hallucinated}\mid\text{answered}) = \frac{h\beta}{h\beta+(1-h)(1-\alpha)}, \qquad
+P(\text{answered}) = 1-q^{K+1},\ q = h(1-\beta)+(1-h)\alpha . \]
+\emph{Why:} every draw is independently ``passed and hallucinated'' ($h\beta$), ``passed and faithful''
+($(1-h)(1-\alpha)$) or ``flagged'' ($q$); the loop returns the first passed draw, so whichever draw it
+returns, the odds of hallucinated vs faithful are $h\beta : (1-h)(1-\alpha)$, the same at every try. So
+more retries buy coverage, never faithfulness, and the place where we resample does not appear in
+the formula at all. Plugging in the detector's error rates measured on RAGTruth's human labels
+($\beta=\lawBeta\%$, $\alpha=\lawAlpha\%$, $h=\lawH\%$) predicts \lawPi\% [\lawPiLo, \lawPiHi]
+hallucinated answers after DRA, a reduction of \lawRed\ points. Two assumptions carry this
+(independent draws; the detector's errors on resampled answers equal those on drafts), so it is an
+exploratory estimate until people rate the outputs.
+
 \section{Model training}\label{sec:training}
 \begin{viva}[Project: Model Training (5 marks)]
 The large language models are used frozen; what we train are the decision models built on top of
@@ -435,6 +483,23 @@ not choke points (\cbPrmDropAccDPct\%); restart is not beaten at matched compute
 \cbOracleGainB); the same in RAG (mechanism adds \rrHFive).
 \end{viva}
 
+\subsection{Mitigation: what works and what it costs}
+\begin{tabularx}{\linewidth}{Xcccc}
+\toprule
+RAG mitigation (RAGTruth, 450 sources) & cost & $E_1$ & $E_2$ & coverage\\\midrule
+No mitigation & 1.00$\times$ & \hallEOneBase & \hallETwoBase & \covBase\\
+Delete flagged sentences & \costDel$\times$ & \hallEOneDel & \hallETwoDel & \covDel\\
+\textbf{Detect, restart, abstain (DRA)} & \costDra$\times$ & \hallEOneDra & \hallETwoDra & \covDra\\
+Claim repair, then delete & \costRep$\times$ & \hallEOneRep & \hallETwoRep & \covRep\\
+CARE (choke-point-aware) & \costCare$\times$ & \hallEOneCare & \hallETwoCare & \covCare\\
+Abstain on flagged QA & \costAbst$\times$ & \hallEOneAbst & \hallETwoAbst & \covAbst\\
+Chain-of-Verification (raw, $n$=192) & \costCove$\times$ & \hallEOneCove & \hallETwoCove & \covCove\\\bottomrule
+\end{tabularx}
+
+Hallucination rates in \%. In maths, plain restarting solves \recMinOne--\recMaxOne\% of failed solutions
+with one attempt, \recMinFour--\recMaxFour\% within four and \recMinEight--\recMaxEight\% within eight.
+Human-scale prediction for DRA (Proposition 3): \lawH\% $\to$ \lawPi\% [\lawPiLo, \lawPiHi].
+
 \subsection{Part 1: early warning is a difficulty signal}
 \begin{tabularx}{\linewidth}{Xc}
 \toprule
@@ -573,6 +638,13 @@ $D$ on \robAgreeETwoD\% of drafts): the gate is grading itself. The independent 
 smaller effect, but it agrees weakly with people, so neither number is the truth. Human ratings are
 needed, and the blinded kit is ready.
 
+\subsection{Reading 6: what to do in practice}
+The cheapest effective mitigation is to gate every output with a cheap detector, restart only what it
+flags, and abstain or delete flagged sentences when the budget runs out. Proposition 3 says where
+effort pays: the detector sets the hallucination rate of what is delivered, the budget sets how often
+the system answers, and the resampling point sets neither. So a better detector is worth more than a
+smarter repair.
+
 \begin{plain}[The big picture]
 Across maths and RAG, ``find the bad step and fix it'' is a natural idea that does not survive a
 fair, compute-matched comparison against starting over. The useful levers are a better verifier
@@ -654,7 +726,19 @@ before collecting data, so that results cannot be selected after the fact. Our c
 \texttt{a6fb04c} and \texttt{459ff22} predate the data they test.
 \item[Q14. What would you do with more compute?] Human ratings for Part 3, and the protocol on long
 reasoning models, to see where prefixes start to beat restarts.
-\item[Q15. How can someone reproduce your numbers?] \texttt{make story} regenerates ChokeBench, the
+\item[Q15. So does your research reduce hallucination?] Yes. Detect--restart--abstain reduced
+hallucination significantly in a preregistered test (\rrHZero, $p=\rrHZeroP$), is the cheapest resampling
+mitigation (\costDra$\times$ the base cost), and is predicted to cut hallucinated answers from \lawH\% to
+\lawPi\% for people. Our contribution is to show that this simple recipe is the right one, prove what
+limits it, and show that the more complex surgical alternatives do not beat it.
+\item[Q16. State and explain Proposition 3.] The loop returns the first answer the detector passes.
+Each draw is passed-and-hallucinated with probability $h\beta$ or passed-and-faithful with
+$(1-h)(1-\alpha)$, so a returned answer is hallucinated with probability $h\beta/(h\beta+(1-h)(1-\alpha))$
+whatever the number of retries. Retries raise coverage, only the detector lowers hallucination.
+\item[Q17. Can you beat Perplexity?] Not claimed. Perplexity is a web-search system judged on open-domain
+factuality (SimpleQA); our task is faithfulness to given sources. The fair test is to run its API on the
+same RAGTruth items and score it with the same graders, which we list as future work.
+\item[Q18. How can someone reproduce your numbers?] \texttt{make story} regenerates ChokeBench, the
 grader analysis, the figures, every paper number and the PDF on a CPU in a few minutes; the GPU runs
 have resumable Kaggle scripts.
 \end{description}

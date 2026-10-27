@@ -1,33 +1,32 @@
 \begin{abstract}
-Verifier-guided search, process reward models and hallucination-repair loops share one assumption:
-a failing generation goes wrong at an identifiable step, and resampling from just before that step
-is better than starting over. We test this assumption end to end, on mathematical reasoning and on
-retrieval-augmented generation, with a single quantity: $v_k$, the generator's own probability of
-success from prefix $k$, measured by on-policy resampling.
+Language models fail mid-generation: a reasoning step goes wrong, or an answer drifts from its
+source into hallucination. The standard remedy is surgical: find the step where the failure
+happened and repair or regenerate from there. We ask what actually mitigates these failures at the
+lowest cost, and answer with one measurement, $v_k$, the generator's own probability of success
+from prefix $k$, estimated from \TotalRollouts\ on-policy continuations in mathematics and 11,320 in
+retrieval-augmented generation (RAG).
 
-\emph{Detection.} On 3,400 ProcessBench traces, early-warning detectors mostly read difficulty:
-question and generator alone reach AUROC \aucQG, and a quarter of the reasoning adds \dIncA\ (n.s.).
+\emph{What works is simple.} Detect, restart and, if the output is still flagged, abstain. Plain
+restarting recovers \recMinFour--\recMaxFour\% of failed maths solutions within four attempts'
+compute. In RAG (RAGTruth, Llama-2-7B), a preregistered detect--resample controller reduces
+hallucination relative to the base model (\rrHZero\ [\rrHZeroLo, \rrHZeroHi], $p=\rrHZeroP$, LLM
+judge), and the plain detect--restart--abstain loop costs \costDra$\times$ the base model, against
+\costCare$\times$ for the choke-point-aware controller and \costCove$\times$ for Chain-of-Verification. We
+prove that such a loop delivers answers whose hallucination rate equals the detector's
+$P(\text{hallucinated}\mid\text{pass})$, independent of the retry budget; with human labels this
+predicts \lawH\% $\to$ \lawPi\% [\lawPiLo, \lawPiHi].
 
-\emph{Commitment.} From \TotalRollouts\ continuations of four open models, value curves replicate
-across independent batches ($r=\QwenSmallAllSplitR$). \QwenSmallAllCapPct--\QwenMathCapPct\% of
-failures are decided before the first step. When the outcome is still open, the human-labelled
-first error is where success collapses in \QwenTwoAllDec--\QwenSmallAllDec\ of traces (null
-$\approx$0.18; preregistered and confirmed on a held-out model family).
+\emph{Why the surgical version does not pay.} Early-warning signals mostly read difficulty
+(question and model alone: AUROC \aucQG). \QwenSmallAllCapPct--\QwenMathCapPct\% of failures are
+decided before the first step, and the human-labelled error is the decisive step only in
+\QwenTwoAllDec--\QwenSmallAllDec\ of the rest (preregistered, confirmed on a held-out family). On our
+new benchmark, ChokeBench, a process reward model finds \cbPrmDropAccHPct\% of human first errors but
+\cbPrmDropAccDPct\% of choke points, and even a free oracle for the choke point gains only
+\cbOracleGainB\ at four restarts' budget. A supermartingale bound explains why: a failed prefix is,
+on average, worth no more than a fresh start, so locating the failure saves tokens, not successes.
+The same holds for hallucinations, where choosing where to resample adds \rrHFive.
 
-\emph{Localisation.} We release ChokeBench, which grades step localisers on both targets. A
-validated process reward model finds the human first error in \cbPrmDropAccHPct\% of open
-failures but the choke point in only \cbPrmDropAccDPct\%.
-
-\emph{Recovery.} No deployable resampling point reliably beats restart. At a matched end-to-end budget, PRM-guided
-backtracking is worse than restart (\LlamaPolPrmDropFourDiff\ on the preregistered model), and even
-an oracle that knows the choke point for free gains only \cbOracleGainB\ [\cbOracleGainBLo,
-\cbOracleGainBHi] at four restarts' budget. A supermartingale argument explains why. In RAG
-(RAGTruth, Llama-2-7B), a preregistered commitment-aware controller is equivalent to restarting
-until the detector passes, and its choice of where to resample adds \rrHFive\
-[\rrHFiveLo, \rrHFiveHi]. We also find that the apparent size of such recovery gains depends on
-the evaluator: \robBaseETwoDiff\ under an evaluator sharing the gate detector's training data,
-\robBaseEOneDiff\ (n.s.) under an independent judge.
-
-Across both domains, restart is the baseline that local recovery must beat at matched compute,
-and it rarely is. All rollouts, preregistrations and the code behind every number are released.
+Finally, the measured gain of a detector-gated loop depends on the grader: \robBaseETwoDiff\ under a
+grader trained like the detector, \robBaseEOneDiff\ (n.s.) under an independent judge. All rollouts,
+preregistrations and the code behind every number are released.
 \end{abstract}

@@ -379,6 +379,25 @@ put("coveN", cs["n"], "{}")
 put("coveDiff", cs["care_minus_cove_before_echo"][0], "{:+.3f}")
 put("coveDiffLo", cs["care_minus_cove_before_echo"][1], "{:+.3f}"); put("coveDiffHi", cs["care_minus_cove_before_echo"][2], "{:+.3f}")
 
+ml_file = RF / "mitigation_law.json"
+if ml_file.exists():
+    ml = json.loads(ml_file.read_text())
+    for k, name in [("h", "H"), ("alpha", "Alpha"), ("beta", "Beta"), ("pi", "Pi"), ("reduction_vs_base", "Red"),
+                    ("implied_halluc_D_passed_cont", "Inv")]:
+        v, lo, hi = ml["law"][k]
+        put(f"law{name}", f"{100 * v:.1f}", "{}"); put(f"law{name}Lo", f"{100 * lo:.1f}", "{}")
+        put(f"law{name}Hi", f"{100 * hi:.1f}", "{}")
+    for c in ml["cost"]:
+        key = {"base": "Base", "delete": "Del", "repairdel": "Rep", "restart_fb": "Dra", "backtrack_fb": "Back",
+               "care": "Care", "abstain_flag": "Abst", "cove_all": "Cove"}[c["policy"]]
+        put(f"cost{key}", c["cost_vs_base"], "{:.2f}"); put(f"tok{key}", c["tokens"], "{:,.0f}")
+        put(f"hallEOne{key}", f"{100 * c['hall_E1']:.1f}", "{}"); put(f"hallETwo{key}", f"{100 * c['hall_E2']:.1f}", "{}")
+        put(f"cov{key}", f"{100 * c['coverage']:.1f}", "{}")
+    rec = ml["maths_restart_recovery"]
+    for b, nm in [("4", "Four"), ("8", "Eight"), ("1", "One")]:
+        vals = [d[b][0] for d in rec.values()]
+        put(f"recMin{nm}", f"{100 * min(vals):.0f}", "{}"); put(f"recMax{nm}", f"{100 * max(vals):.0f}", "{}")
+
 rob_file = RF / "evaluator_robustness.json"
 if rob_file.exists():
     rob = json.loads(rob_file.read_text())

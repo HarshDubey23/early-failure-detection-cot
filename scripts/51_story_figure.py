@@ -178,6 +178,55 @@ def fig_tuning() -> None:
     plt.close(fig)
 
 
+def fig_mitigation() -> None:
+    """Fig. 27: what mitigation buys. Left: failed maths solutions recovered by restart vs budget.
+    Right: RAG hallucination vs cost for each policy, under the D-family grader E2 and the
+    independent judge E1, with the detect-restart-abstain law's human-scale prediction."""
+    m = json.loads((ROOT / "results/recovery/final/mitigation_law.json").read_text())
+    fig, (a, b) = plt.subplots(1, 2, figsize=(14, 5.2), layout="constrained", gridspec_kw={"width_ratios": [1, 1.25]})
+    for (gen, d), c in zip(sorted(m["maths_restart_recovery"].items()), [BLUE, ORANGE, AQUA, YELLOW]):
+        xs = [1, 2, 4, 8]
+        ys = [d[str(x)][0] for x in xs]
+        a.errorbar(xs, ys, yerr=[[ys[i] - d[str(x)][1] for i, x in enumerate(xs)], [d[str(x)][2] - ys[i] for i, x in enumerate(xs)]],
+                   fmt="-o", color=c, lw=2, ms=6, capsize=0, elinewidth=1, label=gen.replace("-Instruct", ""))
+    a.set_xscale("log", base=2)
+    a.set_xticks([1, 2, 4, 8], ["1", "2", "4", "8"])
+    a.set_ylim(0, 0.85)
+    a.set_yticks([0, 0.2, 0.4, 0.6, 0.8], ["0%", "20%", "40%", "60%", "80%"])
+    a.set_xlabel("budget (restart attempts, FLOP-matched)")
+    a.set_ylabel("failed solutions recovered")
+    a.set_title("Maths: restarting recovers most failures")
+    a.legend(loc="lower right")
+    order = ["base", "delete", "restart_fb", "backtrack_fb", "repairdel", "care", "abstain_flag", "cove_all"]
+    label = {"base": "No mitigation", "delete": "Delete flagged sentences", "restart_fb": "Detect, restart, abstain (DRA)",
+             "backtrack_fb": "Detect, backtrack, abstain", "repairdel": "Repair flagged claims", "care": "CARE controller",
+             "abstain_flag": "Abstain on flagged QA", "cove_all": "CoVe, raw output (n=192)"}
+    cost = {c["policy"]: c for c in m["cost"]}
+    law = m["law"]
+    y = np.arange(len(order))[::-1]
+    for yi, k in zip(y, order):
+        c = cost[k]
+        b.plot([c["hall_E2"], c["hall_E1"]], [yi, yi], color=GREY, lw=1.5, zorder=1)
+        b.scatter(c["hall_E1"], yi, color=BLUE, marker="s", s=48, zorder=3)
+        b.scatter(c["hall_E2"], yi, color=ORANGE, marker="o", s=48, zorder=3)
+        if k in ("base", "restart_fb"):
+            v, lo, hi = law["h"] if k == "base" else law["pi"]
+            b.errorbar([v], [yi + 0.28], xerr=[[v - lo], [hi - v]], fmt="D", color=AQUA, ms=7, capsize=2, zorder=4)
+    b.set_yticks(y, [f"{label[k]}  ({cost[k]['cost_vs_base']:.2f}x)" for k in order])
+    b.set_xlim(0, 1.02)
+    b.set_xticks([0, 0.25, 0.5, 0.75, 1.0], ["0%", "25%", "50%", "75%", "100%"])
+    b.set_xlabel("answers with a hallucination   (cost relative to no mitigation in brackets)")
+    b.set_title("RAG: hallucination after each mitigation")
+    from matplotlib.lines import Line2D
+    b.legend(handles=[Line2D([], [], color=BLUE, marker="s", ls="", label="independent LLM judge (E1)"),
+                      Line2D([], [], color=ORANGE, marker="o", ls="", label="grader trained like the detector (E2)"),
+                      Line2D([], [], color=AQUA, marker="D", ls="", label="people (no mitigation) / law's prediction (DRA)")],
+             loc="upper left", bbox_to_anchor=(0.0, -0.17), ncol=2)
+    for ext in ("png", "pdf"):
+        fig.savefig(FIG / f"fig27_mitigation.{ext}", dpi=200)
+    plt.close(fig)
+
+
 def main() -> None:
     S = pd.read_csv(ROOT / "results/chokebench/summary.csv")
     fig = plt.figure(figsize=(17, 10.5), layout="constrained")
@@ -204,7 +253,8 @@ def main() -> None:
         fig.savefig(FIG / f"fig25_chokebench.{ext}", dpi=200)
     plt.close(fig)
     fig_tuning()
-    print("wrote fig0_story, fig25_chokebench, fig26_learned_tuning")
+    fig_mitigation()
+    print("wrote fig27_mitigation, fig0_story, fig25_chokebench, fig26_learned_tuning")
 
 
 if __name__ == "__main__":

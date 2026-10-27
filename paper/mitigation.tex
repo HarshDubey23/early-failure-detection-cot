@@ -63,6 +63,30 @@ upper bound on the reduction and report it as exploratory. An attempt to confirm
 independent judge's own error rates was consistent (\lawInv\%) but too imprecise to be informative
 ([\lawInvLo, \lawInvHi]); the human rating kit is released for that purpose.
 
+\textbf{Two checks of the law} (\textsc{exp}, Fig.~\ref{fig:law}). \emph{Budget invariance.} The law
+predicts that more retries raise coverage but leave the hallucination of delivered answers unchanged,
+for any fixed definition of ``hallucinated''. The replay ran DRA at budgets 1 and 4 on the same 450
+sources. Coverage rose from \invCovOne\% to \invCovFour\% (\invCov\ points [\invCovLo, \invCovHi]),
+while delivered hallucination moved by \invETwo\ points [\invETwoLo, \invETwoHi] under $E_2$ and
+\invEOne\ [\invEOneLo, \invEOneHi] under $E_1$. The small rise is the direction the heterogeneity
+caveat predicts: the extra answers come from inputs that are harder to answer faithfully.
+\emph{Operating curve.} Sweeping the detector threshold, the law turns the human-labelled drafts into
+a menu of hallucination rates and their price (Fig.~\ref{fig:law}, right). With the setting of our
+runs ($D$, $\tau=0.5$) it predicts \ocDFivePi\% at \ocDFiveDraws\ generations per answered input; a
+gate that flags when either LettuceDetect model fires at $\tau=0.1$ predicts \ocUnionPi\%
+[\ocUnionPiLo, \ocUnionPiHi] at \ocUnionDraws, against \lawH\% without mitigation. These predictions
+inherit the law's assumptions and await human ratings of system outputs.
+
+\begin{figure*}[t]\centering
+\includegraphics[width=0.95\textwidth]{fig28_law.pdf}
+\caption{Checks of Proposition~3. Left: raising the DRA budget from 1 to 4 raises coverage while
+delivered hallucination stays nearly flat (paired over 450 sources, 95\% CIs). Right: predicted
+hallucination of delivered answers against generations per answered input, for three gates and a
+sweep of thresholds, from 449 human-labelled drafts (bands: 95\% bootstrap CIs); the circle marks the
+setting of our runs.}
+\label{fig:law}
+\end{figure*}
+
 \textbf{What the law says about cost.} The retry budget only buys coverage: abstentions fall
 geometrically with more attempts, but the hallucination rate of delivered answers stays at the
 detector's floor. The lever is therefore the detector, not the budget and not the resampling point:

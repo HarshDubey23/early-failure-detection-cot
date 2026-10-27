@@ -14,7 +14,10 @@ judge), and the plain detect--restart--abstain loop costs \costDra$\times$ the b
 \costCare$\times$ for the choke-point-aware controller and \costCove$\times$ for Chain-of-Verification. We
 prove that such a loop delivers answers whose hallucination rate equals the detector's
 $P(\text{hallucinated}\mid\text{pass})$, independent of the retry budget; with human labels this
-predicts \lawH\% $\to$ \lawPi\% [\lawPiLo, \lawPiHi].
+predicts \lawH\% $\to$ \lawPi\% [\lawPiLo, \lawPiHi] at the setting we ran, and a stricter gate is predicted
+to reach \ocUnionPi\% at \ocUnionDraws\ generations per answer. In the replay, a four-fold retry budget raises
+coverage by \invCov\ points while delivered hallucination moves by only \invETwo\ to \invEOne\ points, as the
+law predicts.
 
 \emph{Why the surgical version does not pay.} Early-warning signals mostly read difficulty
 (question and model alone: AUROC \aucQG). \QwenSmallAllCapPct--\QwenMathCapPct\% of failures are

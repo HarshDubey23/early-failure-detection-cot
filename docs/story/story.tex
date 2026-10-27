@@ -500,6 +500,17 @@ Hallucination rates in \%. In maths, plain restarting solves \recMinOne--\recMax
 with one attempt, \recMinFour--\recMaxFour\% within four and \recMinEight--\recMaxEight\% within eight.
 Human-scale prediction for DRA (Proposition 3): \lawH\% $\to$ \lawPi\% [\lawPiLo, \lawPiHi].
 
+\textbf{Checking the law.} (1) Raising the retry budget from 1 to 4 on the same 450 sources raised
+coverage from \invCovOne\% to \invCovFour\% while delivered hallucination moved by only \invETwo\
+($E_2$) to \invEOne\ ($E_1$) points: retries buy coverage, not faithfulness, as predicted. (2) Sweeping
+the detector threshold gives an operating curve: \ocDFivePi\% at \ocDFiveDraws\ generations per answer
+(our setting) down to \ocUnionPi\% at \ocUnionDraws\ with a stricter gate (predicted from human labels).
+
+\begin{figure}[h]\centering
+\includegraphics[width=\textwidth]{fig28_law.pdf}
+\caption{Checks of Proposition 3: budget invariance (left) and the predicted operating curve (right).}
+\end{figure}
+
 \subsection{Part 1: early warning is a difficulty signal}
 \begin{tabularx}{\linewidth}{Xc}
 \toprule
@@ -735,10 +746,14 @@ limits it, and show that the more complex surgical alternatives do not beat it.
 Each draw is passed-and-hallucinated with probability $h\beta$ or passed-and-faithful with
 $(1-h)(1-\alpha)$, so a returned answer is hallucinated with probability $h\beta/(h\beta+(1-h)(1-\alpha))$
 whatever the number of retries. Retries raise coverage, only the detector lowers hallucination.
-\item[Q17. Can you beat Perplexity?] Not claimed. Perplexity is a web-search system judged on open-domain
+\item[Q17. How did you test your own law?] It makes a falsifiable prediction: more retries should
+raise coverage but not change the hallucination rate of delivered answers. From budget 1 to 4,
+coverage rose by \invCov\ points and delivered hallucination moved by \invETwo\ to \invEOne\ points. A large
+change would have refuted it.
+\item[Q18. Can you beat Perplexity?] Not claimed. Perplexity is a web-search system judged on open-domain
 factuality (SimpleQA); our task is faithfulness to given sources. The fair test is to run its API on the
 same RAGTruth items and score it with the same graders, which we list as future work.
-\item[Q18. How can someone reproduce your numbers?] \texttt{make story} regenerates ChokeBench, the
+\item[Q19. How can someone reproduce your numbers?] \texttt{make story} regenerates ChokeBench, the
 grader analysis, the figures, every paper number and the PDF on a CPU in a few minutes; the GPU runs
 have resumable Kaggle scripts.
 \end{description}

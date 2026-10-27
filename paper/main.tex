@@ -81,7 +81,9 @@ reduces hallucination relative to the base model (\rrHZero, $p=\rrHZeroP$), DRA 
 (H1), at \costDra$\times$ the base cost (claim repair \costRep$\times$, the choke-point-aware controller CARE \costCare$\times$,
 Chain-of-Verification \costCove$\times$). We prove that DRA's residual hallucination rate is the
 detector's $P(\text{hallucinated}\mid\text{pass})$ whatever the retry budget, which predicts
-\lawH\% $\to$ \lawPi\% [\lawPiLo, \lawPiHi] with human labels (\textsc{exp}).
+\lawH\% $\to$ \lawPi\% [\lawPiLo, \lawPiHi] with human labels, and gives an operating curve down to
+\ocUnionPi\% at \ocUnionDraws\ generations per answer; a four-fold retry budget raises coverage by
+\invCov\ points while delivered hallucination stays within \invEOne\ points, as predicted (\textsc{exp}).
 \item \textbf{Where failures are decided.} Early warning is a difficulty signal (question and
 model alone: AUROC \aucQG; the first quarter of the reasoning adds \dIncA, n.s., and is at chance
 within a problem). From \TotalRollouts\ on-policy continuations with replicated value curves

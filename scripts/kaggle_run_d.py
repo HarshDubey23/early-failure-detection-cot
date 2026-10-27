@@ -1,20 +1,20 @@
-"""Kaggle driver for Run D (2x T4): clone the repository, install vLLM, run stage 60 on both GPUs.
+"""Kaggle driver for Run D (2x T4): clone the repository, install vLLM, run stage 60 for one model on both GPUs.
 
-Pushed as a Kaggle script kernel. RUN below is rewritten per launch (pilot or full). Results are
-archived to /kaggle/working/run_d_results.tar.gz after every model, so a session that is cut short
-still keeps what finished. Every launch also records versions, timings and token counts in run_d.log.
+Pushed as a Kaggle script kernel, one kernel per model so the two models run in parallel. RUN below is
+rewritten per launch. The repository is cloned to /tmp so the saved output (/kaggle/working) holds only
+the result files: traces, rollouts, per-shard logs and run_d.log (versions, timings, token counts).
+Rollout rows are appended per chunk, so a run cut short by its time limit keeps what finished.
 """
 import os
 import subprocess
 import time
 
-RUN = {"mode": "pilot", "models": ["Qwen/Qwen3-1.7B", "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"],
-       "skip": 0, "n": 20, "m": 8, "max_gen": 6144, "limit_s": 40000, "branch": "story-and-benchmarks"}
+RUN = {"model": "Qwen/Qwen3-1.7B", "skip": 20, "n": 480, "m": 8, "max_gen": 6144, "limit_s": 23400,
+       "branch": "story-and-benchmarks"}
 
 START = time.time()
-W = "/kaggle/working"
-REPO = f"{W}/repo"
-OUT = f"{REPO}/results/run_d"
+REPO = "/tmp/repo"
+OUT = "/kaggle/working/run_d"
 
 
 def sh(cmd: str, check: bool = True) -> int:
@@ -40,25 +40,23 @@ sh("python -c \"import vllm, torch, transformers; print('vllm', vllm.__version__
    "'transformers', transformers.__version__, 'gpus', torch.cuda.device_count())\" | tee -a /tmp/versions.txt")
 log(f"RUN {RUN} | {open('/tmp/versions.txt').read().strip()}")
 
-for model in RUN["models"]:
-    left = RUN["limit_s"] - (time.time() - START) - 600
-    if left < 900:
-        log(f"SKIP {model}: no time left")
-        continue
-    t0 = time.time()
-    args = f"--model {model} --skip-problems {RUN['skip']} --n-problems {RUN['n']} --m {RUN['m']} --max-gen {RUN['max_gen']} --out {OUT}"
-    procs = [subprocess.Popen(f"cd {REPO} && CUDA_VISIBLE_DEVICES={g} timeout {int(left)} python scripts/60_reasoning_rollouts.py "
-                              f"{args} --shard {g}/2 > {OUT}/{model.split('/')[-1]}.s{g}.out 2>&1", shell=True)
-             for g in (0, 1)]
-    codes = [p.wait() for p in procs]
-    name = model.split("/")[-1]
-    stats = subprocess.run(f"cd {OUT} && cat traces.{name}.s*.jsonl 2>/dev/null | python -c \"import sys,json; r=[json.loads(x) for x in sys.stdin]; "
-                           f"print(len(r),'traces', sum(not x['correct'] for x in r),'failed', sum(x['gen_tokens'] for x in r),'trace tokens', "
-                           f"sum(x['finish']=='length' for x in r),'truncated')\"; cat rollouts.{name}.s*.jsonl 2>/dev/null | python -c \"import sys,json; "
-                           f"r=[json.loads(x) for x in sys.stdin]; print(len(r),'cut rows', sum(sum(x['new_tokens']) for x in r),'continuation tokens')\"",
-                           shell=True, capture_output=True, text=True).stdout.strip().replace("\n", " | ")
-    log(f"{name}: exit {codes}, {(time.time() - t0) / 60:.1f} min, {stats}")
-    for g in (0, 1):
-        sh(f"tail -n 5 {OUT}/{name}.s{g}.out", check=False)
-    sh(f"cd {REPO} && tar -czf {W}/run_d_results.tar.gz results/run_d")
+model, name = RUN["model"], RUN["model"].split("/")[-1]
+left = int(RUN["limit_s"] - (time.time() - START) - 300)
+args = f"--model {model} --skip-problems {RUN['skip']} --n-problems {RUN['n']} --m {RUN['m']} --max-gen {RUN['max_gen']} --out {OUT}"
+procs = [subprocess.Popen(f"cd {REPO} && CUDA_VISIBLE_DEVICES={g} timeout {left} python scripts/60_reasoning_rollouts.py "
+                          f"{args} --shard {g}/2 > {OUT}/{name}.s{g}.out 2>&1", shell=True) for g in (0, 1)]
+while any(p.poll() is None for p in procs):
+    time.sleep(1800)
+    rows = sum(1 for g in (0, 1) if os.path.exists(f"{OUT}/rollouts.{name}.s{g}.jsonl")
+               for _ in open(f"{OUT}/rollouts.{name}.s{g}.jsonl"))
+    log(f"{name}: running, {rows} cut rows so far")
+codes = [p.returncode for p in procs]
+stats = subprocess.run(f"cd {OUT} && cat traces.{name}.s*.jsonl 2>/dev/null | python -c \"import sys,json; r=[json.loads(x) for x in sys.stdin]; "
+                       f"print(len(r),'traces', sum(not x['correct'] for x in r),'failed', sum(x['gen_tokens'] for x in r),'trace tokens', "
+                       f"sum(x['finish']=='length' for x in r),'truncated')\"; cat rollouts.{name}.s*.jsonl 2>/dev/null | python -c \"import sys,json; "
+                       f"r=[json.loads(x) for x in sys.stdin]; print(len(r),'cut rows', sum(sum(x['new_tokens']) for x in r),'continuation tokens')\"",
+                       shell=True, capture_output=True, text=True).stdout.strip().replace("\n", " | ")
+log(f"{name}: exit {codes} (124 = time limit), {stats}")
+for g in (0, 1):
+    sh(f"tail -n 5 {OUT}/{name}.s{g}.out", check=False)
 log("done")

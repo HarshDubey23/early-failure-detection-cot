@@ -134,11 +134,51 @@ def analyse(model: str, traces: dict, rows: dict, keep, rng) -> dict:
     return out
 
 
+def figure(res: dict, path: Path) -> None:
+    """Fig. 29: (a) value of a failed trace's prefix minus a fresh start, by cut; (b) matched-compute gain over restart."""
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+    cols = ["#2a78d6", "#eb6834"]
+    plt.rcParams.update({"font.size": 10, "axes.spines.top": False, "axes.spines.right": False, "axes.titleweight": "bold",
+                         "axes.titlesize": 11, "axes.titlelocation": "left", "legend.frameon": False, "legend.fontsize": 8.5})
+    fig, (a, b) = plt.subplots(1, 2, figsize=(10, 3.6), layout="constrained", gridspec_kw={"width_ratios": [1.5, 1]})
+    a.axhline(0, color="#52514e", lw=0.9, ls=(0, (3, 3)))
+    for i, (model, r) in enumerate(res.items()):
+        d1 = r["primary"]["D1"]["cut_mean_ci_n_endedshare_pholm"]
+        cuts = [0] + [int(c) for c in d1]
+        mu = [0.0] + [d1[c][0] for c in d1]
+        lo = [0.0] + [d1[c][1] for c in d1]
+        hi = [0.0] + [d1[c][2] for c in d1]
+        lab = f"{model.split('/')[-1]} ({r['primary']['n_failed']} failures)"
+        a.plot(cuts, mu, "o-", color=cols[i % 2], ms=4, lw=1.6, label=lab)
+        a.fill_between(cuts, lo, hi, color=cols[i % 2], alpha=0.15, lw=0)
+        bs = [str(x) for x in BUDGETS]
+        g = [r["primary"]["D2"][x] for x in bs]
+        x = np.arange(len(bs)) + (i - 0.5) * 0.3
+        b.bar(x, [v[0] for v in g], 0.28, color=cols[i % 2])
+        b.errorbar(x, [v[0] for v in g], yerr=[[v[0] - v[1] for v in g], [v[2] - v[0] for v in g]], fmt="none", ecolor="#0b0b0b", lw=1)
+    a.set(xlabel="Cut position t in the failed trace (generated tokens)", ylabel="v(t) − v(0)",
+          title="a  Is a failed partial trace worth more than a fresh start?")
+    a.text(a.get_xlim()[1], 0.005, "fresh start", ha="right", va="bottom", fontsize=8.5, color="#52514e")
+    a.legend(loc="lower left")
+    b.axhline(0.05, color="#52514e", lw=0.9, ls=(0, (3, 3)))
+    b.axhline(0, color="#52514e", lw=0.6)
+    b.set_xticks(np.arange(len(BUDGETS)), [f"{x}×" for x in BUDGETS])
+    b.set(xlabel="Compute budget (restart-equivalents)", ylabel="Best cut − restart, P(solved)",
+          title="b  Best resampling point vs restart")
+    b.text(-0.45, 0.052, "+5-point bar", ha="left", va="bottom", fontsize=8.5, color="#52514e")
+    path.parent.mkdir(parents=True, exist_ok=True)
+    for ext in ("pdf", "png"):
+        fig.savefig(path.with_suffix(f".{ext}"), dpi=200)
+
+
 def main() -> None:
     ap = argparse.ArgumentParser()
     ap.add_argument("--rollouts", default="results/run_d")
     ap.add_argument("--exclude-first", type=int, default=20)
     ap.add_argument("--out", default="results/run_d/analysis")
+    ap.add_argument("--fig", default="results/figures/fig29_reasoning")
     args = ap.parse_args()
     rng = np.random.default_rng(61)
     traces, rows, excluded = load(Path(args.rollouts), args.exclude_first)
@@ -151,6 +191,7 @@ def main() -> None:
                       "D4_wrong_answer_only": analyse(model, traces, rows, lambda t: t["finish"] != "length", rng)}
     Path(args.out).mkdir(parents=True, exist_ok=True)
     (Path(args.out) / "summary.json").write_text(json.dumps(res, indent=2), encoding="utf-8")
+    figure(res, Path(args.fig))
     for model, r in res.items():
         p = r["primary"]
         print(f"\n== {model}: accuracy {r['accuracy']:.3f}, failed {p['n_failed']} (truncated {p['truncated_share']:.2f})")

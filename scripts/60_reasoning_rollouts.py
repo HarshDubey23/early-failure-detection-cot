@@ -93,7 +93,7 @@ def main() -> None:
     ap.add_argument("--shard", default="0/1")
     ap.add_argument("--m", type=int, default=8)
     ap.add_argument("--max-gen", type=int, default=6144, help="total generated-token budget per answer")
-    ap.add_argument("--chunk", type=int, default=24, help="failed traces per generate call")
+    ap.add_argument("--chunk", type=int, default=8, help="failed traces per generate call")
     ap.add_argument("--out", required=True)
     args = ap.parse_args()
     si, sn = map(int, args.shard.split("/"))
@@ -120,9 +120,14 @@ def main() -> None:
         ds = load_dataset("HuggingFaceH4/MATH-500", split="test")
         problems = [dict(r) for r in ds]
         tok = AutoTokenizer.from_pretrained(args.model)
-        # T4 (SM75): float16, eager mode, no custom all-reduce, as in Runs A-C
-        llm = LLM(model=args.model, dtype="half", max_model_len=args.max_gen + 1024, gpu_memory_utilization=0.9,
-                  enforce_eager=True, disable_custom_all_reduce=True, seed=0)
+        # T4 (SM75): float16, no custom all-reduce. CUDA graphs are ~2x faster for a small model; eager is the fallback.
+        kw = dict(model=args.model, dtype="half", max_model_len=args.max_gen + 1024, gpu_memory_utilization=0.92,
+                  disable_custom_all_reduce=True, seed=0)
+        try:
+            llm = LLM(**kw)
+        except Exception as e:  # noqa: BLE001
+            print(f"CUDA-graph start failed ({e!r}); retrying in eager mode", flush=True)
+            llm = LLM(**kw, enforce_eager=True)
         samp = dict(SAMPLING[args.model], skip_special_tokens=False)  # keep </think> in the text
     problems = problems[args.skip_problems:args.skip_problems + args.n_problems]
     problems = [p for i, p in enumerate(problems) if i % sn == si]

@@ -4,7 +4,7 @@ Let a trace $s_1,\dots,s_n$ be sampled from policy $M$ for question $q$, let $S$
 its final answer is correct, $\mathcal{F}_k=\sigma(s_{1:k})$, and $v_k=P_M(S\mid q,\mathcal{F}_k)$.
 Resampling a fresh continuation of $s_{1:k}$ from $M$ succeeds with probability $v_k$.
 
-\textbf{Proposition.} For every stopping time $\tau\le n$ of $(\mathcal{F}_k)$,
+\textbf{Proposition 1.} For every stopping time $\tau\le n$ of $(\mathcal{F}_k)$,
 $\mathbb{E}[v_\tau\mid \neg S]\le v_0$ (whenever $v_0<1$).
 
 \emph{Proof.} $(v_k)$ is a bounded martingale and $g(x)=x(1-x)$ is concave, so $g(v_k)$ is a
@@ -55,3 +55,43 @@ First error = first drop above clean floor & \QwenSmallAllDefFloorA\,/\,\QwenSma
 Restart $-$ first error keeps its sign and significance at every threshold for every model: positive
 for the three Qwen models and null for Llama. The clean-floor definition is unavailable for Llama
 (no clean traces were run).
+
+\section{Two more propositions on mitigation}\label{app:more}
+\textbf{Proposition 2 (the only advantage of a later restart point is shorter attempts).}
+Let attempts from resampling point $k$ succeed independently with probability $v_k$ and each consume
+$c_k$ generated tokens, so that a budget of $B$ tokens buys $\lfloor B/c_k\rfloor$ attempts and
+$P_k(B)=1-(1-v_k)^{\lfloor B/c_k\rfloor}$. If $v_k\le v_0$, then for every $B$,
+\[P_k(B)\;\le\;P_0\!\left(B\,\tfrac{c_0}{c_k}\right).\]
+\emph{Proof.} $\lfloor B/c_k\rfloor=\lfloor (Bc_0/c_k)/c_0\rfloor$ and $1-(1-v)^N$ is increasing in $v$,
+so $P_k(B)\le 1-(1-v_0)^{\lfloor (Bc_0/c_k)/c_0\rfloor}=P_0(Bc_0/c_k)$.\hfill$\square$
+
+By Proposition 1, $v_\tau\le v_0$ holds on average over failed on-policy traces for any resampling
+point chosen without looking ahead, so such a point is worth at most restart with its budget
+multiplied by $c_0/c_\tau$. Measured continuation lengths give $c_\tau/c_0\approx0.7$--$0.8$
+(\texttt{results/chokebench/summary.md}), so the best such point is worth at most restart with 1.25--1.4 times the
+budget, before the cost of finding it.
+
+\textbf{Proposition 3 (a restart loop is exactly as faithful as its detector).}
+For one input, let draws $Y_0,Y_1,\dots$ be independent, each hallucinated with probability $h$, and
+let a detector flag each draw independently of the others, missing a hallucinated draw with
+probability $\beta$ and flagging a faithful one with probability $\alpha$. The loop returns the first
+of at most $K+1$ draws that the detector passes, and abstains otherwise. Let
+$q=h(1-\beta)+(1-h)\alpha$ be the flag probability. Then
+\[P(\text{answer})=1-q^{K+1},\qquad
+P(\text{hallucinated}\mid\text{answer})=\pi:=\frac{h\beta}{h\beta+(1-h)(1-\alpha)},\qquad
+\mathbb{E}[\text{draws}]=\frac{1-q^{K+1}}{1-q}.\]
+\emph{Proof.} Each draw is, independently, passed and hallucinated with probability $a=h\beta$,
+passed and faithful with probability $f=(1-h)(1-\alpha)$, or flagged with probability $q=1-a-f$. The
+loop returns draw $i$ exactly when draws $0,\dots,i-1$ are flagged and draw $i$ is passed, so
+$P(\text{hallucinated answer})=\sum_{i=0}^{K}q^ia=a\frac{1-q^{K+1}}{1-q}$ and
+$P(\text{answer})=(a+f)\frac{1-q^{K+1}}{1-q}=1-q^{K+1}$. Their ratio is $a/(a+f)=\pi$, which does not
+depend on $K$. The loop makes draw $i$ only if draws $0,\dots,i-1$ were flagged, so
+$\mathbb{E}[\text{draws}]=\sum_{i=0}^{K}q^i$.\hfill$\square$
+
+\emph{Consequences.} (i) A larger retry budget raises coverage, never faithfulness: the delivered
+hallucination rate is the detector's $P(\text{hallucinated}\mid\text{pass})$, measurable on labelled
+drafts. (ii) The expected cost is at most $1/(1-q)$ draws, so a detector that flags a fraction $q$ of
+drafts costs at most $1/(1-q)$ generations per answer. (iii) A grader whose errors coincide with the
+detector's sees no hallucination in delivered answers at all, whatever $\pi$ is; a grader that shares the detector's training data will typically lie between that and the truth, which is the evaluator effect of
+Section~\ref{sec:grounded}. (iv) Choosing \emph{where} to resample does not enter $\pi$; only the
+detector does.

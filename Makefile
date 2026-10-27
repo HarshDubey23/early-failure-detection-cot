@@ -13,7 +13,8 @@ TECTONIC ?= tectonic
 .PHONY: setup smoke data preprocess eda baselines activations probes analysis \
         intervention report all test lint diagrams paper guide \
         decomposition commitment-mock commitment commitment-analysis choke-paper \
-        recovery-labels recovery-mock recovery-analysis
+        recovery-labels recovery-mock recovery-analysis \
+        chokebench evaluator-robustness story
 
 # Counterfactual commitment (stages 12-13). GPU for 12; override on the command line.
 GENERATOR ?= Qwen2.5-1.5B-Instruct
@@ -129,15 +130,17 @@ recovery-analysis:  # after extracting recovery_results.tar.gz here: replay, tes
 	$(PY) scripts/34_replay.py --items data/recovery/items.*.jsonl --out results/recovery/final
 	$(PY) scripts/35_mechanism.py --items data/recovery/items.ragtruth.llama-2-7b-chat.jsonl --out results/recovery/final/mechanism
 
-recovery-dual-judge:  # calibrate judge (kappa >= 0.60) and re-evaluate all policies
-	$(PY) scripts/43_calibrate_judge.py
-	$(PY) scripts/44_benchmark_dual_judge.py
+# CPU analyses added after Run R, from committed outputs only (no GPU, no dataset text)
+chokebench:  # ChokeBench: step localisers vs human first error and counterfactual choke point
+	$(PY) scripts/49_chokebench.py
 
-recovery-baselines:  # evaluate 6 matched-compute baselines on RAGTruth
-	$(PY) scripts/45_six_baselines_benchmark.py
+evaluator-robustness:  # Part 3 under five evaluators; which conclusions survive (exploratory)
+	$(PY) scripts/50_evaluator_robustness.py
 
-audit:  # execute one-command reproducibility and statistical audit
-	$(PY) scripts/47_audit.py
-
-recovery-cross-model:  # evaluate cross-model generalization (Llama-2 vs Llama-3.1)
-	$(PY) scripts/48_cross_model_generalization.py
+story:  # every CPU analysis above, the figures, the paper numbers, the paper PDF and the story PDF
+	$(PY) scripts/49_chokebench.py > /dev/null
+	$(PY) scripts/50_evaluator_robustness.py > /dev/null
+	$(PY) scripts/52_mitigation_law.py > /dev/null
+	$(PY) scripts/51_story_figure.py
+	$(MAKE) choke-paper
+	cd docs/story && pdflatex -interaction=nonstopmode story.tex > /dev/null && pdflatex -interaction=nonstopmode story.tex > /dev/null

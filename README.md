@@ -1,148 +1,229 @@
-# Errors Are Not Choke Points: Where LLM Failures Are Decided, and What Recovery Can Do About It
+# Detect, Restart, Abstain
 
-> **Status: preprint draft, not peer-reviewed.** Every number is computed by the code here from
-> real data:
-> - Parts 1–2 (math reasoning):
->   - 3,400 expert-annotated ProcessBench solutions;
->   - 125,832 resampled continuations;
->   - 65,976 forced-answer probes;
->   - process-reward-model scores for 3,374 traces.
-> - Part 3 (hallucinations):
->   - RAGTruth (450 human-labelled responses) and HotpotQA (300 controlled-evidence items);
->   - 11,320 resampled continuations;
->   - 12,985 detector scores per evaluator;
->   - 8,803 LLM-judge verdicts.
->
-> Claims carry an evidence level: **preregistered**, **exploratory** or **confirmatory** (a
-> preregistered test on new data). Results that did not confirm are reported as such. What remains
-> unverified is listed [below](#limitations-and-what-remains-unverified).
+### Cheap mitigation of LLM failures and hallucinations, and why fixing the choke point does not pay
+
+**Harsh Dubey, Harshit Saini, Prashant Jain, Himanshu Kumar, Gaurav Kaushal, Rohit Chaudhary**
+· Dept. of CSE (AI&ML), KIET Group of Institutions · [Paper (PDF)](paper/main.pdf) ·
+[The research story (PDF)](docs/story/story.pdf) ·
+[ChokeBench](#chokebench-a-new-benchmark) · [Reproduce](#reproduce-every-number)
 
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
-![Tests: pytest](https://img.shields.io/badge/tests-pytest-lightgrey)
 ![CI](https://github.com/HarshDubey23/early-failure-detection-cot/actions/workflows/ci.yml/badge.svg)
+![preregistered](https://img.shields.io/badge/claims-preregistered%20%2F%20exploratory%20labelled-8a2be2)
 
-## Abstract
+> Language models fail mid-generation: a reasoning step goes wrong, or an answer drifts from its
+> source into hallucination. The popular fix is surgical: find the step that went wrong and repair or
+> regenerate from there. We asked **what actually mitigates these failures at the lowest cost**,
+> using **125,832 on-policy continuations** in maths and **11,320** in retrieval-augmented generation.
+>
+> **The answer is simple: detect, restart, abstain.** Plain restarting recovers
+> **44–66%** of failed maths solutions within four attempts' compute. In RAG, the
+> detect–restart–abstain loop costs **1.36×** the base model (claim repair
+> 1.71×, a choke-point-aware controller 1.77×, Chain-of-Verification
+> 3.75×), and we **prove** its hallucination rate is set by the detector alone, which predicts
+> **50.2% → 26.6%** hallucinated answers for people. The surgical version does not pay: failures are
+> often decided before the first step, verifiers find the human-labelled error rather than the real
+> choke point, and even a free oracle for the choke point gains only about three points.
 
-Two ideas guide how systems recover from mistakes in language-model generation:
-- **the annotated first error is where an output goes wrong**, so a verifier should backtrack to it;
-- **a partial output reveals whether it will fail**.
+![Why surgical repair does not pay](results/figures/fig0_story.png)
 
-We test both, then build and test a recovery system on the result.
+*Preprint, not peer-reviewed. Every number on this page and in the paper is computed by the code in
+this repository from committed data. Each claim is labelled **preregistered**, **exploratory** or
+**confirmatory** (a preregistered test on new data), and results that failed are reported as such.*
 
-**Part 1 (detection).** On 3,400 ProcessBench solutions, early failure prediction is mostly a
-difficulty signal. The question and the generator's identity alone reach AUROC 0.588, and a
-quarter of the reasoning adds nothing.
+---
 
-**Part 2 (commitment).** We resample four open models at every step of their own solutions
-(125,832 continuations) and measure where success becomes unlikely:
-- When the outcome is still open, the human-labelled first error is that point in 42–65% of
-  traces, against a null of 0.16–0.20; this is confirmed on a held-out model family.
-- Backtracking to it is worse than restarting for three of four models.
-- No practical backtracking policy beats restart at a matched compute budget.
+## The question, and the one quantity that answers it
 
-**Part 3 (recovery from hallucinations).** We turn this into a recovery controller for
-retrieval-augmented generation that chooses between claim repair, backtracking, restarting and
-abstaining by estimated recoverability. A preregistered test on RAGTruth and HotpotQA with
-Llama-2-7B-chat shows:
-- **It reduces hallucinations relative to the base model**: −4.7 points under a strict LLM judge,
-  46% → 15% under a held-out detector.
-- **It does not beat simply restarting until the detector passes**, at equal compute, and its
-  commitment-aware choice adds nothing (−0.0 [−0.5, +0.5] points).
-- Chain-of-Verification, once a formatting failure is removed, is a stronger baseline than it
-  first appears.
+When a model fails mid-generation, what should a system do about it, and where is the failure
+actually decided? We answer with a single measurement. For a trace written by model *M*, let
 
-Across both domains the same lesson holds: **restart is hard to beat, and the gains lie in the
-verifier, not in where you resample.** We release all rollouts, preregistrations and the code
-behind every number.
+&nbsp;&nbsp;&nbsp;&nbsp;**v<sub>k</sub> = P<sub>M</sub>(correct | question, first k steps)**
 
-**Paper:** [`paper/main.pdf`](paper/main.pdf) (10 pages; every number in it is generated from the
-result tables by `paper/make_values.py`).
+estimated by sampling *M*'s own continuations of the prefix. Then *restart* means resampling
+from k = 0, *backtracking to step j* means resampling from k = j − 1, and the **choke point** is
+where v collapses. An **error** is where a human annotator says reasoning first goes wrong.
 
-## The research in one page
+This is the restart-versus-continue problem of randomised search (Luby, Sinclair and Zuckerman
+1993; Gomes et al. 2000), posed for language-model decoding, and the answer is the same: restart.
 
-One question runs through three studies: **when a language model goes wrong mid-generation, where
-is the outcome actually decided, and what should a system do about it?**
+## Findings
 
-| Part | Question | Data | Answer |
+| # | Finding | Key number | Evidence |
 |---|---|---|---|
-| 1. Detection | Can partial reasoning predict failure? | 3,400 ProcessBench traces | Mostly no: question + generator explain it (difficulty) |
-| 2. Commitment | Is the human-labelled first error where a solution becomes doomed? | 125,832 resampled continuations, four models | Often (42–65% vs a null of 0.16–0.20), but backtracking there loses to restarting for three of four models |
-| 3. Recovery | Does recovery that targets where an answer is still recoverable reduce hallucinations? | RAGTruth + HotpotQA, 11,320 continuations, 8,803 judge verdicts | Reduces hallucination vs the base model, but does not beat plain restart at equal compute |
+| 1 | **Detect, restart, abstain is the cheapest mitigation that works.** In maths, restarting recovers most failed solutions; in RAG, a detector-gated restart loop reduces hallucination at the lowest cost of any resampling method. | maths: **44–66%** of failures recovered at 4 attempts, **56–77%** at 8; RAG: a detector-gated resampling loop cuts hallucination by 4.7 points (preregistered, p = 0.0003, LLM judge); plain DRA does the same at **1.36×** cost | preregistered (RAG reduction); exploratory (costs) |
+| 2 | **A law for restart loops (proved).** The hallucination rate of what the loop delivers equals the detector's P(hallucinated &#124; pass), whatever the retry budget; budget buys coverage, not faithfulness. | predicted for people: **50.2% [45.5, 54.9] → 26.6% [21.0, 32.2]** | theory + exploratory estimate |
+| 3 | **Early warning reads difficulty, not reasoning.** | AUROC **0.588** from question + model; +0.005 (n.s.) from 25% of the trace | exploratory |
+| 4 | **Many failures are decided before the first step**, and the rest are often (not always) decided at the labelled error. | **33–66%** decided before step 1; labelled error = choke point in **0.44–0.65** vs a null of 0.16–0.20 | preregistered; **confirmed** on Llama-3.1-8B |
+| 5 | **Verifiers find errors, not choke points** (new: ChokeBench). | a PRM finds **73%** of human first errors but **45%** of choke points; a localiser trained and tuned for it **39%** | exploratory |
+| 6 | **Fixing the choke point does not pay.** No deployable resampling point reliably beats restart at matched compute; a free choke-point oracle gains little. | PRM backtracking **−0.063** [−0.100, −0.024] (Llama); free oracle **+0.028**; in RAG, choosing where to resample adds **−0.000** | **confirmed** (Llama); preregistered (RAG) |
+| 7 | **The gate partly grades itself.** The measured gain of a detector-gated loop depends on whether the grader shares the detector's training data. | **+32.6** points (related grader) vs **+1.7** (independent, n.s.) | exploratory |
 
-Every claim is labelled **preregistered**, **exploratory** or **confirmed on new data**, and the
-negative results are reported as such.
+## Mitigation at a glance
 
-**Contributions:**
-1. **A difficulty-controlled protocol for early failure detection**: question-only and generator
-   baselines, incremental AUROC, and within-problem concordance.
-2. **Counterfactual commitment measurement** at scale, with reliability checks:
-   - four models, up to 64 continuations per step;
-   - independent sampling batches;
-   - posterior uncertainty of the decisive step.
-3. **Matched-compute evaluation of recovery policies** that charges every token, including verifier
-   passes, probes and prefills, in both math and RAG.
-4. **A working recovery system for RAG hallucinations** (`src/recovery/`). It has a live controller,
-   an offline replay of every policy over a shared sample bank, a resumable Kaggle pipeline and a
-   test suite with planted-effect simulations.
-5. **Preregistered negative results and two caught artifacts**:
-   - chat preambles that corrupted claim repairs;
-   - echoed verification blocks that made Chain-of-Verification look 25 points worse than it is.
+![What mitigation buys](results/figures/fig27_mitigation.png)
 
-## Key findings (Parts 1–2: math reasoning)
+| RAG mitigation (RAGTruth, 450 sources) | tokens / item | cost | hallucinated (E1 judge) | hallucinated (E2) | coverage |
+|---|---|---|---|---|---|
+| No mitigation | 948 | 1.00× | 80.9% | 46.0% | 100.0% |
+| Delete flagged sentences | 968 | 1.02× | 79.6% | 13.1% | 99.8% |
+| **Detect, restart, abstain (DRA)** | 1,293 | 1.36× | 76.7% | 12.9% | 98.9% |
+| Detect, backtrack, abstain | 1,279 | 1.35× | 75.9% | 13.4% | 97.1% |
+| Claim repair, then delete | 1,624 | 1.71× | 80.0% | 18.9% | 99.8% |
+| CARE (choke-point-aware) | 1,677 | 1.77× | 76.2% | 15.3% | 96.5% |
+| Abstain on flagged QA | 968 | 1.02× | 67.3% | 10.4% | 87.1% |
+| Chain-of-Verification, raw output (n = 192) | 3,558 | 3.75× | 97.4% | 72.4% | 100.0% |
 
-| # | Finding | Evidence |
+The two graders disagree by an order of magnitude (see the five-grader analysis below), so the
+human-scale effect comes from the law: the detector misses 28.4% of hallucinated drafts and flags
+20.6% of faithful ones (RAGTruth human labels), so DRA's delivered answers are predicted to be
+**26.6% [21.0, 32.2]** hallucinated, against **50.2% [45.5, 54.9]** for the base model. This rests on two stated
+assumptions and is optimistic under per-item variation; the blinded human rating kit is released to
+measure it directly. Details: [`results/recovery/final/mitigation_law.md`](results/recovery/final/mitigation_law.md),
+paper §9 and Appendix D.
+
+**How to deploy it:** gate every output with a cheap detector; restart only what it flags; when the
+budget runs out, abstain (QA) or delete the flagged sentences. Improve the detector, not the
+resampling point: the detector sets the hallucination rate, the budget sets the coverage.
+
+## Benchmarks
+
+### Maths: recovery policies at a matched budget
+
+P(solved) for failed traces at a budget of **four restart attempts**, FLOP-matched, every
+overhead charged (prefill, generated tokens, PRM passes, probes, oracle rollouts). Differences from
+restart, 95% trace-bootstrap CIs. Verifier: Qwen2.5-Math-PRM-7B, re-validated here at ProcessBench
+F1 73.2 (published 73.5).
+
+| Policy | Qwen2.5-1.5B | Qwen2-1.5B | Qwen2.5-Math-7B | Llama-3.1-8B |
+|---|---|---|---|---|
+| **Restart** (P(solved)) | **0.657** | **0.514** | **0.437** | **0.492** |
+| PRM: resample before first step < 0.5 | −0.651 | −0.514 | −0.041 | −0.068 |
+| PRM: resample before largest drop | −0.651 | −0.514 | −0.022 [−0.052, +0.010] | **−0.063** [−0.100, −0.024] |
+| PRM largest drop, verifier pass free (exploratory) | −0.061 | −0.098 | +0.046 | +0.003 |
+| Probe search | −0.646 | −0.448 | −0.428 | −0.489 |
+| Learned restart point (trained on other models) | −0.657 | −0.514 | −0.151 | −0.187 |
+| *Human first error (oracle label, not deployable)* | *−0.047* | *−0.075* | *+0.039* | *+0.001* |
+
+On the 1.5B models a 7B verifier pass costs about five generator attempts, so every verifier-based
+policy runs out of budget. The only positive estimate under full accounting is PRM largest drop on
+Qwen2.5-Math-7B at an 8× budget: +0.030 [+0.003, +0.057] (exploratory). Llama rows for PRM largest drop and the learned policy are
+**confirmatory**; the rest are exploratory. Details: [paper §6](paper/main.pdf),
+[`results/commitment/policies/`](results/commitment/policies).
+
+### ChokeBench: a new benchmark
+
+ProcessBench asks a verifier to find the human-labelled first error. **ChokeBench** also asks it to
+find the **choke point**, the step where the generator's own success probability collapses, and
+scores what the named step is worth as a resampling point. 230 open failed traces from four
+generators; ground truth from the released rollouts with a Bayesian posterior so sampling noise is
+not counted as a miss; selection and scoring on independent halves of the continuations.
+
+| Localiser | finds human first error | finds choke point | Δ vs restart, per attempt | Δ vs restart at 4× budget, step found free |
+|---|---|---|---|---|
+| Human first error (expert label) | 1.00 | 0.51 [0.45, 0.56] | -0.066 [-0.105, -0.029] | -0.045 [-0.077, -0.013] |
+| PRM: first step < 0.5 | 0.68 | 0.38 [0.32, 0.44] | -0.077 [-0.111, -0.043] | -0.062 [-0.094, -0.031] |
+| PRM: largest drop | **0.73** | 0.45 [0.39, 0.51] | -0.103 [-0.145, -0.061] | -0.074 [-0.111, -0.037] |
+| PRM: minimum | 0.61 | 0.39 [0.34, 0.45] | -0.158 [-0.201, -0.116] | -0.121 [-0.160, -0.085] |
+| Learned, tuned (nested CV, held-out model) | 0.68 | 0.39 [0.33, 0.44] | -0.085 [-0.120, -0.050] | -0.071 [-0.103, -0.035] |
+| Generator: max token NLL | 0.27 | 0.26 [0.21, 0.31] | -0.097 [-0.132, -0.063] | -0.099 [-0.137, -0.063] |
+| Generator: max entropy | 0.30 | 0.28 [0.22, 0.33] | -0.178 [-0.219, -0.136] | -0.165 [-0.208, -0.124] |
+| Random step | 0.18 | 0.18 | -0.224 | -0.187 |
+| First step (= restart) | 0.14 | 0.28 | 0 | 0 |
+| *Oracle choke point (held-out rollouts)* | – | – | *+0.015 [-0.010, +0.039]* | ***+0.028 [+0.012, +0.046]*** |
+
+The learned localiser is trained for the choke point directly (soft posterior labels, 24
+configurations of logistic regression and boosted trees selected by nested leave-one-generator-out
+cross-validation) and still does no better than the fixed PRM rule: which step decides a failure is
+model-specific. The last row is the ceiling for **any** backtracking verifier on these traces before its own cost
+is paid: about three points. Before the choke point, a failed trace is worth about as much as a
+fresh start, so finding the choke point saves tokens, not successes.
+
+**Grade your own verifier:** [`results/chokebench/chokebench_v1.jsonl`](results/chokebench/chokebench_v1.jsonl)
+holds, per failed trace, the per-prefix success and continuation counts, continuation lengths, the
+human label and PRM scores. Name one step per trace and run
+[`scripts/49_chokebench.py`](scripts/49_chokebench.py). Per-generator results:
+[`results/chokebench/summary.md`](results/chokebench/summary.md).
+
+![ChokeBench](results/figures/fig25_chokebench.png)
+
+### RAG: hallucination recovery under five graders
+
+A recovery controller (CARE) gates on a hallucination detector *D* (LettuceDetect-base), then
+repairs claims, resamples (choosing restart or backtrack by estimated recoverability) and finally
+abstains or deletes. Preregistered test on RAGTruth (450 human-labelled sources) and HotpotQA (300
+controlled-evidence items) with Llama-2-7B-chat, budget 2.
+
+| Preregistered test (RAGTruth, primary judge E1) | Result | Verdict |
 |---|---|---|
-| 1 | **Early failure prediction is mostly difficulty.** Question + generator alone predict a wrong answer with AUROC 0.588 [0.570, 0.607]; the first 25% of the reasoning adds +0.005 (n.s.) and is at chance within a problem. | exploratory, CPU |
-| 2 | **One first error in four is not fatal** (23.5%), fatality is flat in error position, and failure detectors rank non-fatal errors as riskier than fatal ones (AUROC 0.456). | exploratory, CPU |
-| 3 | **The counterfactual measurement is reliable.** Value curves from independent sampling batches correlate at r = 0.985 / 0.976. The decisive step's posterior mode is ≥ 0.5 in 87–100% of traces, so disagreement with human labels is not sampling noise. | confirmatory (R2, R3) |
-| 4 | **33–66% of failures are decided before the first step**: the model almost never solves the problem from scratch. | preregistered categories |
-| 5 | **When the outcome is still open, the annotated error is the step where success collapses in 42–65% of traces** (position-matched null 0.16–0.20). | preregistered (Qwen); **confirmed** on Llama (0.633 vs 0.187, Holm p < 0.002) |
-| 6 | **Backtracking to the human first error is model-dependent.** For three Qwen models it is *worse than restarting* per attempt (by 0.07–0.17), and this replicates on 48 new continuations per step (+0.140 [+0.078, +0.202]). **It does not generalize to Llama-3.1-8B**: −0.022 [−0.090, +0.047], also with truncated outputs dropped. | exploratory → replicated (R1) → **not confirmed** on Llama (C1) |
-| 7 | **No practical policy beats restart at a matched end-to-end budget** that counts every token, including verifier passes and probes. PRM-guided backtracking with a validated verifier (ProcessBench F1 73.2 vs published 73.5) is *worse* than restart for Llama (−0.063 [−0.100, −0.024]). A learned restart-point predictor transferred across families is worse everywhere. The only positive estimate is a small gain for Qwen2.5-Math-7B at large budgets or with a free verifier pass. | **confirmed** on Llama (P2, P4); exploratory elsewhere |
-| 8 | **Why restart is hard to beat:** for on-policy traces, any restart point chosen without looking ahead is, per attempt and in expectation over failures, no better than starting over (a supermartingale argument, Appendix A). | theory |
+| H0: CARE vs base model | −0.047 [−0.072, −0.025], p = 0.0003 | supported |
+| H1: CARE vs restart until *D* passes | −0.005 [−0.024, +0.013]; equivalent within ±0.03; restart uses 23% fewer tokens | not shown |
+| H5: CARE vs CARE restricted to restarts (does the choice matter?) | **−0.000 [−0.005, +0.005]** | not shown: the mechanism adds nothing |
+| Mechanism: resample before the first human-labelled hallucination vs restart | +0.024 [−0.002, +0.049] | not shown |
+| Snowballing after a hallucinated sentence | −0.006 [−0.029, +0.019] | none |
 
-![Where to backtrack](results/figures/fig20_backtracking.png)
+Hallucination rate (%) on a held-out half of RAGTruth (233 sources) under five graders
+([`scripts/50_evaluator_robustness.py`](scripts/50_evaluator_robustness.py)). Two graders never read
+a LettuceDetect score; three share LettuceDetect's training data with the gate *D*:
 
-Success after resampling a failed trace from each target, per attempt. Each step choice is made on
-one half of the continuations and scored on the other; 50 splits; 95% CIs.
+| Policy | coverage | tokens | E1 judge | E1 calibrated | E2 | E1 ∧ E2 | D |
+|---|---|---|---|---|---|---|---|
+| Base model | 100.0 | 980 | 80.7 | 51.1 | 47.2 | 49.8 | 44.6 |
+| Restart until *D* passes | 99.6 | 1,320 | 79.0 | 49.8 | 14.6 | 18.9 | 0.9 |
+| CARE | 97.1 | 1,708 | 77.7 | 46.8 | 19.3 | 24.9 | 2.1 |
+| CARE, restarts only | 96.8 | 1,710 | 77.3 | 45.1 | 18.5 | 23.6 | 2.1 |
+| Abstain if flagged (QA) | 88.4 | 1,001 | 67.8 | 42.1 | 15.0 | 19.7 | 5.6 |
+| Chain-of-Verification, revised answer (n = 98) | 100.0 | – | 71.4 | 43.9 | 41.8 | 42.9 | 30.6 |
 
-![Policies at a matched budget](results/figures/fig22_policies.png)
+Human agreement (Cohen's κ, held-out drafts): E1 0.24, E1 calibrated 0.19, E2 0.54, E1 ∧ E2 0.56
+(threshold chosen on all drafts, so not out-of-sample), D 0.48.
 
-P(solved) for failed traces against the end-to-end budget, counted in restart attempts. The budget
-is FLOP-matched and every overhead is charged.
+**Reading.** CARE never beats restart under any grader. But how much a detector-gated loop helps
+depends on whether the grader is a relative of the detector: the hallucination rate drops by
+**32.6 points** according to LettuceDetect-large and by **1.7 points (n.s.)** according to the
+independent judge. The independent judges are weak and cannot rule out a real effect; the related
+ones are partly the gate grading itself. **Recovery loops should be graded by an evaluator that
+shares no training data with the verifier**, and ultimately by people (a blinded two-rater kit is
+in [`results/recovery/human_eval/`](results/recovery/human_eval)).
+
+## What is new here
+
+| Prior work | What it showed | What this study adds |
+|---|---|---|
+| ProcessBench (Zheng et al., ACL 2025); PRM lessons (Zhang et al. 2025) | human first-error labels; Monte Carlo labels disagree with them | measures the disagreement counterfactually at scale and shows which target verifiers actually track |
+| Thought Anchors / Thought Branches (Bogdan, Macar et al. 2025) | resampling finds influential reasoning sentences | uses resampling to evaluate human labels, verifiers and recovery policies |
+| Bulut 2026, *It's the problem, not the path* | early-signal AUROCs are mostly difficulty; prefixes vs matched restarts for reasoning models | difficulty control on human-annotated traces; failed traces, four generators, verifier costs charged |
+| Qin et al. 2025, *To backtrack or not to backtrack* | trained backtracking beats best-of-n on deep search trees, not shallow ones | an upper bound on backtracking gains for failed on-policy traces, and the theory behind it |
+| Snell et al. (ICLR 2025) | verifier search vs best-of-n depends on difficulty and budget | counterfactual ground truth for where a restart point should be |
+| CoVe, RARR, LettuceDetect, RAGTruth | detect-then-revise hallucination repair | a preregistered test of *where* to resample, and an evaluator-dependence check |
+
+Full positioning, with 2026 work: [`docs/RELATED_WORK.md`](docs/RELATED_WORK.md).
 
 ## Evidence levels: what was preregistered and what was found
 
-- **Preregistered before any rollout** (`a6fb04c`): the commitment categories, the decisive step,
+- **Preregistered before any rollout** (`a6fb04c`): commitment categories, decisive step,
   sample-split backtracking, δ = 1/8 (1/16 and 1/4 as sensitivity).
-- **Exploratory (found in Runs A/B):** restart vs first-error backtracking, the position-matched
-  null, repeated sample splitting, and the CPU difficulty and fatality analyses.
 - **Preregistered for the confirmatory run** ([`docs/PREREGISTRATION_RUN_C.md`](docs/PREREGISTRATION_RUN_C.md),
-  committed in `459ff22` before any Run C data):
-  - C1–C4 on Llama-3.1-8B, whose traces cover 479 questions not in the Qwen traces;
-  - R1–R3 on three new independent sampling batches;
-  - the practical policies and their cost accounting.
-
-  Outcomes, including the failures, are appended to the same file.
+  `459ff22`): C1–C4 on Llama-3.1-8B (479 questions not in the Qwen traces), R1–R3 on three new
+  sampling batches, the practical policies and their cost accounting.
+- **Preregistered for Part 3** ([`docs/PREREGISTRATION_RECOVERY.md`](docs/PREREGISTRATION_RECOVERY.md)):
+  H0–H5 at budget 2, judge validated against human labels, mechanism tests M1–M3.
+- **Exploratory:** the difficulty and fatality analyses, ChokeBench, the evaluator comparison, and
+  all policy results on Qwen models.
 
 | Test | Result | Outcome |
 |---|---|---|
 | C1 restart > first error (Llama) | −0.022 [−0.090, +0.047] | not confirmed |
 | C2 decisive step > first error (Llama) | +0.010 [−0.030, +0.058] | not confirmed |
-| C3 decisive share > null (Llama) | +0.447 [+0.328, +0.569] | confirmed |
+| C3 decisive share > null (Llama) | +0.447 [+0.328, +0.569] | **confirmed** |
 | C4 decisive ≡ restart within ±0.05 (Llama) | 90% CI [−0.008, +0.076] | inconclusive |
-| R1 restart > first error on new batches | +0.140 [+0.078, +0.202] | confirmed |
-| R2 / R3 measurement reliability | r = 0.985 / 0.976; stable decisive steps | confirmed |
+| R1 restart > first error on new batches | +0.140 [+0.078, +0.202] | **confirmed** |
+| R2 / R3 measurement reliability | r = 0.985 / 0.976; stable decisive steps | **confirmed** |
 | P2 / P4 practical policies vs restart (Llama) | −0.063 / −0.187 | both worse than restart |
+| H1 / H5 recovery controller vs restart / vs its restart-only ablation | −0.005 / −0.000 | not shown (equivalent) |
 
-Part 3 has its own plan, committed before any Run R data:
-[`docs/PREREGISTRATION_RECOVERY.md`](docs/PREREGISTRATION_RECOVERY.md). It covers H0–H5 at
-budget 2 with an LLM judge validated against human labels, and the mechanism tests M1–M3.
-Outcomes, deviations (a time-limited run resumed from saved files; CoVe on 192 of 750 items) and
-two analysis bug fixes are appended to that file.
-
-## Per-model results
+## Per-model results (maths)
 
 | | Qwen2.5-1.5B | Qwen2-1.5B | Qwen2.5-Math-7B | Llama-3.1-8B |
 |---|---|---|---|---|
@@ -152,166 +233,97 @@ two analysis bug fixes are appended to that file.
 | first error = decisive step (null) | 0.647 (0.166) | 0.438 (0.204) | 0.423 (0.159) | 0.633 (0.187) |
 | restart − first error, per attempt | +0.123 [+0.054, +0.197] | +0.165 [+0.067, +0.265] | +0.068 [+0.007, +0.133] | −0.022 [−0.090, +0.047] |
 | decisive step − restart (TOST ±0.05) | −0.020 (equivalent) | −0.018 (inconclusive) | +0.040 (inconclusive) | +0.032 (inconclusive) |
-| PRM largest drop − restart, budget 4, all costs | −0.651 | −0.514 | −0.022 [−0.052, +0.010] | −0.063 [−0.100, −0.024] |
-| human first error − restart, budget 4 | −0.047 | −0.075 | +0.039 | +0.001 |
 
 "No difference detected" is never reported as "equal": equivalence is claimed only where a TOST
-at ±0.05 passes. Details and every other number:
-- [`docs/COMMITMENT_EXPERIMENT.md`](docs/COMMITMENT_EXPERIMENT.md) (counterfactual runs);
-- [`docs/RESULTS_DECOMPOSITION.md`](docs/RESULTS_DECOMPOSITION.md) (difficulty and fatality);
-- [`docs/NOVELTY_AUDIT.md`](docs/NOVELTY_AUDIT.md) (positioning).
+at ±0.05 passes.
 
-## Part 3: recovering from hallucinations (Run R)
-
-The commitment measurement is turned into a system: a recovery controller for
-retrieval-augmented generation. When a hallucination detector flags a sentence, the controller
-first tries claim repair. It then resamples, choosing between backtracking to just before the
-flagged sentence and restarting by how recoverable each looks. Finally it abstains on questions
-whose evidence is insufficient. It was **preregistered before any data**
-([plan](docs/PREREGISTRATION_RECOVERY.md)) and evaluated on RAGTruth (450 sources) and HotpotQA
-with controlled evidence (300 items), with Llama-2-7B-chat. The comparisons are the base model,
-Chain-of-Verification and each fixed strategy, at a matched compute budget. An LLM judge from
-another model family is the primary evaluator; it was validated against RAGTruth's human labels.
-
-| Result (RAGTruth, budget 2x the draft) | Value | Evidence |
-|---|---|---|
-| Hallucinated outputs: base model → controller | 80.9% → 76.2% (−4.7 [−7.2, −2.5]) | preregistered, **supported** |
-| Controller − plain restart until the detector passes | −0.5 [−2.4, +1.3]; restart costs 23% fewer tokens | preregistered, **not shown** (equivalent within ±3) |
-| Controller − controller restricted to restarts (does the mechanism add value?) | −0.0 [−0.5, +0.5] | preregistered, **not shown** |
-| Oracle choice of resampling point − restart-only | −1.5 | upper bound on what the mechanism could add |
-| Chain-of-Verification (revised answer only) − controller | −10 [−18, −3], 192 items | exploratory: CoVe is better, at about 2x the tokens |
-| First human-labelled hallucination: backtrack − restart | +2.4 [−0.2, +4.9]; +9.3 for summaries | preregistered mechanism test, n.s. |
-| Snowballing after a hallucinated sentence | none detected | preregistered, not supported |
-
-**Reading:**
-- A detector-triggered regenerate-or-abstain loop reduces hallucinations.
-- The judge is strict, so the true reduction is probably larger (exploratory). People find a
-  hallucination in 27% of the drafts the system's detector passes, but the judge flags 76% of the
-  continuations that detector passes. A human-validated evaluation is needed before quoting a
-  number under human judgement.
-- At equal compute, choosing *where* to resample by estimated recoverability does not beat simply
-  restarting. The same "restart is hard to beat" result as the math study, now for
-  hallucinations.
-
-Full results, evaluator checks, latency and limitations:
-[`docs/RESULTS_RECOVERY.md`](docs/RESULTS_RECOVERY.md). System and commands:
-[`docs/RECOVERY_SYSTEM.md`](docs/RECOVERY_SYSTEM.md).
-
-![Hallucination vs cost](results/figures/fig24_recovery_tradeoff.png)
-
-## Reproducing the results
+## Reproduce every number
 
 ```bash
 python -m pip install -r requirements.txt
+make story          # CPU, ~1 min: ChokeBench, evaluator robustness, Fig. 0, paper numbers, paper PDF
 ```
 
 | Command | Hardware | What it does |
 |---|---|---|
-| `make decomposition` | CPU | difficulty controls, error fatality, three-way AUROC (findings 1–2) |
-| `make commitment-analysis` | CPU | Run B numbers and Fig. 18–20 from the committed rollouts |
-| `bash scripts/run_c_analysis.sh` | CPU | every preregistered Run C analysis from `results/run_c/` (confirmatory tests, replication, robustness, policies, PRM check, answer curves) |
-| `python scripts/21_run_c_figures.py` | CPU | Fig. 21–23 |
-| `make choke-paper` | CPU | regenerates `paper/values.tex` and compiles `paper/main.pdf` |
-| `make test` | CPU | the test suite, including a planted-effect test of the commitment pipeline |
-| `bash scripts/kaggle_run_c.sh` | Kaggle 2x T4 | the full GPU run (~11.5 h; `scripts/run_c_mode` selects smoke or full) |
-| `make recovery-labels` | CPU | Part 3: what RAGTruth's human labels say (no model) |
-| `make recovery-mock` | CPU | Part 3: the whole Kaggle sequence with fake models (pipeline test, no results) |
-| `make recovery-analysis` | CPU | Part 3: replay of every policy, preregistered tests, mechanism study, from `results/recovery/run/` |
-| `python scripts/39_recovery_figures.py`, `40_*`, `41_*`, `42_*` | CPU | Part 3: figure, CoVe sensitivity, exploratory improvements, evaluator ceiling |
-| `bash scripts/kaggle_recovery.sh` | Kaggle 2x T4 | Part 3 GPU run (`scripts/recovery_mode` selects smoke, full or resume) |
+| `make decomposition` | CPU | difficulty controls, error fatality (finding 1) |
+| `bash scripts/run_c_analysis.sh` | CPU | every preregistered maths analysis from committed rollouts |
+| `make chokebench` | CPU | ChokeBench (finding 5) |
+| `make evaluator-robustness` | CPU | Part 3 under five graders (finding 7) |
+| `python scripts/52_mitigation_law.py` | CPU | mitigation costs, maths restart recovery, the restart-loop law (findings 1–2) |
+| `make choke-paper` | CPU | regenerates `paper/values.tex` from the result tables and compiles the PDF |
+| `make test` | CPU | test suite, including planted-effect tests of the estimators |
+| `bash scripts/kaggle_run_c.sh` | Kaggle 2× T4 | the maths GPU run (~11.5 h; resumable) |
+| `bash scripts/kaggle_recovery.sh` | Kaggle 2× T4 | the RAG GPU run (resumable) |
 
-Part 3 needs the benchmark items, which are not committed because they contain dataset text:
-`python scripts/31_build_items.py --benchmark ragtruth --generator llama-2-7b-chat` (and
-`--benchmark hotpot`).
-
-GPU code paths: stage 12 (rollouts, vLLM), stage 14 (PRM and generator step signals), stage 15
-(forced-answer probes). T4s have no bfloat16, so everything runs in float16 with eager execution.
-Every stage appends results as it goes and resumes after an interruption.
+The paper never types a result by hand: every number is a macro written by
+[`paper/make_values.py`](paper/make_values.py) from the result tables.
 
 ## Repository map
 
 | Path | Contents |
 |---|---|
-| `paper/` | `main.tex`, `counterfactual.tex`, `policies.tex`, `appendix.tex` (proposition, preregistered outcomes, sensitivity), `make_values.py`, `main.pdf` |
-| `results/commitment/` | Run A/B rollouts and logs, `tables_*`, `robustness_*`, `policies/`, `answer_curves/`, `prm_check.json` |
-| `results/run_c/` | Run C raw outputs: rollouts (new batches, Llama), PRM and generator step signals, forced-answer probes, logs |
-| `results/coding/` | blinded sheets for human coding of recovered traces (protocol: `docs/CODING_PROTOCOL.md`) |
-| `scripts/11*` | difficulty and fatality decomposition (CPU) |
-| `scripts/12*`–`15` | GPU stages: rollouts, ProcessBench preparation, step signals, answer probes |
-| `scripts/13*`, `16`–`21` | analysis: commitment, robustness, policies, coding agreement, PRM check, answer curves, figures |
-| `scripts/kaggle_*.sh`, `run_c_analysis.sh` | GPU drivers and the Run C analysis runner |
-| `docs/` | PREREGISTRATION_RUN_C, COMMITMENT_EXPERIMENT, RESULTS_DECOMPOSITION, CODING_PROTOCOL, NOVELTY_AUDIT, METHODOLOGY, RESULTS; Part 3: PREREGISTRATION_RECOVERY, RECOVERY_SYSTEM, RESULTS_RECOVERY |
-| `src/recovery/`, `scripts/30`–`42`, `scripts/kaggle_recovery.sh` | Part 3: hallucination-recovery system, generation, scoring, replay at matched budgets, mechanism study, figures |
-| `results/recovery/` | Part 3: RAGTruth label analysis, raw generations and scores (`run/`), analysis outputs (`final/`) |
-| `src/`, `scripts/01-10`, `tests/` | the original pipeline (E1–E8) and its tests |
+| `paper/` | the paper (`main.pdf`), its sections, `make_values.py` |
+| `results/commitment/`, `results/run_c/` | maths rollouts, PRM and generator step signals, forced-answer probes, analysis tables |
+| `results/chokebench/` | ChokeBench release file, per-trace results, summary |
+| `results/recovery/` | RAG generations, scores, judge verdicts, replay outputs, evaluator robustness, human-evaluation kit |
+| `src/recovery/` | the recovery system: live controller, offline replay, statistics |
+| `scripts/11`–`21` | maths analyses; `scripts/30`–`42` RAG pipeline; `scripts/49`–`51` ChokeBench, graders, summary figure |
+| `docs/` | preregistrations, methodology, full results, related work |
 
-## Limitations and what remains unverified
+## Limitations
 
-- **Coverage.** Four open models of at most 8B parameters, mathematics only.
-  - Llama contributes 144 of its 274 fatal traces. The time limit ran out; traces were processed
-    in a random order.
-  - Llama's recovered and clean traces were not run.
-- **On-policy approximation.** ProcessBench re-segmented the original solutions, and their
-  decoding settings are unknown, so prefixes are near-, not exactly, on-policy.
-- **Truncation.** For the larger models, 17% (Qwen2.5-Math-7B) and 29% (Llama) of continuations
-  hit the 1,024-token cap without an answer. Treating them as missing changes no conclusion.
-- **Equivalence.** Decisive-step backtracking and restart are shown equivalent (±0.05) only for
-  Qwen2.5-1.5B and the pooled new batches.
-- **Human coding.** The two-coder human coding of recovered traces has not been done yet. The
-  protocol and blinded sheets are released, and no coding result is reported until it is complete.
-- **Exploratory results.** The CPU analyses, the answer curves, the shared-verifier accounting
-  and all policy results on Qwen models are exploratory.
-
-- **Part 3 coverage.** One generator (Llama-2-7B-chat).
-  - The Llama-3.1-8B arm was not run, because of GPU quota.
-  - Chain-of-Verification ran on 192 of 750 items.
-  - Latency was measured live on 16 items only.
-- **Part 3 evaluation.** The primary judge agrees only moderately with people (κ = 0.22), and no
-  human evaluation of the system's outputs exists yet. The blinded kit is in
-  `scripts/38_human_eval_kit.py`.
+- **Scale.** Four open models of at most 8B parameters for maths, one (Llama-2-7B-chat) for RAG.
+  Llama-3.1-8B contributes 144 of its 274 fatal maths traces (time limit), and its RAG arm produced
+  drafts only, so no recovery claim is made for it.
+- **Near on-policy.** ProcessBench re-segmented the original solutions with unknown decoding
+  settings, so prefixes are near-, not exactly, on-policy.
+- **Graders.** The independent RAG judges agree only weakly with people (κ ≈ 0.2); no human rating of
+  system outputs exists yet. Chain-of-Verification ran on 192 of 750 items.
+- **Not yet done.** Two-coder human coding of recovered maths traces; human rating of RAG outputs.
+  Both protocols and blinded sheets are released, and no result is reported until they are complete.
 
 ## Next steps
 
-1. **Evaluation people trust.** Choose a stronger judge by its agreement with human labels on
-   RAGTruth's training split, before any comparison. Have two people rate 80 blinded pairs of
-   system and baseline outputs.
-2. **A system built on what worked.** Detector gate, then Chain-of-Verification with clean output,
-   then restart, then abstain. Preregistered and tested on RAGTruth's untouched training sources
-   and on Llama-3.1-8B.
-3. **The math study.** Two-coder human coding of recovered traces, and Llama's remaining
-   traces.
+1. **Human ground truth for Part 3:** two raters on 80 blinded pairs (kit released; regenerate with a
+   new seed first, see [its README](results/recovery/human_eval/README.md)).
+2. **Reasoning models at scale:** the same value-curve protocol on long-CoT models (R1-distilled,
+   Qwen3) where Bulut 2026 finds prefixes can beat restarts, to locate the boundary between the two
+   regimes.
+3. **Learned choke-point localisers** trained on ChokeBench, scored against the free-oracle ceiling.
 
-## Original study (E1–E8)
+## Corrections log
 
-The first version of this project studied where first errors occur and whether a partial trace
-predicts a wrong answer. Those results are kept as they were computed (`make all`; details in
-[`docs/RESULTS.md`](docs/RESULTS.md)). The difficulty controls above change how to read them: the
-25%-prefix AUROC of 0.588 equals what question and generator achieve alone. The lexical −
-length-only difference at 25% is +0.052 (p = 0.032) after a tie-handling fix, not +0.073. The
-hidden-state probes (E4) were not run, and the intervention policy (E8) was only simulated.
+- **2026-10-27.** Commits `0ba841e`–`09dafdf` had added a "dual consensus judge", a six-baseline
+  table and a "cross-model generalization" table that overstated the evidence: the judge's threshold
+  was not chosen out-of-sample, the judge shares training data with the system's detector (which
+  favours detector-gated policies), and the Llama-3.1 table reported detector flag rates, not
+  recovery results. They are withdrawn; [`docs/RESULTS_RECOVERY.md`](docs/RESULTS_RECOVERY.md)
+  explains and replaces them with the five-grader analysis above. The committed PDF had also not
+  been rebuilt since Part 3 was added; it is now regenerated from the tables.
 
 ## Datasets, models and licences
 
 | Resource | Source | Licence (as declared) | Role |
 |---|---|---|---|
-| ProcessBench | HF `Qwen/ProcessBench` (Zheng et al., ACL 2025) | Apache-2.0 | primary data |
+| ProcessBench | HF `Qwen/ProcessBench` (Zheng et al., ACL 2025) | Apache-2.0 | primary maths data |
 | BIG-Bench Mistake | GitHub `WHGTyen/BIG-Bench-Mistake` | Apache-2.0 | transfer (E7) |
 | GSM8K, MATH-500, MATH, OlympiadBench, Omni-MATH | HF `openai/gsm8k`, `HuggingFaceH4/MATH-500`, `EleutherAI/hendrycks_math`, `Hothan/OlympiadBench`, `KbsdJames/Omni-MATH` | see cards | gold answers |
 | Qwen2.5-1.5B-Instruct, Qwen2-1.5B-Instruct, Qwen2.5-Math-7B-Instruct | HF `Qwen/...` | see model cards | generators |
-| Llama-3.1-8B-Instruct | HF `unsloth/Meta-Llama-3.1-8B-Instruct` (copy of the Meta release) | Llama 3.1 Community License | generator |
+| Llama-3.1-8B-Instruct | HF `unsloth/Meta-Llama-3.1-8B-Instruct` | Llama 3.1 Community License | generator |
 | Qwen2.5-Math-PRM-7B | HF `Qwen/Qwen2.5-Math-PRM-7B` | see model card | process reward model |
-| RAGTruth | GitHub `ParticleMedia/RAGTruth` (Niu et al., ACL 2024) | MIT | Part 3 primary benchmark, human hallucination spans |
-| HotpotQA (distractor dev) | HF `hotpotqa/hotpot_qa` | CC BY-SA 4.0 | Part 3 controlled-evidence benchmark |
-| Llama-2-7B-chat | HF `NousResearch/Llama-2-7b-chat-hf` (copy of the Meta release) | Llama 2 Community License | Part 3 generator |
-| LettuceDetect base / large | HF `KRLabsOrg/lettucedect-{base,large}-modernbert-en-v1` | MIT | Part 3 detector and secondary evaluator |
-| Qwen2.5-7B-Instruct | HF `Qwen/Qwen2.5-7B-Instruct` | Apache-2.0 | Part 3 judge (primary evaluator) |
+| RAGTruth | GitHub `ParticleMedia/RAGTruth` (Niu et al., ACL 2024) | MIT | RAG benchmark with human spans |
+| HotpotQA (distractor dev) | HF `hotpotqa/hotpot_qa` | CC BY-SA 4.0 | controlled-evidence RAG items |
+| Llama-2-7B-chat | HF `NousResearch/Llama-2-7b-chat-hf` | Llama 2 Community License | RAG generator |
+| LettuceDetect base / large | HF `KRLabsOrg/lettucedect-{base,large}-modernbert-en-v1` (Kovács & Recski 2025) | MIT | gate detector / grader |
+| Qwen2.5-7B-Instruct | HF `Qwen/Qwen2.5-7B-Instruct` | Apache-2.0 | LLM judge |
 
 ## Citation
 
 ```bibtex
-@misc{dubey2026chokepoints,
-  title        = {Errors Are Not Choke Points: Where {LLM} Failures Are Decided, and What
-                  Recovery Can Do About It},
+@misc{dubey2026detectrestart,
+  title        = {Detect, Restart, Abstain: Cheap Mitigation of {LLM} Failures and Hallucinations,
+                  and Why Fixing the Choke Point Does Not Pay},
   author       = {Dubey, Harsh and Saini, Harshit and Jain, Prashant and Kumar, Himanshu and
                   Kaushal, Gaurav and Chaudhary, Rohit},
   year         = {2026},
@@ -320,8 +332,6 @@ hidden-state probes (E4) were not run, and the intervention policy (E8) was only
 }
 ```
 
-## Acknowledgements
-
-Supervised by Dr. Rohit Chaudhary (KIET Group of Institutions). The GPU runs used free Kaggle
-notebooks. Thanks to the ProcessBench, BIG-Bench Mistake, RAGTruth, HotpotQA, LettuceDetect, Qwen
-and Llama teams for releasing data, models and weights.
+Supervised by Dr. Rohit Chaudhary (KIET Group of Institutions). GPU runs used free Kaggle notebooks.
+Thanks to the ProcessBench, BIG-Bench Mistake, RAGTruth, HotpotQA, LettuceDetect, Qwen and Llama
+teams for releasing data, models and weights.

@@ -10,6 +10,7 @@ import json
 import re
 from pathlib import Path
 
+import numpy as np
 import pandas as pd
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -270,6 +271,10 @@ if pt_file.exists():
     ll = qs.get("Llama-3.1-8B-Instruct", set())
     put("QuestionsQwen", len(qwen), "{:,}"); put("QuestionsLlama", len(ll), "{:,}")
     put("QuestionsLlamaNew", len(ll - qwen), "{:,}"); put("QuestionsUnion", len(ll | qwen), "{:,}")
+else:  # the dataset text is not committed; fall back to the counts cached when it was present
+    qc = json.loads((T / "question_coverage.json").read_text())
+    for k in ("QuestionsQwen", "QuestionsLlama", "QuestionsLlamaNew", "QuestionsUnion"):
+        put(k, qc[k], "{:,}")
 
 # ---- totals straight from the raw JSONL files ------------------------------------------
 def count_rows(files):
@@ -292,72 +297,136 @@ put("RunCRollouts", count_rows(sorted(RC.glob("rollouts.*.jsonl"))), "{:,}")
 put("ProbeSamples", count_rows(sorted(RC.glob("probe.*.jsonl"))), "{:,}")
 prm_rows = [json.loads(x) for x in open(RC / "signals_prm.jsonl")] if (RC / "signals_prm.jsonl").exists() else []
 put("PrmTraces", sum(1 for r in prm_rows if r.get("ok")), "{:,}")
-# ---- stage 43-48 grounded generation and recovery (Run R) -----------------------------
-recov_file = ROOT / "results" / "recovery" / "final" / "six_baselines_comparison.json"
-if recov_file.exists():
-    pol_rec = json.loads(recov_file.read_text())
-    raw = pol_rec.get("Raw Generator (Llama-2-7B)")
-    if raw:
-        put("ragRawHall", pct(raw["hallucination"]), "{}")
-        put("ragRawCov", pct(raw["coverage"]), "{}")
-        put("ragRawFaith", pct(raw["faithful_delivered"]), "{}")
-        put("ragRawCost", int(raw["token_cost"]), "{}")
-    rf2 = pol_rec.get("Plain Restart (b=2)")
-    if rf2:
-        put("ragRestartHall", pct(rf2["hallucination"]), "{}")
-        put("ragRestartCov", pct(rf2["coverage"]), "{}")
-        put("ragRestartFaith", pct(rf2["faithful_delivered"]), "{}")
-        put("ragRestartCost", int(rf2["token_cost"]), "{}")
-    care_r = pol_rec.get("CARE Controller (b=2)")
-    if care_r:
-        put("ragCareHall", pct(care_r["hallucination"]), "{}")
-        put("ragCareCov", pct(care_r["coverage"]), "{}")
-        put("ragCareFaith", pct(care_r["faithful_delivered"]), "{}")
-        put("ragCareCost", int(care_r["token_cost"]), "{}")
-    ta = pol_rec.get("Task-Aware (Abstain QA / Restart Other)")
-    if ta:
-        put("ragTaskHall", pct(ta["hallucination"]), "{}")
-        put("ragTaskCov", pct(ta["coverage"]), "{}")
-        put("ragTaskFaith", pct(ta["faithful_delivered"]), "{}")
-        put("ragTaskCost", int(ta["token_cost"]), "{}")
+# ---- stage 49: ChokeBench --------------------------------------------------------------
+cb = ROOT / "results" / "chokebench" / "summary.csv"
+if cb.exists():
+    S = pd.read_csv(cb)
+    P = S[S.generator == "pooled"].set_index("localiser")
+    for loc, name in [("human_first_error", "Human"), ("prm_first_below_0.5", "PrmFirst"), ("prm_min", "PrmMin"),
+                      ("prm_largest_drop", "PrmDrop"), ("gen_max_token_nll", "Nll"), ("gen_max_token_entropy", "Ent"),
+                      ("first_step", "First"), ("last_step", "Last"), ("uniform_random", "Rand"),
+                      ("learned_localiser", "Learned"), ("oracle_decisive_split", "Oracle")]:
+        r = P.loc[loc]
+        for col, cn, f in [("acc_human", "AccH", "{:.2f}"), ("acc_decisive", "AccD", "{:.2f}"),
+                           ("gain", "Gain", "{:+.3f}"), ("gain_b4_free", "GainB", "{:+.3f}")]:
+            if not np.isnan(r[col]):
+                put(f"cb{name}{cn}", r[col], f)
+                put(f"cb{name}{cn}Lo", r[col + "_lo"], f)
+                put(f"cb{name}{cn}Hi", r[col + "_hi"], f)
+        if not np.isnan(r.token_ratio):
+            put(f"cb{name}Tok", r.token_ratio, "{:.2f}")
+        put(f"cb{name}AccHPct", f"{100 * r.acc_human:.0f}" if not np.isnan(r.acc_human) else "--", "{}")
+        put(f"cb{name}AccDPct", f"{100 * r.acc_decisive:.0f}" if not np.isnan(r.acc_decisive) else "--", "{}")
+    put("cbN", int(P.loc["first_step", "n_traces"]), "{:,}")
+    put("cbNeff", P.loc["first_step", "effective_n"], "{:.0f}")
+    for gen, key in [("Qwen2.5-1.5B-Instruct", "QwenSmall"), ("Qwen2-1.5B-Instruct", "QwenTwo"),
+                     ("Qwen2.5-Math-7B-Instruct", "QwenMath"), ("Llama-3.1-8B-Instruct", "Llama")]:
+        G = S[S.generator == gen].set_index("localiser")
+        for loc, name in [("human_first_error", "Human"), ("prm_largest_drop", "PrmDrop"),
+                          ("prm_first_below_0.5", "PrmFirst"), ("oracle_decisive_split", "Oracle")]:
+            put(f"cb{key}{name}AccD", G.loc[loc, "acc_decisive"], "{:.2f}") if not np.isnan(G.loc[loc, "acc_decisive"]) else None
+            put(f"cb{key}{name}GainB", G.loc[loc, "gain_b4_free"], "{:+.3f}")
 
-judge_file = ROOT / "results" / "recovery" / "final" / "dual_judge_validation.json"
-if judge_file.exists():
-    jd = json.loads(judge_file.read_text())
-    if "E1 (Zero-Shot Qwen2.5-7B)" in jd:
-        put("judgeEOneKappa", jd["E1 (Zero-Shot Qwen2.5-7B)"]["kappa"])
-        put("judgeEOneAcc", pct(jd["E1 (Zero-Shot Qwen2.5-7B)"]["accuracy"]), "{}")
-        put("judgeEOneRate", pct(jd["E1 (Zero-Shot Qwen2.5-7B)"]["rate_pred"]), "{}")
-    if "test/E1 (Zero-Shot Qwen2.5-7B)" in jd:
-        put("judgeEOneTestKappa", jd["test/E1 (Zero-Shot Qwen2.5-7B)"]["kappa"])
-    if "E2 (LettuceDetect-Large tau=0.5)" in jd:
-        put("judgeETwoKappa", jd["E2 (LettuceDetect-Large tau=0.5)"]["kappa"])
-        put("judgeETwoAcc", pct(jd["E2 (LettuceDetect-Large tau=0.5)"]["accuracy"]), "{}")
-    if "dev/Dual Consensus Judge (E1 AND E2>=0.3)" in jd:
-        put("judgeDualDevKappa", jd["dev/Dual Consensus Judge (E1 AND E2>=0.3)"]["kappa"])
-    if "test/Dual Consensus Judge (E1 AND E2>=0.3)" in jd:
-        put("judgeDualTestKappa", jd["test/Dual Consensus Judge (E1 AND E2>=0.3)"]["kappa"])
-        put("judgeDualTestAcc", pct(jd["test/Dual Consensus Judge (E1 AND E2>=0.3)"]["accuracy"]), "{}")
-        put("judgeDualTestPrec", pct(jd["test/Dual Consensus Judge (E1 AND E2>=0.3)"]["precision"]), "{}")
-    if "Dual Consensus Judge (E1 AND E2>=0.3)" in jd:
-        put("judgeDualPooledKappa", jd["Dual Consensus Judge (E1 AND E2>=0.3)"]["kappa"])
-        put("judgeDualPooledAcc", pct(jd["Dual Consensus Judge (E1 AND E2>=0.3)"]["accuracy"]), "{}")
+lt = ROOT / "results" / "chokebench" / "learned_tuning.json"
+if lt.exists():
+    rep = json.loads(lt.read_text())
+    put("ltGrid", len(rep["grid"]), "{}")
+    for gen, key in [("Qwen2.5-1.5B-Instruct", "QwenSmall"), ("Qwen2-1.5B-Instruct", "QwenTwo"),
+                     ("Qwen2.5-Math-7B-Instruct", "QwenMath"), ("Llama-3.1-8B-Instruct", "Llama")]:
+        o = rep["outer"][gen]
+        put(f"lt{key}Inner", max(o["inner_scores"]), "{:.2f}")
+        put(f"lt{key}Test", o["test_acc_decisive"], "{:.2f}")
+        put(f"lt{key}Feat", o["selected"]["features"], "{}")
 
-cross_file = ROOT / "results" / "recovery" / "final" / "cross_model_generalization.json"
-if cross_file.exists():
-    cd = json.loads(cross_file.read_text())
-    if "Llama-2-7B-chat" in cd:
-        l2 = cd["Llama-2-7B-chat"]
-        put("crossLlamaTwoFlag", pct(l2["overall_flag_rate"]), "{}")
-        put("crossLlamaTwoData", pct(l2["by_task"]["Data2txt"]["flag_rate"]), "{}")
-        put("crossLlamaTwoQa", pct(l2["by_task"]["QA"]["flag_rate"]), "{}")
-        put("crossLlamaTwoSummary", pct(l2["by_task"]["Summary"]["flag_rate"]), "{}")
-    if "Llama-3.1-8B-Instruct" in cd:
-        l3 = cd["Llama-3.1-8B-Instruct"]
-        put("crossLlamaThreeFlag", pct(l3["overall_flag_rate"]), "{}")
-        put("crossLlamaThreeData", pct(l3["by_task"]["Data2txt"]["flag_rate"]), "{}")
-        put("crossLlamaThreeQa", pct(l3["by_task"]["QA"]["flag_rate"]), "{}")
-        put("crossLlamaThreeSummary", pct(l3["by_task"]["Summary"]["flag_rate"]), "{}")
+# ---- Run R (Part 3): preregistered tests, mechanism, evaluator robustness ------------------
+RF = ROOT / "results" / "recovery" / "final"
+tests = json.loads((RF / "tests.json").read_text())
+fam = tests["families"]["ragtruth/llama-2-7b-chat"]
+
+
+def put_ci(name: str, d: dict, f: str = "{:+.3f}") -> None:
+    put(name, d["diff"], f); put(name + "Lo", d["lo"], f); put(name + "Hi", d["hi"], f)
+
+
+put_ci("rrHZero", fam["sanity_care_vs_base"])
+put("rrHZeroP", fam["sanity_care_vs_base"]["p"], "{:.4f}")
+put_ci("rrHOne", fam["confirmatory"]["care_vs_restart_fb"])
+put_ci("rrHTwo", fam["confirmatory"]["care_vs_backtrack_fb"])
+put_ci("rrHFive", fam["confirmatory"]["care_vs_care@restart"])
+put_ci("rrHFiveEtwo", fam["E2_robustness"]["care_vs_care@restart"])
+put_ci("rrOracle", fam["oracle_headroom"]["oracle_vs_restart_allocation"])
+eq = fam["equivalence_care_vs_restart_fb"]
+put("rrTostLo", eq["lo90"], "{:+.3f}"); put("rrTostHi", eq["hi90"], "{:+.3f}")
+summ = pd.read_csv(RF / "summary.csv")
+ss = summ[(summ.benchmark == "ragtruth") & (summ.scope == "all")]
+for pol, b, name in [("base", 0, "Base"), ("restart_fb", 2, "Restart"), ("backtrack_fb", 2, "Backtrack"), ("care", 2, "Care")]:
+    r = ss[(ss.policy == pol) & (ss.budget == b)].iloc[0]
+    put(f"rr{name}EOne", pct(r.hall_E1), "{}"); put(f"rr{name}ETwo", pct(r.hall_E2), "{}")
+    put(f"rr{name}Cov", pct(r.covered), "{}"); put(f"rr{name}Tok", r.cost_total, "{:,.0f}")
+mech = json.loads((RF / "mechanism" / "summary.json").read_text())
+r1 = mech["R1_recovery"]["E1"]
+put("mechN", r1["n"], "{}"); put("mechCont", mech["n_continuations"], "{:,}")
+put("mechDiff", r1["difference"][0], "{:+.3f}"); put("mechDiffLo", r1["difference"][1], "{:+.3f}")
+put("mechDiffHi", r1["difference"][2], "{:+.3f}"); put("mechP", r1["p_signflip"], "{:.3f}")
+put("mechSum", r1["by_task"]["Summary"][0], "{:+.3f}")
+sn = mech["R2_snowball"]["excess_jump"]
+put("mechSnow", sn[0], "{:+.3f}"); put("mechSnowLo", sn[1], "{:+.3f}"); put("mechSnowHi", sn[2], "{:+.3f}")
+ev = tests["primary_metric"]["E1_response_level"]
+put("evEOneKappa", ev["kappa"]); put("evEOneRate", pct(ev["rate_pred"]), "{}"); put("evHumanRate", pct(ev["rate_true"]), "{}")
+cs = json.loads((RF / "cove_sensitivity.json").read_text())
+put("coveEcho", pct(cs["share_echoing_verification_block"]), "{}")
+put("coveN", cs["n"], "{}")
+put("coveDiff", cs["care_minus_cove_before_echo"][0], "{:+.3f}")
+put("coveDiffLo", cs["care_minus_cove_before_echo"][1], "{:+.3f}"); put("coveDiffHi", cs["care_minus_cove_before_echo"][2], "{:+.3f}")
+
+ml_file = RF / "mitigation_law.json"
+if ml_file.exists():
+    ml = json.loads(ml_file.read_text())
+    for k, name in [("h", "H"), ("alpha", "Alpha"), ("beta", "Beta"), ("pi", "Pi"), ("reduction_vs_base", "Red"),
+                    ("implied_halluc_D_passed_cont", "Inv")]:
+        v, lo, hi = ml["law"][k]
+        put(f"law{name}", f"{100 * v:.1f}", "{}"); put(f"law{name}Lo", f"{100 * lo:.1f}", "{}")
+        put(f"law{name}Hi", f"{100 * hi:.1f}", "{}")
+    for c in ml["cost"]:
+        key = {"base": "Base", "delete": "Del", "repairdel": "Rep", "restart_fb": "Dra", "backtrack_fb": "Back",
+               "care": "Care", "abstain_flag": "Abst", "cove_all": "Cove"}[c["policy"]]
+        put(f"cost{key}", c["cost_vs_base"], "{:.2f}"); put(f"tok{key}", c["tokens"], "{:,.0f}")
+        put(f"hallEOne{key}", f"{100 * c['hall_E1']:.1f}", "{}"); put(f"hallETwo{key}", f"{100 * c['hall_E2']:.1f}", "{}")
+        put(f"cov{key}", f"{100 * c['coverage']:.1f}", "{}")
+    rec = ml["maths_restart_recovery"]
+    for b, nm in [("4", "Four"), ("8", "Eight"), ("1", "One")]:
+        vals = [d[b][0] for d in rec.values()]
+        put(f"recMin{nm}", f"{100 * min(vals):.0f}", "{}"); put(f"recMax{nm}", f"{100 * max(vals):.0f}", "{}")
+
+rob_file = RF / "evaluator_robustness.json"
+if rob_file.exists():
+    rob = json.loads(rob_file.read_text())
+    cal = rob["calibration"]
+    put("robFstar", f"{100 * cal['f_star']:.0f}", "{}")
+    put("robNDev", cal["n_dev"], "{}"); put("robNTest", cal["n_test"], "{}")
+    kt = cal["test"]
+    put("robKEOne", next(v for k, v in kt.items() if k.startswith("E1 (any")))
+    put("robKEOneCal", next(v for k, v in kt.items() if k.startswith("E1-calibrated")))
+    put("robKETwo", next(v for k, v in kt.items() if k.startswith("E2")))
+    put("robKDual", next(v for k, v in kt.items() if k.startswith("dual")))
+    put("robKD", next(v for k, v in kt.items() if k.startswith("D ")))
+    put("robAgreeETwoD", pct(cal["agreement_with_D_on_all_drafts"]["E2"]), "{}")
+    put("robAgreeEOneD", pct(cal["agreement_with_D_on_all_drafts"]["E1-calibrated"]), "{}")
+    tab = rob["policies_test_split"]
+    for key, name in [("base@0", "Base"), ("restart_fb@2", "Restart"), ("care@2", "Care"), ("care@restart@2", "CareR"),
+                      ("abstain_flag@0", "Abst"), ("backtrack_fb@2", "Back"), ("cove_flag_clean@0", "Cove"),
+                      ("delete@0", "Del")]:
+        rec = tab[key]
+        put(f"rob{name}Cov", pct(rec["coverage"]), "{}")
+        put(f"rob{name}N", rec["n"], "{}")
+        if rec["cost"] is not None:
+            put(f"rob{name}Tok", rec["cost"], "{:,.0f}")
+        for ev_, en in [("E1", "EOne"), ("E1cal", "EOneCal"), ("E2", "ETwo"), ("dual", "Dual"), ("D", "D")]:
+            put(f"rob{name}{en}", pct(rec[ev_]), "{}")
+            m, lo, hi = rec[ev_ + "_minus_restart"]
+            if key != "restart_fb@2":
+                put(f"rob{name}{en}Diff", m, "{:+.3f}"); put(f"rob{name}{en}DiffLo", lo, "{:+.3f}")
+                put(f"rob{name}{en}DiffHi", hi, "{:+.3f}")
 
 out = ROOT / "paper" / "values.tex"
 out.write_text("% generated by paper/make_values.py -- do not edit\n"

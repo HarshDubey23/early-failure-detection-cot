@@ -64,6 +64,10 @@ def make(args) -> None:
         rows.append(rec)
     pd.DataFrame(rows).to_csv(out / "sheet_blank.csv", index=False)
     pd.DataFrame(key).to_csv(out / "KEY_do_not_open.csv", index=False)
+    # Commit only this hash; the key itself stays off the repository (.gitignore) until rating is done.
+    import hashlib
+    digest = hashlib.sha256((out / "KEY_do_not_open.csv").read_bytes()).hexdigest()
+    (out / "KEY.sha256").write_text(f"{digest}  KEY_do_not_open.csv\n")
     with open(out / "sheet.html", "w", encoding="utf-8") as fh:
         fh.write("<meta charset='utf-8'><h1>Which sentences are not supported by the source?</h1>")
         for r in rows:

@@ -1,58 +1,87 @@
-\section{Generalization to Grounded Generation}\label{sec:grounded}
-Does the finding that errors are not choke points transfer beyond symbolic mathematics to open-domain text generation? In retrieval-augmented generation (RAG), a prominent hypothesis holds that when a model begins hallucinating unsupported claims, early detection of the hallucination onset enables surgical recovery---either backtracking to the first faithful prefix, revising unsupported claims, or dynamically switching recovery actions based on estimated recoverability~\cite{shuster2021,dhuliawala2024cove,gao2023rarr}.
+\section{The Same Question for Hallucinations}\label{sec:grounded}
+Retrieval-augmented generation (RAG) offers what mathematics lacks: a detector can check, while the
+system runs, whether each sentence is supported by the source. If hallucinations were choke points,
+a controller that estimates $v_k$ online and resamples from the most recoverable boundary should
+beat plain restarting. We built such a controller and preregistered its test
+(\texttt{docs/PREREGISTRATION\_RECOVERY.md}, committed before any data).
 
-We tested this hypothesis directly on RAGTruth~\cite{ragtruth} (450 sources across QA, summarization, and data-to-text) and HotpotQA~\cite{yang2018hotpotqa} (300 items with controlled evidence), using Llama-2-7B-chat and Meta-Llama-3.1-8B-Instruct (1,500 total generation items).
+\textbf{Setup.} RAGTruth~\cite{ragtruth} test sources (450; QA, summarisation, data-to-text), whose
+Llama-2-7B-chat responses carry human span labels, and 300 HotpotQA~\cite{yang2018hotpotqa}
+items with controlled evidence (half with the answer removed). The gate $D$ is LettuceDetect-base~\cite{lettucedetect}.
+When $D$ flags a sentence, the controller (CARE) tries claim repair, then resamples, choosing
+between restarting and backtracking to just before the flagged sentence by Thompson sampling on
+each boundary's estimated recoverability per token, then abstains (QA) or deletes what is still
+flagged. Every policy replays the same bank of on-policy continuations (\mechCont\ in the mechanism
+study alone), under a budget cap of $b=2$ draft-equivalents; tokens actually spent are reported.
+The preregistered primary evaluator $E_1$ is an LLM judge from another family (Qwen2.5-7B-Instruct;
+$\kappa=\evEOneKappa$ with RAGTruth's human labels, passing the preregistered bar of 0.20); $E_2$
+(LettuceDetect-large) is secondary because it shares training data with $D$.
 
-\subsection{Evaluator calibration and out-of-sample validation}
-Evaluating hallucination recovery requires an accurate judge. An uncalibrated zero-shot LLM judge ($E_1$: Qwen2.5-7B-Instruct) flags \judgeEOneRate\% of drafts as hallucinated, where human annotators find only 50.3\%, yielding poor human agreement ($\kappa=\judgeEOneKappa$). This over-flagging inflates baseline error rates and obscures true recovery dynamics.
-
-To address this evaluation bottleneck, we constructed a \emph{Dual Consensus Judge} ($E_{\text{dual}} = E_1 \land E_2[\tau \ge 0.3]$), requiring that an LLM-detected reasoning hallucination be corroborated by token-level support divergence from a ModernBERT groundedness classifier ($E_2$: LettuceDetect-Large)~\cite{lettucedetect}. To guard against post-hoc overfitting, we calibrated the threshold $\tau=0.30$ on a 50\% development split of sources ($n=217$, $\kappa=\judgeDualDevKappa$) and evaluated the frozen decision rule on an untouched, held-out test split ($n=232$). On the untouched test set, the frozen judge achieves $\kappa=\judgeDualTestKappa$, accuracy \judgeDualTestAcc\%, and precision \judgeDualTestPrec\% (matching the ground-truth rate of 51.3\%), compared to $\kappa=\judgeEOneTestKappa$ for the zero-shot LLM judge. Pooled across all 449 drafts, the dual judge reaches $\kappa=\judgeDualPooledKappa$ (Table~\ref{tab:grounded_eval}).
-
-\begin{table}[t]\centering\small
-\caption{Evaluator agreement on 449 human-labelled RAGTruth drafts. Test split ($n=232$) is untouched out-of-sample data.}
-\label{tab:grounded_eval}
-\begin{tabular}{lccc}\toprule
-Evaluator Configuration & Untouched Test $\kappa$ & Pooled $\kappa$ & Acc.\\\midrule
-$E_1$ (Zero-Shot Qwen2.5-7B) & \judgeEOneTestKappa & \judgeEOneKappa & \judgeEOneAcc\%\\
-$E_2$ (LettuceDetect-Large $\tau=0.5$) & 0.535 & \judgeETwoKappa & \judgeETwoAcc\%\\
-\textbf{Dual Consensus ($E_1 \land E_2[\tau \ge 0.3]$)} & \textbf{\judgeDualTestKappa} & \textbf{\judgeDualPooledKappa} & \textbf{\judgeDualPooledAcc\%}\\\bottomrule
-\end{tabular}
-\end{table}
-
-\subsection{Policy comparison: restart dominates commitment-aware recovery}
-We evaluated six executed recovery policies under the calibrated judge at matched compute budget ($b=2$, at most two calls per completion) on RAGTruth test (Table~\ref{tab:grounded_policies}).
+\textbf{Preregistered results (RAGTruth).}
 \begin{itemize}
-\item \textbf{Raw baseline}: Zero-shot draft without intervention (\ragRawHall\% hallucination, \ragRawFaith\% faithful answers delivered).
-\item \textbf{Plain restart ($b=2$)}: When detector $D$ flags a draft, discard and resample from scratch.
-\item \textbf{CARE controller}: Commitment-Aware Recovery Engine dynamically selects between claim editing, prefix backtracking, and restarting based on local recoverability estimates.
-\item \textbf{Task-aware policy}: Selective abstention on flagged QA drafts; restart on synthesis tasks.
-\item \textbf{Chain-of-Verification (CoVe)}: Factored generate-and-revise baseline~\cite{dhuliawala2024cove}.
+\item \emph{H0, sanity:} CARE reduces hallucination relative to the base model,
+\rrHZero\ [\rrHZeroLo, \rrHZeroHi] ($p=\rrHZeroP$).
+\item \emph{H1, versus restart until $D$ passes:} \rrHOne\ [\rrHOneLo, \rrHOneHi]; equivalent within
+$\pm$0.03 (TOST 90\% CI [\rrTostLo, \rrTostHi]). Restart spends \rrRestartTok\ tokens per item
+against \rrCareTok\ for CARE.
+\item \emph{H5, does the commitment-aware choice add anything?} CARE minus the same controller
+restricted to restarts: \rrHFive\ [\rrHFiveLo, \rrHFiveHi] under $E_1$ and \rrHFiveEtwo\
+[\rrHFiveEtwoLo, \rrHFiveEtwoHi] under $E_2$. An oracle that knows each boundary's true
+recoverability gains \rrOracle\ [\rrOracleLo, \rrOracleHi]: there was little to choose between.
+\item \emph{Mechanism, with human span labels:} over \mechN\ human-hallucinated drafts, resampling
+from just before the first hallucinated sentence is no better than restarting (\mechDiff\
+[\mechDiffLo, \mechDiffHi], $p=\mechP$; \mechSum\ for summaries, exploratory). Keeping a
+hallucinated sentence does not raise the hazard of later ones relative to a placebo (\mechSnow\
+[\mechSnowLo, \mechSnowHi]): no snowballing~\cite{zhang2024snowball}.
 \end{itemize}
+HotpotQA agrees: H0 holds and no comparison against an alternative strategy is significant.
+
+\textbf{Who grades the loop matters} (exploratory). Detector-gated policies resample until $D$ is
+satisfied, so an evaluator that resembles $D$ will tend to agree that they succeeded. We score
+every RAGTruth policy on the \robNTest\ sources of a held-out half under five evaluators
+(Table~\ref{tab:evaluators}). One of them never reads a LettuceDetect score: $E_1$ with a threshold on
+the share of sentences it calls unsupported (\robFstar\%), chosen on the other \robNDev\ drafts from a
+grid fixed in advance. Its human agreement is weak ($\kappa=\robKEOneCal$ on the held-out drafts),
+like $E_1$'s (\robKEOne); $E_2$, the ``dual'' rule $E_1\wedge E_2{\ge}0.3$ and $D$ agree better
+(\robKETwo, \robKDual, \robKD) but share training data with the gate ($E_2$ agrees with $D$ on
+\robAgreeETwoD\% of drafts, $E_1$-calibrated on \robAgreeEOneD\%). The threshold 0.3 of the dual rule was
+chosen on all drafts, so its held-out $\kappa$ is not an out-of-sample estimate.
 
 \begin{table}[t]\centering\small
-\caption{Empirical policy trade-offs on RAGTruth test (233 sources) under the dual consensus judge. All rows are executed model runs; no synthetic baselines.}
-\label{tab:grounded_policies}
+\caption{Hallucination rate (\%) on the held-out half of RAGTruth under five evaluators. $D$-family
+evaluators share LettuceDetect's training data with the gate. Differences from restart with 95\%
+CIs: \texttt{results/recovery/final/evaluator\_robustness.md}.}
+\label{tab:evaluators}
+\setlength{\tabcolsep}{2.5pt}
 \resizebox{\columnwidth}{!}{%
-\begin{tabular}{lcccc}\toprule
-Strategy & Halluc.\ $\downarrow$ & Coverage $\uparrow$ & Faithful Delivered $\uparrow$ & Cost\\\midrule
-Raw Generator & \ragRawHall\% & \ragRawCov\% & \ragRawFaith\% & \ragRawCost\\
-\textbf{Plain Restart ($b=2$)} & \ragRestartHall\% & \textbf{\ragRestartCov\%} & \textbf{\ragRestartFaith\%} & \ragRestartCost\\
-CARE Controller ($b=2$) & \ragCareHall\% & \ragCareCov\% & \ragCareFaith\% & \ragCareCost\\
-Abstain-on-flag & 19.7\% & 88.4\% & 68.7\% & 1001\\
-Task-Aware & \textbf{\ragTaskHall\%} & 88.4\% & 71.2\% & \ragTaskCost\\
-CoVe (clean revised) & 42.9\% & 100.0\% & 57.1\% & N/A\\\bottomrule
+\begin{tabular}{lccccccc}\toprule
+& & & \multicolumn{2}{c}{independent of $D$} & \multicolumn{3}{c}{$D$-family}\\\cmidrule(lr){4-5}\cmidrule(lr){6-8}
+Policy & Cov. & Tokens & $E_1$ & $E_1$-cal. & $E_2$ & dual & $D$\\\midrule
+Base model & \robBaseCov & \robBaseTok & \robBaseEOne & \robBaseEOneCal & \robBaseETwo & \robBaseDual & \robBaseD\\
+Restart until $D$ passes & \robRestartCov & \robRestartTok & \robRestartEOne & \robRestartEOneCal & \robRestartETwo & \robRestartDual & \robRestartD\\
+Backtrack until $D$ passes & \robBackCov & \robBackTok & \robBackEOne & \robBackEOneCal & \robBackETwo & \robBackDual & \robBackD\\
+CARE & \robCareCov & \robCareTok & \robCareEOne & \robCareEOneCal & \robCareETwo & \robCareDual & \robCareD\\
+CARE, restarts only & \robCareRCov & \robCareRTok & \robCareREOne & \robCareREOneCal & \robCareRETwo & \robCareRDual & \robCareRD\\
+Abstain if flagged (QA) & \robAbstCov & \robAbstTok & \robAbstEOne & \robAbstEOneCal & \robAbstETwo & \robAbstDual & \robAbstD\\
+CoVe, revised answer ($n$=\robCoveN) & \robCoveCov & -- & \robCoveEOne & \robCoveEOneCal & \robCoveETwo & \robCoveDual & \robCoveD\\\bottomrule
 \end{tabular}}
 \end{table}
 
-The empirical outcome exactly mirrors our findings in mathematical reasoning:
-\begin{enumerate}
-\item \textbf{The commitment-aware controller fails to beat restart.} CARE delivers fewer faithful answers than plain restart (\ragCareFaith\% vs \ragRestartFaith\%) and has a higher hallucination rate (\ragCareHall\% vs \ragRestartHall\%) while costing 29\% more tokens (\ragCareCost\ vs \ragRestartCost).
-\item \textbf{Surgical backtracking is no shortcut.} Resampling from just before the first human-labelled hallucinated sentence is no better than restarting (+0.024 [$-0.002, +0.049$], $p=0.066$).
-\item \textbf{No error snowballing.} Keeping an unfaithful sentence does not increase the hallucination hazard of subsequent sentences ($-0.006$ [$-0.029, +0.019$]). Hallucinations behave as localized generation slips, not irrecoverable path commitments.
-\end{enumerate}
+Two conclusions survive the change of evaluator: CARE beats restart under none of the five, and
+it matches its restart-only ablation under both preregistered evaluators (H5). Everything else depends on the evaluator. Restarting until $D$ passes
+lowers the hallucination rate by \robBaseETwoDiff\ according to $E_2$ and \robBaseDualDiff\ according to
+the dual rule, but by \robBaseEOneDiff\ [\robBaseEOneDiffLo, \robBaseEOneDiffHi] according to $E_1$ and
+\robBaseEOneCalDiff\ [\robBaseEOneCalDiffLo, \robBaseEOneCalDiffHi] according to its calibrated
+version. Chain-of-Verification~\cite{dhuliawala2024cove}, which never consults $D$, looks far worse
+than restart to the $D$-family (\robCoveDualDiff\ under the dual rule) and indistinguishable from it
+to the independent judges (\robCoveEOneDiff\ [\robCoveEOneDiffLo, \robCoveEOneDiffHi]). The independent
+judges are weak, so they cannot rule out a real reduction; but the $D$-family numbers are partly
+the gate grading itself. Gains of a verifier loop should be measured by an evaluator that shares
+no training data with the verifier, and ultimately by people (a blinded two-rater kit is
+released; Section~\ref{sec:limits}).
 
-\subsection{The safety--utility trade-off}
-The Task-Aware policy achieves the lowest apparent hallucination rate (\ragTaskHall\%). However, it achieves this strictly by refusing to answer flagged QA prompts. This reduces answer coverage to \ragTaskCov\% and drops total faithful answers delivered to \ragTaskFaith\% (compared to \ragRestartFaith\% for plain restart). While selective abstention represents a valid safety preference in zero-tolerance environments, it does not represent Pareto dominance: plain restart remains the dominant strategy for maximizing faithful utility.
-
-\subsection{Cross-architecture generalization}
-Evaluating 1,500 outputs across Llama-2-7B and Meta-Llama-3.1-8B-Instruct shows that architectural scaling substantially reduces overall failure flags (\crossLlamaTwoFlag\% $\rightarrow$ \crossLlamaThreeFlag\%). On short-form QA, instruction tuning reduces failures from \crossLlamaTwoQa\% to \crossLlamaThreeQa\%. However, complex synthesis tasks continue to experience frequent failure flags (\crossLlamaThreeData\% for data-to-text, \crossLlamaThreeSummary\% for summarization), confirming that early failure detection remains an active challenge for long-form reasoning and synthesis.
+\textbf{Reading.} As in mathematics, the step where the output first goes wrong is a fine but not a
+better place to resume than the beginning, and an online estimate of recoverability does not
+change that. Hallucinations here behave like local errors rather than commitments:
+detecting and resampling them reduces hallucination by an amount the evaluators disagree on, and
+choosing where to resample adds nothing.

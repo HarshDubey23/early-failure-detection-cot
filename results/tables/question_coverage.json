@@ -1,0 +1,2 @@
+{"_note": "Computed by paper/make_values.py from data/processed/processed_traces.jsonl (ProcessBench text, not committed) in commit e784700; cached so the paper builds without the dataset.",
+ "QuestionsQwen": 590, "QuestionsLlama": 512, "QuestionsLlamaNew": 479, "QuestionsUnion": 1069}

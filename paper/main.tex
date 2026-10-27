@@ -13,10 +13,10 @@
 \graphicspath{{../results/figures/}}
 \input{values}
 
-\title{\Large\bfseries Errors Are Not Choke Points: Difficulty, Error Onset and\\Counterfactual Commitment in LLM Reasoning Failures}
+\title{\Large\bfseries Errors Are Not Choke Points: Where LLM Failures Are Decided,\\and Why Restarting Is Hard to Beat}
 \author{Harsh Dubey \quad Harshit Saini \quad Prashant Jain\\ Himanshu Kumar \quad Gaurav Kaushal \quad Rohit Chaudhary\\
 \small Dept.\ of CSE (AI\&ML), KIET Group of Institutions, Ghaziabad, India\\
-\small \texttt{harsh.2428cseaiml127@kiet.edu}}
+\small \texttt{harshimp123455@gmail.com}}
 \date{}
 
 \begin{document}
@@ -25,57 +25,58 @@
 \input{abstract}
 
 \section{Introduction}
-Chain-of-thought (CoT) reasoning~\cite{wei2022cot} turns a single prediction into a trajectory of
-steps, and two widely used ideas assume that a wrong final answer is decided at an identifiable
-point inside that trajectory. Process supervision~\cite{lightman2023,uesato2022,processbench} trains
-and evaluates verifiers to find the \emph{first incorrect step}, and verifier-guided search
-backtracks to it. Early-warning detectors~\cite{afzal2025,lugoloobi2026} predict from a partial
-trajectory that the answer will be wrong, so that computation can be stopped or redirected.
+When a language model fails, test-time methods try to repair the failure rather than start over.
+Process reward models (PRMs) are trained and benchmarked to find the \emph{first incorrect step} of
+a reasoning trace~\cite{lightman2023,uesato2022,processbench}, and verifier-guided search
+backtracks to it. Early-warning detectors predict from a partial trace that the answer will be
+wrong~\cite{afzal2025,lugoloobi2026}. Retrieval-augmented systems detect a hallucinated sentence
+and rewrite or regenerate from there~\cite{gao2023rarr,dhuliawala2024cove}. All of these assume
+that a failure is \emph{decided} at an identifiable step, and that resampling from just before
+that step beats resampling from scratch.
 
-Both ideas rest on two assumptions that are rarely tested. The first is that the signal they use is
-about the \emph{trajectory}: a detector that reads a prefix should know more than a detector that
-reads only the question. The second is that the \emph{annotated first error is the point at which
-the outcome is decided}. We call a step that decides the outcome a \emph{choke point}, and ask
-whether errors and choke points coincide.
+We test the assumption directly, with one quantity throughout. For a trace written by model $M$,
+let $v_k$ be $M$'s probability of reaching a correct (or faithful) output from the prefix ending at
+step $k$, estimated by sampling $M$'s own continuations. $v_0$ is the from-scratch solve rate, so
+\emph{restart} is resampling from $k=0$ and \emph{backtracking} to step $j$ is resampling from
+$k=j-1$. A \emph{choke point} is where $v$ collapses; an \emph{error} is where a human annotator says
+the reasoning first goes wrong. The paper asks whether they coincide, whether existing signals can
+find either, and whether finding them pays for itself. The question is old in another guise:
+randomised search algorithms face the same choice between continuing a run and restarting it,
+and restarts are often optimal there~\cite{luby1993,gomes2000}. Language-model decoding is such
+a randomised search, and we find that the same answer holds.
 
-We test both assumptions on ProcessBench~\cite{processbench}, which provides expert first-error
-labels for 3,400 solutions written by 12 open models. We then measure commitment directly: we
-resample four open models from two families at every prefix of their own traces, scoring
-\TotalRollouts\ continuations. Every claim below carries its evidence level
-(Section~\ref{sec:evidence}): \textsc{pre} (preregistered before any data), \textsc{exp}
-(exploratory: found while looking at the data) or \textsc{conf} (a preregistered test on new
-data). Our contributions:
+Every claim carries its evidence level (Section~\ref{sec:evidence}): \textsc{pre} (preregistered
+before any data), \textsc{exp} (exploratory) or \textsc{conf} (a preregistered test on new data).
+Our contributions:
 \begin{enumerate}
-\item \textbf{Difficulty-controlled evaluation of early failure detection} (\textsc{exp}, CPU).
-A detector that reads only the question and the generator's identity reaches AUROC \aucQG.
-Adding the first quarter of the reasoning adds \dIncA\ (n.s.), and within a problem the 25\% prefix
-is at chance (\wpPA).
-\item \textbf{Errors are not choke points, observationally} (\textsc{exp}). \nonFatalPct\% of first
-errors are followed by a correct answer, fatality does not depend on where the error occurs, and
-failure detectors rank non-fatal errors as riskier than fatal ones (AUROC \twOutFR).
-\item \textbf{Reliable counterfactual value curves.} With up to 64 continuations per step, drawn as
-four independent batches, value curves replicate across batches ($r=\QwenSmallAllSplitR$). Decisive
-steps are stable under posterior resampling, so disagreement with human labels is not sampling
-noise.
-\item \textbf{Where failures are decided.} \QwenSmallAllCapPct--\QwenMathCapPct\% of failures are
-capability-limited before the first step. When the outcome is still open, the annotated error is
-where success collapses in \QwenTwoAllDec--\QwenSmallAllDec\ of traces, against a position-matched
-null of 0.16--0.20 (\textsc{pre} for the Qwen models; \textsc{conf} on Llama, \LlamaDec).
-\item \textbf{Backtracking to the human first error is model-dependent.} For three Qwen models,
-resampling from just before the annotated first error is worse than restarting, by
-\QwenMathBtRestErr\ to \QwenTwoAllBtRestErr\ per attempt (\textsc{exp}). The effect replicates on
-independent samples (\PooledNewBtRestErr, \textsc{conf}) but \emph{fails to generalize} to
-Llama-3.1-8B (\LlamaBtRestErr, \textsc{conf}, not confirmed). A short supermartingale argument
-shows that restart is a strong baseline for any restart point chosen without looking ahead.
-\item \textbf{No practical policy beats restart at matched compute.} We count every token,
-including the cost of finding the restart point. Under that accounting, backtracking guided by a
-validated process reward model (ProcessBench F1 \prmFOne) is worse than restart for Llama
-(\LlamaPolPrmDropFourDiff, \textsc{conf}) and for the 1.5B models. A learned target transferred
-across families is worse everywhere. Only for Qwen2.5-Math-7B with large budgets is there a small
-gain.
-\item \textbf{Generalization to grounded generation.} On RAGTruth (450 sources) and HotpotQA (300 items) across 1,500 outputs from Llama-2-7B and Llama-3.1-8B, we test whether local failure detection enables commitment-aware recovery. Under an out-of-sample validated Dual Consensus Judge (\judgeDualTestKappa\ on untouched test, \judgeDualPooledKappa\ pooled), a commitment-aware controller (CARE) fails to beat plain restart (\ragCareFaith\% vs \ragRestartFaith\% faithful answers delivered) while costing 29\% more tokens. Lower hallucination rate is achievable only via selective abstention, sacrificing answer coverage.
+\item \textbf{Early warning is a difficulty signal} (\textsc{exp}). On ProcessBench, question and
+generator alone predict a wrong answer with AUROC \aucQG; the first quarter of the reasoning adds
+\dIncA\ (n.s.) and is at chance within a problem (\wpPA). \nonFatalPct\% of first errors are not fatal.
+\item \textbf{Counterfactual commitment at scale, with reliability checks.} \TotalRollouts\
+on-policy continuations from four models in two families; value curves replicate across
+independent batches ($r=\QwenSmallAllSplitR$) and decisive steps are stable under posterior noise.
+\QwenSmallAllCapPct--\QwenMathCapPct\% of failures are decided before the first step; among the
+rest, the labelled error is the choke point in \QwenTwoAllDec--\QwenSmallAllDec\ of traces against
+a null of 0.16--0.20 (\textsc{pre}; \textsc{conf} on Llama-3.1-8B, \LlamaDec).
+\item \textbf{ChokeBench} (new). A benchmark that grades step localisers on the human first error
+\emph{and} on the counterfactual choke point. The best PRM rule finds \cbPrmDropAccHPct\% of human
+first errors but \cbPrmDropAccDPct\% of choke points; on open failures no localiser, including the
+expert label, yields a better resampling point than the beginning.
+\item \textbf{Restart is hard to beat at matched compute.} Charging every token, including verifier
+passes, PRM-guided backtracking loses to restart (\LlamaPolPrmDropFourDiff, \textsc{conf}); a free
+oracle for the choke point gains at most \cbOracleGainB\ at four restarts' budget. A short
+supermartingale argument shows why: a failed on-policy prefix chosen without looking ahead is, in
+expectation, worth no more than a fresh start.
+\item \textbf{The same holds for hallucination recovery} (\textsc{pre}). A commitment-aware RAG
+controller is equivalent to restart-until-the-detector-passes on RAGTruth, and its choice of where
+to resample adds \rrHFive\ [\rrHFiveLo, \rrHFiveHi]. Hallucinations do not snowball.
+\item \textbf{A measurement caution for detector-gated loops} (\textsc{exp}). The reduction such a
+loop achieves looks \robBaseETwoDiff\ under an evaluator trained on the same data as the gate and
+\robBaseEOneDiff\ (n.s.) under an independent judge. Gains of a verifier loop should be measured
+by an evaluator that shares nothing with the verifier.
 \end{enumerate}
-All code, tables and the generator of every number in this paper are released.\footnote{\url{https://github.com/HarshDubey23/early-failure-detection-cot}}
+All code, rollouts, tables and the generator of every number in this paper are
+released.\footnote{\url{https://github.com/HarshDubey23/early-failure-detection-cot}}
 
 \section{Related Work}
 \textbf{Process supervision.} Step-level supervision outperforms outcome supervision~\cite{lightman2023,uesato2022};
@@ -103,8 +104,23 @@ models can correct a mistake once told where it is~\cite{tyen2024}, which motiva
 search that returns to the first error. Independent resampling from scratch, as in
 self-consistency~\cite{wang2023sc}, is the natural baseline for any such scheme; we compare the two
 directly. Compute-matched comparisons of verifier-guided search with independent sampling are
-known to depend on difficulty and budget~\cite{snell2024}; we add counterfactual ground truth on
-where the restart point should be.
+known to depend on difficulty and budget~\cite{snell2024}, and trained backtracking beats parallel
+best-of-$n$ on deep search trees but not on shallow ones~\cite{qin2025backtrack}. Bulut~\cite{bulut2026} compares
+truncated reasoning prefixes with matched-token restarts for two reasoning models and finds that
+long prefixes mostly buy the same successes more cheaply; we study \emph{failed} traces, with
+expert error labels, four generators and verifier costs charged. Persistent-pool PRM search revisits
+discarded prefixes~\cite{tran2026sps}; our results bound what any such revisiting can gain when the
+prefix belongs to a failed on-policy trace. Restart strategies for randomised search have a long
+theory~\cite{luby1993,gomes2000}; Appendix~\ref{app:prop} gives the analogue for language-model
+decoding.
+
+\textbf{Hallucination recovery.} Detect-then-revise systems rewrite unsupported claims~\cite{gao2023rarr}
+or verify and regenerate~\cite{dhuliawala2024cove}; token-level detectors such as
+LettuceDetect~\cite{lettucedetect}, trained on RAGTruth~\cite{ragtruth}, make the gate cheap.
+Hallucinations can snowball when a model commits to an early claim~\cite{zhang2024snowball}; we
+test for this with human span labels and find no excess hazard. Resampling-based interpretability
+measures the importance of reasoning steps counterfactually~\cite{bogdan2025,macar2025branches};
+we apply the same tool to human error labels, verifiers and recovery policies.
 
 \section{Data and Definitions}
 \textbf{Data.} ProcessBench~\cite{processbench} contains 3,400 step-segmented solutions to GSM8K,
@@ -229,6 +245,8 @@ Prefix 100\% (has error) & \twErrRC & \twErrFR & \twErrFC\\\bottomrule
 
 \input{policies}
 
+\input{chokebench}
+
 \input{recovery}
 
 \section{Discussion}
@@ -247,16 +265,24 @@ equal for Llama, and at matched compute it never clearly beat restarting. Verifi
 backtracking should therefore always be reported against restart at matched end-to-end compute,
 with the verifier's own cost included.
 
-\textbf{What would change the picture.} The oracle shows headroom: the best restart point in
-hindsight succeeds \QwenSmallAllBtOracle--\LlamaBtOracle\ per attempt, against
-\QwenMathBtRestart--\QwenTwoAllBtRestart\ for restart. A verifier that predicted the decisive step
-cheaply and accurately could exploit that headroom. Our learned predictor does not: transferred
-across families, it is worse than restart. The released value curves are labelled training data
-for such a predictor.
+\textbf{What would change the picture.} The in-sample oracle shows apparent headroom: the best
+restart point in hindsight succeeds \QwenSmallAllBtOracle--\LlamaBtOracle\ per attempt, against
+\QwenMathBtRestart--\QwenTwoAllBtRestart\ for restart. ChokeBench shows that most of it is
+selection on noise: chosen and scored on independent halves of the rollouts, the choke point is
+worth \cbOracleGain\ per attempt and \cbOracleGainB\ at a 4$\times$ budget, before any verifier
+cost. Backtracking can win only where a prefix holds work the model cannot reproduce from scratch,
+which is the regime of long, correct-so-far reasoning~\cite{bulut2026} and of deep search
+problems~\cite{qin2025backtrack}, not of failed traces at these scales. The released value curves
+let anyone test a localiser against that ceiling.
 
-\textbf{For grounded generation and hallucination.} The finding that errors are not choke points is not unique to symbolic mathematics. In grounded generation, hallucinations behave as local slips rather than irreversible trajectory commitments. Dynamic switching between claim editing, prefix backtracking and restart adds token and latency overhead without surpassing plain whole-sequence restart. The only intervention that lowers hallucination rate below restart is selective abstention, which trades away answer volume.
+\textbf{For grounded generation.} The math result carries over: the first hallucinated sentence is
+not a better resampling point than the beginning, an online recoverability estimate does not
+change that, and hallucinations do not snowball. A detector-gated loop does reduce hallucination,
+but by how much depends on whether the evaluator resembles the gate. We recommend that recovery
+systems report (i) a matched-compute restart baseline, (ii) an ablation that removes the choice of
+resampling point, and (iii) an evaluator that shares no training data with the gate.
 
-\section{Limitations and what remains unverified}
+\section{Limitations and what remains unverified}\label{sec:limits}
 \begin{itemize}
 \item \textbf{Coverage.}
   \begin{itemize}
@@ -279,15 +305,25 @@ preregistered Llama test, it is inconclusive.
 shared-verifier accounting and all policy results on the Qwen models are exploratory.
 \item \textbf{Human coding.} The coding of recovered traces by two independent human coders has
 not been done. The protocol and blinded sheets are released, and no coding result is reported.
+\item \textbf{Hallucination recovery.} One generator (Llama-2-7B-chat); the Llama-3.1-8B arm produced
+drafts only (GPU quota), so no recovery claim is made for it. Chain-of-Verification ran on 192 of
+750 items. The independent judges agree only weakly with people, and no human rating of the
+system's outputs exists yet; a blinded 80-pair, two-rater kit is released.
+\item \textbf{ChokeBench} is built from the same rollouts as Sections~\ref{sec:counterfactual}--\ref{sec:policies}
+and is exploratory; its localisers are fixed rules, not trained models (the learned policy of
+Section~\ref{sec:policies} is the trained case).
 \end{itemize}
 
 \section{Conclusion}
-Errors are where reasoning first goes wrong; choke points are where it stops being recoverable.
-Measured counterfactually, on two model families with independent replication, three things hold.
-First, many failures are decided before the first step. Second, when the outcome is still open, the
-human-labelled error is a better-than-chance but far from perfect locator of the choke point.
-Third, neither human labels nor a strong process reward model provide a restart point that beats
-simply starting over at matched compute. Across both multi-step symbolic reasoning and open-domain grounded generation, whole-sequence restart is the benchmark that local recovery has to beat.
+Errors are where generation first goes wrong; choke points are where it stops being recoverable.
+Measured counterfactually, with preregistration and independent replication, four things hold.
+Many failures are decided before the first step, which is why early warning reads difficulty. When
+the outcome is still open, the human-labelled error is a better-than-chance but imperfect locator of
+the choke point, and process reward models track the label rather than the choke point. Neither
+labels, nor reward models, nor an oracle for the choke point provide a resampling point that
+clearly beats starting over at matched compute. And the same is true for hallucinations in
+retrieval-augmented generation. Restart is the baseline that local recovery has to beat, and the
+gains, where there are any, lie in the verifier and the evaluator, not in where one resamples.
 
 \input{refs}
 \onecolumn

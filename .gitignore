@@ -41,3 +41,6 @@ docs/explained/
 data/external/
 # Run R benchmark items contain dataset text (RAGTruth, HotpotQA); scripts/31_build_items.py recreates them
 data/recovery/
+
+# Blinding key of the human-evaluation kit: keep it off the repository (SHA-256 committed instead)
+results/recovery/human_eval/KEY*.csv

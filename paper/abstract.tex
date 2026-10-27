@@ -1,35 +1,33 @@
 \begin{abstract}
-Process supervision assumes that the first incorrect step of a reasoning trace is where it fails,
-and verifier-guided search backtracks to that step. We test this on ProcessBench's expert
-first-error labels.
+Verifier-guided search, process reward models and hallucination-repair loops share one assumption:
+a failing generation goes wrong at an identifiable step, and resampling from just before that step
+is better than starting over. We test this assumption end to end, on mathematical reasoning and on
+retrieval-augmented generation, with a single quantity: $v_k$, the generator's own probability of
+success from prefix $k$, measured by on-policy resampling.
 
-Observationally, early-warning detectors mostly read problem difficulty: question and generator
-alone reach AUROC \aucQG, and a quarter of the reasoning adds \dIncA\ (n.s.). \nonFatalPct\% of
-first errors are not fatal.
+\emph{Detection.} On 3,400 ProcessBench traces, early-warning detectors mostly read difficulty:
+question and generator alone reach AUROC \aucQG, and a quarter of the reasoning adds \dIncA\ (n.s.).
 
-We then measure commitment directly. We resample four open models from two families at every
-prefix of their own traces (\TotalRollouts\ scored continuations, up to 64 per step in
-independent batches) and show that the resulting value curves and decisive steps are reliable.
-\QwenSmallAllCapPct--\QwenMathCapPct\% of failures are decided before the first step. When the
-outcome is still open, the labelled error is where success collapses in
-\QwenTwoAllDec--\QwenSmallAllDec\ of traces, against a null of about 0.18. This was confirmed in a
-preregistered test on Llama-3.1-8B.
+\emph{Commitment.} From \TotalRollouts\ continuations of four open models, value curves replicate
+across independent batches ($r=\QwenSmallAllSplitR$). \QwenSmallAllCapPct--\QwenMathCapPct\% of
+failures are decided before the first step. When the outcome is still open, the human-labelled
+first error is where success collapses in \QwenTwoAllDec--\QwenSmallAllDec\ of traces (null
+$\approx$0.18; preregistered and confirmed on a held-out model family).
 
-For three Qwen models, resampling from just before the labelled error succeeds less often than
-restarting, and the effect replicates on independent samples (\PooledNewBtRestErr). It does not
-generalize to Llama, where the preregistered test fails (\LlamaBtRestErr).
+\emph{Localisation.} We release ChokeBench, which grades step localisers on both targets. A
+validated process reward model finds the human first error in \cbPrmDropAccHPct\% of open
+failures but the choke point in only \cbPrmDropAccDPct\%.
 
-At a matched end-to-end budget that counts every token, no practical policy beats restart
-reliably. This includes backtracking guided by a validated process reward model (ProcessBench F1
-\prmFOne), which is worse than restart for Llama (\LlamaPolPrmDropFourDiff). A short
-supermartingale argument explains why restart is hard to beat.
+\emph{Recovery.} No deployable resampling point reliably beats restart. At a matched end-to-end budget, PRM-guided
+backtracking is worse than restart (\LlamaPolPrmDropFourDiff\ on the preregistered model), and even
+an oracle that knows the choke point for free gains only \cbOracleGainB\ [\cbOracleGainBLo,
+\cbOracleGainBHi] at four restarts' budget. A supermartingale argument explains why. In RAG
+(RAGTruth, Llama-2-7B), a preregistered commitment-aware controller is equivalent to restarting
+until the detector passes, and its choice of where to resample adds \rrHFive\
+[\rrHFiveLo, \rrHFiveHi]. We also find that the apparent size of such recovery gains depends on
+the evaluator: \robBaseETwoDiff\ under an evaluator sharing the gate detector's training data,
+\robBaseEOneDiff\ (n.s.) under an independent judge.
 
-The finding that errors are not choke points generalizes to grounded text generation. On RAGTruth and
-HotpotQA across 1,500 outputs from Llama-2-7B and Llama-3.1-8B, under an out-of-sample validated dual
-consensus judge ($\kappa=\judgeDualPooledKappa$), a commitment-aware controller fails to beat
-whole-sequence restart (\ragCareFaith\% vs \ragRestartFaith\% faithful answers delivered), and no error
-snowballing is observed. Across symbolic reasoning and open-domain generation, whole-sequence restart is
-the benchmark that local recovery has to beat.
-
-We release all rollouts, the preregistration and the code behind every number.
+Across both domains, restart is the baseline that local recovery must beat at matched compute,
+and it rarely is. All rollouts, preregistrations and the code behind every number are released.
 \end{abstract}

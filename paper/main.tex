@@ -81,7 +81,9 @@ against a null of 0.16--0.20 (\textsc{pre}; \textsc{conf} on Llama-3.1-8B, \Llam
 \item \textbf{ChokeBench v1}, a benchmark and evaluation protocol (\cbN\ failed traces, four generators). Step localisers graded on the human first error \emph{and}
 the counterfactual choke point. The best PRM rule finds \cbPrmDropAccHPct\% of human first errors but
 \cbPrmDropAccDPct\% of choke points; a localiser trained and tuned for the choke point does no
-better (\cbLearnedAccD).
+better (\cbLearnedAccD). The benchmark has predictive validity on held-out halves of the rollouts
+and held-out models: within a trace, naming the choke point raises the recovery gain by \valBothD,
+and the human label adds \valBothE\ once the choke point is accounted for (\textsc{exp}).
 \item \textbf{Why surgery does not pay, proved and measured.} Restarting recovers \recMinFour--\recMaxFour\% of failed
 solutions at four attempts and \recMinEight--\recMaxEight\% at eight. At matched compute, PRM-guided
 backtracking loses to restart (\LlamaPolPrmDropFourDiff, \textsc{conf}); a free choke-point oracle
@@ -91,7 +93,7 @@ restart loop's quality is capped by its detector. In RAG, choosing where to resa
 \rrHFive\ (\textsc{pre}), and hallucinations do not snowball.
 \item \textbf{Secondary: a cheap recipe for RAG, with its law.} Detect, restart, abstain
 (DRA). A preregistered detect--resample controller
-reduces judged hallucination relative to the base model (\rrHZero, $p=\rrHZeroP$; the judge's agreement with people is $\kappa=\evEOneKappa$, and no human rating of outputs exists yet), DRA is equivalent to it
+reduces judged hallucination relative to the base model (\rrHZero, $p=\rrHZeroP$; the judge's agreement with people is $\kappa=\evEOneKappa$, and no human rating of outputs exists yet); plain DRA, tested against the base model on the same items, gives \vbDraEOne\ [\vbDraEOneLo, \vbDraEOneHi] (\textsc{exp}), DRA is equivalent to it
 (H1), at \costDra$\times$ the base cost (claim repair \costRep$\times$, the choke-point-aware controller CARE \costCare$\times$,
 Chain-of-Verification \costCove$\times$). We prove that DRA's residual hallucination rate is the
 detector's $P(\text{hallucinated}\mid\text{pass})$ whatever the retry budget, which predicts
@@ -102,6 +104,14 @@ detector's $P(\text{hallucinated}\mid\text{pass})$ whatever the retry budget, wh
 \robBaseETwoDiff\ under a grader trained like the detector and \robBaseEOneDiff\ (n.s.) under an
 independent judge: the gate partly grades itself.
 \end{enumerate}
+\textbf{Scope of the claims.} Proposition~1 is conditional: it bounds the per-attempt value of a
+resampling point chosen without lookahead, on failed traces sampled from the generator itself. It
+does not say restart is always optimal. Rules that look ahead, or shorter attempts
+(Proposition~2), can win, and the ProcessBench traces of Sections~\ref{sec:counterfactual}--\ref{sec:chokebench}
+are only near on-policy. Empirically, restart beat PRM-guided backtracking on the held-out
+Llama-3.1-8B (\textsc{conf}), but restart against backtracking to the human error was not confirmed
+(C1: \LlamaBtRestErr\ [\LlamaBtRestErrLo, \LlamaBtRestErrHi]).
+
 All code, rollouts, tables and the generator of every number in this paper are
 released.\footnote{\url{https://github.com/HarshDubey23/early-failure-detection-cot}}
 

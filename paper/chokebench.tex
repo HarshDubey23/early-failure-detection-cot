@@ -84,6 +84,24 @@ stars mark the selected configuration; the legend gives its score on the held-ou
 \label{fig:tuning}
 \end{figure*}
 
+\textbf{Does a ChokeBench score predict recovery?} (\textsc{exp}.) A benchmark for localisers is
+useful only if scoring well on it predicts that resampling from the named step helps. We test this
+without circularity. In each of 50 random splits of every prefix's continuations, half A labels the
+choke point and half B scores the gain of resampling just before the named step; the halves are
+independent given the true value curve. Over \valN\ open failed traces and every localiser, with
+trace fixed effects (so problem difficulty cancels), naming the choke point raises the per-attempt
+gain by \valD\ [\valDLo, \valDHi], and naming the human first error by \valE\ [\valELo, \valEHi].
+Fitted jointly, the human label adds nothing once the choke point is accounted for (\valBothE\
+[\valBothELo, \valBothEHi], against \valBothD\ for the choke point). The human label is useful only to the
+extent that it coincides with the choke point. The coefficients compare named steps within a trace,
+not a named step with restart: hitting the choke point avoids most of the loss that other steps
+incur, which is why even the oracle only ties restart. At the system level, ranking localisers by
+their ChokeBench score on three generators predicts their mean gain on the fourth better than
+ranking them by a ProcessBench-style score: mean Spearman $\rho=\valRhoD$ against \valRhoE, difference
+\valRhoDiff\ [\valRhoDiffLo, \valRhoDiffHi] (trace bootstrap; seven localisers per generator, so
+each single $\rho$ is noisy). Localiser-level accuracies and gains had been seen before this analysis,
+so it is exploratory (\texttt{scripts/54\_chokebench\_validity.py}).
+
 \textbf{Release.} \texttt{results/chokebench/chokebench\_v1.jsonl} holds, for every failed trace,
 the per-prefix success counts, continuation counts and lengths, the human label and the PRM scores.
 A new localiser is graded by naming one step per trace (\texttt{scripts/49\_chokebench.py}).

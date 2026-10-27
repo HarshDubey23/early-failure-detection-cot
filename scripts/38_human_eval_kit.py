@@ -43,15 +43,19 @@ def make(args) -> None:
          if r.get("sent_scores") is not None}
     texts = {c["cand_id"]: c["text"] for st in (1, 2) for c in C.build_candidates(run, D, args.tau, st)}
     per = pd.read_csv(args.per_item_outputs)
-    a = per[(per.policy == "care") & (per.budget == args.budget)].set_index("item_id")
+    a = per[(per.policy == args.a) & (per.budget == (0 if args.a == "base" else args.budget))].set_index("item_id")
     b = per[(per.policy == args.ref) & (per.budget == (args.budget if args.ref.endswith("_fb") else 0))].set_index("item_id")
-    common = sorted(i for i in a.index.intersection(b.index) if i in run["items"] and a.loc[i, "cid"] != b.loc[i, "cid"])
+    both = [i for i in a.index.intersection(b.index) if i in run["items"]]
+    common = sorted(i for i in both if a.loc[i, "cid"] != b.loc[i, "cid"])
+    # Items where both policies return the same text differ by 0; this share rescales the paired difference to all items.
+    (out / "design.json").write_text(json.dumps({"a": args.a, "ref": args.ref, "items": len(both), "items_that_differ": len(common),
+                                                 "share_that_differ": len(common) / len(both), "rated_pairs": min(args.n, len(common))}, indent=1))
     rng = random.Random(args.seed)
     rng.shuffle(common)
     rows, key = [], []
     for n, iid in enumerate(common[: args.n]):
         it = run["items"][iid]
-        outs = [("care", a.loc[iid, "cid"]), (args.ref, b.loc[iid, "cid"])]
+        outs = [(args.a, a.loc[iid, "cid"]), (args.ref, b.loc[iid, "cid"])]
         rng.shuffle(outs)
         rec = {"pair": n + 1, "task": it["task"], "source": it["prompt"]}
         for lab, (pol, cid) in zip("AB", outs):
@@ -75,7 +79,7 @@ def make(args) -> None:
                      f"<pre style='white-space:pre-wrap'>{html.escape(r['source'])}</pre></details>")
             for lab in "AB":
                 fh.write(f"<h3>Output {lab}</h3><pre style='white-space:pre-wrap'>{html.escape(r[lab + '_numbered'])}</pre>")
-    print(f"{len(rows)} pairs written to {out} (CARE vs {args.ref}); fill sheet_blank.csv copies, one per annotator")
+    print(f"{len(rows)} pairs written to {out} ({args.a} vs {args.ref}); fill sheet_blank.csv copies, one per annotator")
 
 
 def score(args) -> None:
@@ -98,8 +102,11 @@ def score(args) -> None:
         wide = R_.pivot(index="pair", columns="policy", values="halluc")
         pols = list(wide.columns)
         d = (wide[pols[0]] - wide[pols[1]]).to_numpy()
-        res[sh.stem] = {"rates": {p: float(wide[p].mean()) for p in pols},
-                        f"{pols[0]}_minus_{pols[1]}": S.boot_ci(d, np.arange(len(d))),
+        ci = S.boot_ci(d, np.arange(len(d)))
+        share = json.loads((out / "design.json").read_text())["share_that_differ"] if (out / "design.json").exists() else None
+        res[sh.stem] = {"rates_on_rated_pairs": {p: float(wide[p].mean()) for p in pols},
+                        f"{pols[0]}_minus_{pols[1]}": ci,
+                        f"{pols[0]}_minus_{pols[1]}_all_items": None if share is None else [share * float(x) for x in ci],
                         "preferred_share": R_.groupby("policy").preferred.mean().to_dict()}
         labels[sh.stem] = R_.set_index(["pair", "policy"]).halluc
     if len(labels) >= 2:
@@ -116,6 +123,7 @@ def main() -> None:
     ap.add_argument("--items", nargs="*", default=["data/recovery/items.ragtruth.llama-2-7b-chat.jsonl"])
     ap.add_argument("--run-dir", default="results/recovery/run")
     ap.add_argument("--per-item-outputs", default="results/recovery/final/outputs_round0.csv")
+    ap.add_argument("--a", default="care", help="first policy (base, care, ...)")
     ap.add_argument("--ref", default="restart_fb")
     ap.add_argument("--budget", type=float, default=2)
     ap.add_argument("--tau", type=float, default=0.5)

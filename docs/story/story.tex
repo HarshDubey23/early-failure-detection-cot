@@ -93,6 +93,11 @@ of traces, against a chance level of about 0.18 (preregistered, confirmed on Lla
 \item A PRM finds the human-marked error \cbPrmDropAccHPct\% of the time but the choke point only
 \cbPrmDropAccDPct\% (ChokeBench v1, our new benchmark and evaluation protocol, \cbN\ failed traces). A model we trained and tuned for the choke point
 does no better (\cbLearnedAccD).
+\item ChokeBench predicts real recovery. With the choke point labelled on one half of the samples
+and gains scored on the other, naming the choke point raises a trace's recovery gain by \valBothD,
+while the human label adds only \valBothE\ once the choke point is accounted for. On a held-out
+model, ChokeBench scores rank localisers by their actual gain with Spearman \valRhoD, against
+\valRhoE\ for first-error scores (exploratory).
 \item No deployable choice of where to resample reliably beats a plain restart at equal compute. Even
 a free, perfect choke-point oracle gains only \cbOracleGainB\ at four restarts' budget; in RAG,
 choosing where to resample adds \rrHFive.
@@ -770,6 +775,15 @@ same RAGTruth items and score it with the same graders, which we list as future 
 lead with one claim: human-labelled errors are not where failures are decided, and so localising
 and repairing them does not beat restart at matched compute. The early-detection result is reported
 as a negative result that motivates it, and the RAG study as a secondary application.
+\item[Q21. Does ChokeBench predict which interventions work?] Yes, in our data, and without circularity.
+One half of each prefix's samples labels the choke point and the other half scores the recovery gain,
+so a hit cannot raise the gain mechanically. Within a trace, naming the choke point raises the gain
+by \valBothD; the human label adds \valBothE\ once the choke point is accounted for. Across held-out
+models, ChokeBench ranks localisers by gain with $\rho=\valRhoD$, against \valRhoE\ for first-error
+scores. It is exploratory and on our own rollouts; outside replication is still needed.
+\item[Q22. How will you show the hallucination reduction with people?] With a second blinded kit:
+base model against detect--restart--abstain, on 80 of the 208 items where they differ, two raters,
+key hash committed first. The planned analysis is fixed in its README.
 \item[Q20. How can someone reproduce your numbers?] \texttt{make story} regenerates ChokeBench, the
 grader analysis, the figures, every paper number and the PDF on a CPU in a few minutes; the GPU runs
 have resumable Kaggle scripts.

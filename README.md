@@ -74,11 +74,11 @@ This is the restart-versus-continue problem of randomised search (Luby, Sinclair
 
 | # | Finding | Key number | Evidence |
 |---|---|---|---|
-| 1 | **Restart is the baseline to beat.** In maths, restarting recovers most failed solutions. In RAG (secondary), a detector-gated loop lowers *judged* hallucination, and plain restarting matches the choke-point-aware controller at lower cost. | maths: **44–66%** of failures recovered at 4 attempts, **56–77%** at 8. RAG: −4.7 points under an LLM judge with κ = 0.219 (preregistered, p = 0.0003); CARE vs restart-only −0.5 [−2.4, +1.3]; DRA at **1.36×** cost vs CARE 1.77×; no human rating of outputs yet | preregistered (RAG reduction); exploratory (costs) |
+| 1 | **Restart is the baseline to beat.** In maths, restarting recovers most failed solutions. In RAG (secondary), a detector-gated loop lowers *judged* hallucination, and plain restarting matches the choke-point-aware controller at lower cost. | maths: **44–66%** of failures recovered at 4 attempts, **56–77%** at 8. RAG: −4.7 points under an LLM judge with κ = 0.219 (preregistered, p = 0.0003); plain DRA vs base, same items, −4.2 [−6.3, −2.2] (exploratory); CARE vs restart-only −0.5 [−2.4, +1.3]; DRA at **1.36×** cost vs CARE 1.77×; no human rating of outputs yet | preregistered (RAG reduction); exploratory (costs) |
 | 2 | **A law for restart loops (proved).** The hallucination rate of what the loop delivers equals the detector's P(hallucinated &#124; pass), whatever the retry budget; budget buys coverage, not faithfulness. | predicted for people: **50.2% [45.5, 54.9] → 26.6% [21.0, 32.2]** | theory + exploratory estimate |
 | 3 | **Early warning reads difficulty, not reasoning.** | AUROC **0.588** from question + model; +0.005 (n.s.) from 25% of the trace | exploratory |
 | 4 | **Many failures are decided before the first step**, and the rest are often (not always) decided at the labelled error. | **33–66%** decided before step 1; labelled error = choke point in **0.44–0.65** vs a null of 0.16–0.20 | preregistered; **confirmed** on Llama-3.1-8B |
-| 5 | **Verifiers find errors, not choke points** (new: ChokeBench). | a PRM finds **73%** of human first errors but **45%** of choke points; a localiser trained and tuned for it **39%** | exploratory |
+| 5 | **Verifiers find errors, not choke points** (new: ChokeBench). | a PRM finds **73%** of human first errors but **45%** of choke points; a localiser trained and tuned for it **39%**. The benchmark predicts real recovery: within a trace, naming the choke point raises the gain by **+0.40**, and the human label adds **+0.01** (n.s.) once the choke point is accounted for; on held-out models, ChokeBench scores rank localisers by gain with ρ = **0.52** vs **0.22** for first-error scores | exploratory |
 | 6 | **Fixing the choke point does not pay.** No deployable resampling point reliably beats restart at matched compute; a free choke-point oracle gains little. | PRM backtracking **−0.063** [−0.100, −0.024] (Llama); free oracle **+0.028**; in RAG, choosing where to resample adds **−0.000** | **confirmed** (Llama); preregistered (RAG) |
 | 7 | **The gate partly grades itself.** The measured gain of a detector-gated loop depends on whether the grader shares the detector's training data. | **+32.6** points (related grader) vs **+1.7** (independent, n.s.) | exploratory |
 
@@ -171,6 +171,19 @@ human label and PRM scores. Name one step per trace and run
 [`results/chokebench/summary.md`](results/chokebench/summary.md).
 
 ![ChokeBench](results/figures/fig25_chokebench.png)
+
+**Does a ChokeBench score predict real recovery?** (exploratory; [`results/chokebench/validity.md`](results/chokebench/validity.md))
+Half of each prefix's continuations labels the choke point, and the other half scores the gain of
+resampling from the named step, so a hit cannot mechanically raise the gain.
+
+| Within a trace (trace fixed effects, 232 traces) | change in recovery gain per attempt |
+|---|---|
+| named step is the choke point | **+0.40** [+0.35, +0.44] |
+| named step is the human first error, once the choke point is accounted for | **+0.01** [−0.03, +0.05] |
+| **Held-out model:** rank localisers on 3 generators, predict gain on the 4th | Spearman **0.52** (ChokeBench) vs **0.22** (first-error score); difference +0.29 [+0.08, +0.46] |
+
+The human label is useful only where it coincides with the choke point. Even so, hitting the choke
+point avoids the loss other steps incur rather than beating restart.
 
 ### RAG: hallucination recovery under five graders
 
@@ -276,6 +289,7 @@ make story          # CPU, ~1 min: ChokeBench, evaluator robustness, Fig. 0, pap
 | `bash scripts/run_c_analysis.sh` | CPU | every preregistered maths analysis from committed rollouts |
 | `make chokebench` | CPU | ChokeBench (finding 5) |
 | `make evaluator-robustness` | CPU | Part 3 under five graders (finding 7) |
+| `python scripts/54_chokebench_validity.py` | CPU | does a ChokeBench score predict recovery gains? (held-out halves and models) |
 | `python scripts/53_law_tests.py` | CPU | budget-invariance check and operating curve of the restart-loop law |
 | `python scripts/52_mitigation_law.py` | CPU | mitigation costs, maths restart recovery, the restart-loop law (findings 1–2) |
 | `make choke-paper` | CPU | regenerates `paper/values.tex` from the result tables and compiles the PDF |

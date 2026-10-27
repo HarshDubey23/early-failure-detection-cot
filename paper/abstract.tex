@@ -11,7 +11,8 @@ before the first step, and in the rest the human-labelled error is the decisive 
 \QwenTwoAllDec--\QwenSmallAllDec\ of the time, against 0.16--0.20 by chance (preregistered; confirmed on a held-out model
 family). On ChokeBench, a benchmark and evaluation protocol we release (\cbN\ failed traces, four
 generators), a process reward model finds \cbPrmDropAccHPct\% of human first errors but only
-\cbPrmDropAccDPct\% of the decisive steps. At matched compute, no deployable resampling point reliably beats
+\cbPrmDropAccDPct\% of the decisive steps, and on held-out models ChokeBench scores rank localisers
+by their actual recovery gain better than first-error scores do (Spearman \valRhoD\ against \valRhoE). At matched compute, no deployable resampling point reliably beats
 plain restart, and even a free oracle for the decisive step gains only \cbOracleGainB\ at four
 restarts' budget, while restarting recovers \recMinFour--\recMaxFour\% of failed solutions within
 four attempts. A supermartingale bound explains the pattern: a failed on-policy prefix is, in
@@ -21,7 +22,8 @@ question and model alone give AUROC \aucQG, and the first quarter of the reasoni
 
 In a secondary study on retrieval-augmented generation (RAGTruth, Llama-2-7B), a preregistered
 detect--resample controller lowers the judged hallucination rate against the base model
-(\rrHZero, $p=\rrHZeroP$). That judge agrees only weakly with people ($\kappa=\evEOneKappa$), the
+(\rrHZero, $p=\rrHZeroP$), and plain restarting does about the same (\vbDraEOne\ [\vbDraEOneLo, \vbDraEOneHi],
+exploratory). That judge agrees only weakly with people ($\kappa=\evEOneKappa$), the
 choke-point-aware variant is no better than plain restarting (\rrHOne) at higher cost
 (\costCare$\times$ against \costDra$\times$ the base model), and outputs have not yet been rated by
 people. The measured gain also depends on the grader: \robBaseETwoDiff\ under a grader trained like

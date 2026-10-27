@@ -1,0 +1,215 @@
+{
+  "trace_level": {
+    "choke_only": {
+      "hit_d": [
+        0.4044883748311465,
+        0.36753532464099187,
+        0.44246888377739513
+      ]
+    },
+    "human_only": {
+      "hit_e": [
+        0.15315079800014036,
+        0.10947293985980562,
+        0.19640636929642197
+      ]
+    },
+    "both": {
+      "hit_d": [
+        0.39608073793848947,
+        0.3539328710758007,
+        0.44174936262494113
+      ],
+      "hit_e": [
+        0.013632382944515825,
+        -0.02579352220716001,
+        0.049836680275736546
+      ],
+      "choke_minus_human": [
+        0.38244835499397367,
+        0.31323382614763484,
+        0.45793428804218345
+      ]
+    },
+    "n_traces": 232,
+    "n_rows": 1821
+  },
+  "system_level": {
+    "Qwen2.5-1.5B-Instruct": {
+      "n_localisers": 7,
+      "rho_chokebench": 0.3214285714285715,
+      "rho_processbench": 0.1785714285714286,
+      "localisers": {
+        "first_step": {
+          "chokebench_other": 0.31904529956161715,
+          "processbench_other": 0.14198733560642962,
+          "gain_heldout": 0.0
+        },
+        "gen_max_token_entropy": {
+          "chokebench_other": 0.2520701412566975,
+          "processbench_other": 0.2715538236726741,
+          "gain_heldout": -0.1647248838559814
+        },
+        "gen_max_token_nll": {
+          "chokebench_other": 0.2698490014612762,
+          "processbench_other": 0.27167559668777397,
+          "gain_heldout": -0.05032302555168409
+        },
+        "last_step": {
+          "chokebench_other": 0.07574281539210911,
+          "processbench_other": 0.05565026790063322,
+          "gain_heldout": -0.4705466027874565
+        },
+        "prm_first_below_0.5": {
+          "chokebench_other": 0.3851808291678917,
+          "processbench_other": 0.7890326374595706,
+          "gain_heldout": -0.09173387096774191
+        },
+        "prm_largest_drop": {
+          "chokebench_other": 0.39320506575742814,
+          "processbench_other": 0.7053093034583536,
+          "gain_heldout": -0.13227714866434379
+        },
+        "prm_min": {
+          "chokebench_other": 0.3392596200681929,
+          "processbench_other": 0.5860935216755966,
+          "gain_heldout": -0.18603005226480837
+        }
+      }
+    },
+    "Qwen2-1.5B-Instruct": {
+      "n_localisers": 7,
+      "rho_chokebench": 0.6071428571428572,
+      "rho_processbench": 0.3214285714285715,
+      "localisers": {
+        "first_step": {
+          "chokebench_other": 0.28590329564589845,
+          "processbench_other": 0.12063988453211448,
+          "gain_heldout": 0.0
+        },
+        "gen_max_token_entropy": {
+          "chokebench_other": 0.27050757757998556,
+          "processbench_other": 0.2987731537166225,
+          "gain_heldout": -0.29621913580246917
+        },
+        "gen_max_token_nll": {
+          "chokebench_other": 0.2675006013952369,
+          "processbench_other": 0.24260283858551834,
+          "gain_heldout": -0.21508487654320987
+        },
+        "last_step": {
+          "chokebench_other": 0.052201106567235984,
+          "processbench_other": 0.030911715179215773,
+          "gain_heldout": -0.47038966049382724
+        },
+        "prm_first_below_0.5": {
+          "chokebench_other": 0.4591349631129755,
+          "processbench_other": 0.804281787935773,
+          "gain_heldout": -0.2108843537414966
+        },
+        "prm_largest_drop": {
+          "chokebench_other": 0.43372624488814043,
+          "processbench_other": 0.7126533557854221,
+          "gain_heldout": -0.20401234567901236
+        },
+        "prm_min": {
+          "chokebench_other": 0.367211931681501,
+          "processbench_other": 0.5967043541015155,
+          "gain_heldout": -0.25445601851851857
+        }
+      }
+    },
+    "Qwen2.5-Math-7B-Instruct": {
+      "n_localisers": 7,
+      "rho_chokebench": 0.3214285714285715,
+      "rho_processbench": 0.03571428571428572,
+      "localisers": {
+        "first_step": {
+          "chokebench_other": 0.389132197891322,
+          "processbench_other": 0.17177615571776153,
+          "gain_heldout": 0.0
+        },
+        "gen_max_token_entropy": {
+          "chokebench_other": 0.3106244931062449,
+          "processbench_other": 0.34712084347120836,
+          "gain_heldout": -0.11921818342619617
+        },
+        "gen_max_token_nll": {
+          "chokebench_other": 0.31743714517437144,
+          "processbench_other": 0.27996755879967555,
+          "gain_heldout": -0.07915450605819405
+        },
+        "last_step": {
+          "chokebench_other": 0.060340632603406316,
+          "processbench_other": 0.04995944849959448,
+          "gain_heldout": -0.384496329707261
+        },
+        "prm_first_below_0.5": {
+          "chokebench_other": 0.5225417110401135,
+          "processbench_other": 0.851792687255946,
+          "gain_heldout": -0.11301079180307992
+        },
+        "prm_largest_drop": {
+          "chokebench_other": 0.5072181670721817,
+          "processbench_other": 0.8061638280616382,
+          "gain_heldout": -0.10471389404793492
+        },
+        "prm_min": {
+          "chokebench_other": 0.4262773722627736,
+          "processbench_other": 0.6222222222222221,
+          "gain_heldout": -0.12722207482090742
+        }
+      }
+    },
+    "Llama-3.1-8B-Instruct": {
+      "n_localisers": 7,
+      "rho_chokebench": 0.8214285714285715,
+      "rho_processbench": 0.3571428571428572,
+      "localisers": {
+        "first_step": {
+          "chokebench_other": 0.3837716214315848,
+          "processbench_other": 0.156518070594853,
+          "gain_heldout": 0.0
+        },
+        "gen_max_token_entropy": {
+          "chokebench_other": 0.2581915342427225,
+          "processbench_other": 0.30009843903810995,
+          "gain_heldout": -0.19783917817924193
+        },
+        "gen_max_token_nll": {
+          "chokebench_other": 0.28378568415131483,
+          "processbench_other": 0.282941920967515,
+          "gain_heldout": -0.07863974495217854
+        },
+        "last_step": {
+          "chokebench_other": 0.08268879201237518,
+          "processbench_other": 0.07017297145267894,
+          "gain_heldout": -0.4977417640807652
+        },
+        "prm_first_below_0.5": {
+          "chokebench_other": 0.3922413793103448,
+          "processbench_other": 0.8032758620689656,
+          "gain_heldout": -0.004307007355787846
+        },
+        "prm_largest_drop": {
+          "chokebench_other": 0.3933342708479819,
+          "processbench_other": 0.7373083954436787,
+          "gain_heldout": -0.031083953241232733
+        },
+        "prm_min": {
+          "chokebench_other": 0.35297426522289405,
+          "processbench_other": 0.6316973702714104,
+          "gain_heldout": -0.13040205455189516
+        }
+      }
+    },
+    "mean_rho_chokebench": 0.5178571428571429,
+    "mean_rho_processbench": 0.22321428571428575,
+    "mean_rho_diff": [
+      0.29464285714285715,
+      0.08459821428571429,
+      0.45535714285714307
+    ]
+  },
+  "note": "exploratory; localiser-level ChokeBench accuracies and gains (stage 49) had been seen before this analysis"
+}

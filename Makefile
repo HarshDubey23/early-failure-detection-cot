@@ -133,6 +133,7 @@ recovery-analysis:  # after extracting recovery_results.tar.gz here: replay, tes
 # CPU analyses added after Run R, from committed outputs only (no GPU, no dataset text)
 chokebench:  # ChokeBench: step localisers vs human first error and counterfactual choke point
 	$(PY) scripts/49_chokebench.py
+	$(PY) scripts/54_chokebench_validity.py
 
 evaluator-robustness:  # Part 3 under five evaluators; which conclusions survive (exploratory)
 	$(PY) scripts/50_evaluator_robustness.py
@@ -142,6 +143,7 @@ story:  # every CPU analysis above, the figures, the paper numbers, the paper PD
 	$(PY) scripts/50_evaluator_robustness.py > /dev/null
 	$(PY) scripts/52_mitigation_law.py > /dev/null
 	$(PY) scripts/53_law_tests.py > /dev/null
+	$(PY) scripts/54_chokebench_validity.py > /dev/null
 	$(PY) scripts/51_story_figure.py
 	$(MAKE) choke-paper
 	cd docs/story && pdflatex -interaction=nonstopmode story.tex > /dev/null && pdflatex -interaction=nonstopmode story.tex > /dev/null

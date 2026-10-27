@@ -1,0 +1,8 @@
+{
+ "a": "base",
+ "ref": "restart_fb",
+ "items": 450,
+ "items_that_differ": 208,
+ "share_that_differ": 0.4622222222222222,
+ "rated_pairs": 80
+}

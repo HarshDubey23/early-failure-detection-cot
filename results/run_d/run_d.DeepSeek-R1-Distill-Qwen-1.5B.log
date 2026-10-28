@@ -1,0 +1,16 @@
+[2026-10-27 21:31:00 +8.9 min] RUN {'model': 'deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B', 'skip': 20, 'n': 480, 'm': 8, 'max_gen': 6144, 'limit_s': 23400, 'branch': 'story-and-benchmarks'} | vllm 0.32.0 torch 2.13.0+cu130 transformers 5.16.1 gpus 2
+[2026-10-27 22:01:00 +38.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 0 cut rows so far
+[2026-10-27 22:31:00 +68.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 0 cut rows so far
+[2026-10-27 23:01:00 +98.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 0 cut rows so far
+[2026-10-27 23:31:00 +128.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 72 cut rows so far
+[2026-10-28 00:01:00 +158.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 144 cut rows so far
+[2026-10-28 00:31:00 +188.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 144 cut rows so far
+[2026-10-28 01:01:00 +218.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 144 cut rows so far
+[2026-10-28 01:31:00 +248.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 216 cut rows so far
+[2026-10-28 02:01:00 +278.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 288 cut rows so far
+[2026-10-28 02:31:00 +308.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 288 cut rows so far
+[2026-10-28 03:01:00 +338.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 288 cut rows so far
+[2026-10-28 03:31:00 +368.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 288 cut rows so far
+[2026-10-28 04:01:00 +398.9 min] DeepSeek-R1-Distill-Qwen-1.5B: running, 360 cut rows so far
+[2026-10-28 04:01:00 +398.9 min] DeepSeek-R1-Distill-Qwen-1.5B: exit [124, 124] (124 = time limit), 480 traces 131 failed 1638427 trace tokens 120 truncated | 360 cut rows 10460169 continuation tokens
+[2026-10-28 04:01:00 +398.9 min] done

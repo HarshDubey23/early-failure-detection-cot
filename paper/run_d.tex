@@ -1,0 +1,37 @@
+\section{Reasoning Models, Exactly On-Policy (Run D)}\label{sec:rund}
+The ProcessBench traces above are near on-policy, and their generators are instruction models.
+Run D (preregistered, \texttt{docs/PREREGISTRATION\_RUN\_D.md}, with deviations recorded before
+launch) asks the same questions of two long-reasoning models whose traces are exactly on-policy:
+Qwen3-1.7B in thinking mode and DeepSeek-R1-Distill-Qwen-1.5B, on MATH-500 problems 21--500, with a
+6,144-token budget per answer. Each model writes one trace per problem. Each failed trace is cut at
+fixed token positions $t\in\{0,256,\dots,5120\}$, moved back to the last paragraph break so that a cut
+depends only on the past, and $m=8$ continuations are sampled from each cut under the same total
+budget (Fig.~\ref{fig:rund}).
+
+\textbf{Failures are mostly budget exhaustion.} Accuracy is \rdQwenAcc\% (Qwen3) and \rdROneAcc\%
+(R1-distill). 95\% and 92\% of their failures end because the reasoning hits the budget, not because
+of a wrong final answer: these failures have no wrong step for a localiser to find.
+
+\textbf{Value curves.} On 2$\times$T4 GPUs only R1-distill's stage~2 produced data in the session
+limit: the first \rdROneN\ failures in dataset order. Proposition~1's prediction (D1) holds: no cut
+is worth more than a fresh start, and $v(t)-v(0)$ falls from $0$ at $t=256$ to \rdDOneLast\
+[\rdDOneLastLo, \rdDOneLastHi] at $t=5120$. \rdCap\% of these failures are capability-limited. At a
+matched budget of generated tokens (D2), the preregistered estimator finds the best cut ahead of restart
+by \rdDTwo\ [\rdDTwoLo, \rdDTwoHi] at 4$\times$, so the preregistered ``restart not beaten'' criterion
+fails. The gain is fragile. Per attempt no cut beats restart, so it comes entirely from cheaper
+attempts: a late cut leaves a short budget, and its attempts cost a fifth of a restart's. The estimator
+extrapolates four observed samples to up to about 19 attempts, and its Jeffreys prior credits a cut
+with no observed success with about 10\% per attempt. A plug-in estimate gives \rdDTwoPlug\
+[\rdDTwoPlugLo, \rdDTwoPlugHi] (exploratory). On reasoning models, resampling late in a failed trace
+may therefore pay through shorter attempts, as Proposition~2 allows, but our samples cannot settle
+it. Budget-truncated traces also make part of the fall in $v(t)$ mechanical, since later cuts leave
+less budget; only 4 wrong-answer failures have value curves (D4).
+
+\begin{figure*}[t]\centering
+\includegraphics[width=0.9\textwidth]{fig29_reasoning.pdf}
+\caption{Run D, DeepSeek-R1-Distill-Qwen-1.5B, \rdROneN\ failed traces. (a) Value of a failed partial
+trace cut at $t$ tokens, minus a fresh start (95\% bootstrap band). (b) Best cut (chosen on half of the
+continuations, scored on the other) minus restart at a matched budget of generated tokens, under the
+preregistered Jeffreys estimator and a plug-in sensitivity.}
+\label{fig:rund}
+\end{figure*}

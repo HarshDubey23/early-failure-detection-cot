@@ -110,7 +110,8 @@ does not say restart is always optimal. Rules that look ahead, or shorter attemp
 (Proposition~2), can win, and the ProcessBench traces of Sections~\ref{sec:counterfactual}--\ref{sec:chokebench}
 are only near on-policy. Empirically, restart beat PRM-guided backtracking on the held-out
 Llama-3.1-8B (\textsc{conf}), but restart against backtracking to the human error was not confirmed
-(C1: \LlamaBtRestErr\ [\LlamaBtRestErrLo, \LlamaBtRestErrHi]).
+(C1: \LlamaBtRestErr\ [\LlamaBtRestErrLo, \LlamaBtRestErrHi]). On exactly on-policy traces of a reasoning model (Section~\ref{sec:rund}), Proposition~1's
+prediction holds, but a matched-budget gain through shorter attempts could not be ruled out.
 
 All code, rollouts, tables and the generator of every number in this paper are
 released.\footnote{\url{https://github.com/HarshDubey23/early-failure-detection-cot}}
@@ -291,6 +292,8 @@ Prefix 100\% (has error) & \twErrRC & \twErrFR & \twErrFC\\\bottomrule
 \input{policies}
 
 \input{chokebench}
+
+\input{run_d}
 
 \input{recovery}
 

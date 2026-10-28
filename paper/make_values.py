@@ -420,6 +420,20 @@ if lt_file.exists():
             v, lo, hi, _ = lt["vs_base_b2"][pol][g]
             put(f"vb{name}{gn}", v, "{:+.3f}"); put(f"vb{name}{gn}Lo", lo, "{:+.3f}"); put(f"vb{name}{gn}Hi", hi, "{:+.3f}")
 
+rd_file = ROOT / "results" / "run_d" / "analysis" / "summary.json"
+if rd_file.exists():                                                # Run D (stage 61)
+    rd = json.loads(rd_file.read_text())
+    q, r1 = rd["Qwen/Qwen3-1.7B"], rd["deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B"]
+    put("rdQwenAcc", f"{100 * q['accuracy']:.1f}", "{}"); put("rdROneAcc", f"{100 * r1['accuracy']:.1f}", "{}")
+    p = r1["primary"]
+    put("rdROneN", p["n_failed"], "{}")
+    last = p["D1"]["cut_mean_ci_n_endedshare_pholm"]["5120"]
+    put("rdDOneLast", last[0], "{:+.3f}"); put("rdDOneLastLo", last[1], "{:+.3f}"); put("rdDOneLastHi", last[2], "{:+.3f}")
+    for key, name in [("D2", "DTwo"), ("D2_plugin", "DTwoPlug")]:
+        v = p[key]["4"]
+        put(f"rd{name}", v[0], "{:+.3f}"); put(f"rd{name}Lo", v[1], "{:+.3f}"); put(f"rd{name}Hi", v[2], "{:+.3f}")
+    put("rdCap", f"{100 * p['D3']['capability_limited'][0]:.0f}", "{}")
+
 val_file = ROOT / "results" / "chokebench" / "validity.json"
 if val_file.exists():                                               # stage 54: ChokeBench predictive validity
     val = json.loads(val_file.read_text())

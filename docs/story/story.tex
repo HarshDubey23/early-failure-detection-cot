@@ -104,6 +104,11 @@ choosing where to resample adds \rrHFive.
 \item Plain restarting recovers \recMinFour--\recMaxFour\% of failed maths solutions within four
 attempts' compute (\recMinEight--\recMaxEight\% within eight). It is the baseline any
 localise-and-repair method must beat.
+\item Run D, reasoning models with exactly on-policy traces: accuracy \rdQwenAcc\% (Qwen3-1.7B) and
+\rdROneAcc\% (R1-distill), and over 90\% of failures are budget exhaustion. On R1-distill, no cut of a
+failed trace is worth more than a fresh start (down to \rdDOneLast\ at 5,120 tokens), as Proposition 1
+predicts. At matched compute the preregistered estimator gives the best cut \rdDTwo\ over restart, but only
+through cheaper late attempts, and a plug-in check gives \rdDTwoPlug\ (n.s.).
 \end{enumerate}
 \textbf{Secondary study: RAG hallucinations (LLM graders only, human ratings pending).}
 \begin{enumerate}[resume]
@@ -751,8 +756,8 @@ a grader trained on the same data likes them too. An independent grader sees muc
 \item[Q13. What is preregistration and why did you do it?] Writing hypotheses and analyses into git
 before collecting data, so that results cannot be selected after the fact. Our commits
 \texttt{a6fb04c} and \texttt{459ff22} predate the data they test.
-\item[Q14. What would you do with more compute?] Human ratings for Part 3, and the protocol on long
-reasoning models, to see where prefixes start to beat restarts.
+\item[Q14. What would you do with more compute?] Human ratings for Part 3, and more continuations per cut
+in Run D, to settle whether cheap late attempts really beat restart on reasoning models.
 \item[Q15. So does your research reduce hallucination?] Not yet shown for people. Under the
 preregistered LLM judge, detect--resample lowers the judged rate (\rrHZero, $p=\rrHZeroP$), but that
 judge agrees only weakly with people ($\kappa=\evEOneKappa$) and flags 81\% of drafts where people

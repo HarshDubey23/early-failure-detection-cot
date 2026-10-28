@@ -50,7 +50,7 @@ Phase & Kahani ek nazar mein \\
 4. ChokeBench & naya benchmark; check kiya ki yeh asli recovery predict karta hai \\
 5. RAG (secondary) & hallucination par same idea; result grader par depend karta hai, human rating baaki \\
 6. Review aur refocus & do reviews ke baad claims narrow kiye, kamzor hisse imaandari se likhe \\
-7. Run D & reasoning models (Qwen3, R1) par exact on-policy test, Kaggle par chal raha hai \\
+7. Run D & reasoning models (Qwen3, R1) par exact on-policy test: theory sahi, failures zyaadatar budget khatam hone se \\
 \bottomrule
 \end{tabularx}
 \end{center}
@@ -253,7 +253,7 @@ External review & do reviews ke baad focus narrow kiya: main claim maths wala, R
 \end{tabularx}
 \end{center}
 
-\section{Run D: naya bada experiment (abhi Kaggle par chal raha hai)}
+\section{Run D: naya bada experiment, aur uske results}
 \textbf{Kyun?} Pichhle traces ProcessBench ke the, kisi aur ne likhe the, isliye sirf ``near on-policy'' the.
 Proposition 1 exactly on-policy traces par hold karti hai. Aur aaj ki field ka sawaal \emph{reasoning models}
 ka hai (jo hazaaron tokens sochte hain, \texttt{<think>} ke andar khud backtrack karte hain). Run D yahi test karta hai.
@@ -283,12 +283,27 @@ D4: sensitivity & D1, D2 bina un traces ke jo token limit par kat gaye \\
 \bottomrule
 \end{tabularx}
 \end{center}
-\textbf{Ab tak:} pilot (8 problems) mein pipeline sahi chali; 6/8 sahi, dono failures token limit par kate.
-Speed kam thi ($\sim$130 tokens/s per GPU), isliye fast CUDA-graph mode lagaya, $m=8$ rakha, aur problems dataset
-order mein time tak process honge. Yeh sab \textbf{deviations data aane se pehle} preregistration doc mein likhe.
-Qwen3 ka run chal raha hai (raat ~2:40 baje khatam), uske baad R1 shuru hoga (Kaggle ek waqt mein ek hi slot de raha hai).
-Result jo bhi aaye (theory sahi ya galat), paper mein waise hi jayega. Agar D2 mein koi cut restart ko
-harata hai, toh hum likhenge ki reasoning models conclusion badalte hain.
+\textbf{Kya hua:} Qwen3 ka stage 1 pura hua, lekin uska stage 2 T4 par bahut slow ($\sim$92 tokens/s) tha aur time limit
+mein ek bhi batch pura nahi hua. R1 ke 40 failed traces ka stage 2 pura hua (10.5 million tokens).
+\begin{center}\small
+\begin{tabularx}{\textwidth}{lX}
+\toprule
+Result & Matlab \\
+\midrule
+Accuracy: Qwen3 \rdQwenAcc\%, R1 \rdROneAcc\% & dono models 480 mein se lagbhag 70\% sahi \\
+Failures mein budget khatam: Qwen3 95\%, R1 92\% & reasoning models zyaadatar \emph{galat step} se nahi, \emph{sochte-sochte budget khatam} hone se fail hote hain. Wahan dhundhne ko koi galat step hi nahi \\
+D1 (R1): $v(t)-v(0)$: $t=256$ par 0, $t=5120$ par \rdDOneLast & \textbf{theory sahi nikli}: failed trace ka koi cut fresh start se behtar nahi \\
+D3: \rdCap\% failures capability-limited & purane result (33--66\%) jaisa \\
+D2 preregistered: best cut $-$ restart = \rdDTwo\ [\rdDTwoLo, \rdDTwoHi] & rule ke hisaab se restart \emph{haara}. Lekin yeh fragile hai (neeche) \\
+D2 plug-in check: \rdDTwoPlug\ [\rdDTwoPlugLo, \rdDTwoPlugHi] & significant nahi \\
+\bottomrule
+\end{tabularx}
+\end{center}
+\textbf{D2 fragile kyun:} per attempt koi cut restart ko nahi harata (D1). Fayda sirf \emph{saste attempts} se aata hai:
+late cut par budget kam bachta hai, toh ek attempt restart ka lagbhag 1/5 cost karta hai, aur 4 samples se $\sim$19
+attempts ka andaza lagaya jaata hai. Jeffreys prior 0/4 success wale cut ko bhi $\sim$10\% chance deta hai. Imaandar
+reading: reasoning models par late resampling \emph{shayad} saste attempts se pay kare (Proposition 2 ise allow karti hai),
+lekin hamare samples kam hain. Paper (Sec.~8) mein dono numbers likhe hain.
 
 \section{Ant mein: ek line mein research}
 \begin{idea}[Final takeaway]
@@ -297,7 +312,7 @@ bahut failures shuru se hi decided hote hain; verifiers label pakadte hain, asli
 repair karna, same compute par, simple restart ko nahi harata. Isliye restart woh baseline hai jise har
 localise-and-repair method ko harana chahiye. Hamara naya ChokeBench yeh test karne ka tool hai.
 \end{idea}
-\small\textbf{Abhi baaki:} (1) Run D ke results; (2) human ratings (base vs DRA, 2 log, ~2--3 ghante each);
+\small\textbf{Abhi baaki:} (1) zyada samples ke saath Run D ka D2; (2) human ratings (base vs DRA, 2 log, ~2--3 ghante each);
 (3) doosre researchers ka replication. \textbf{Paper padhne ka order:} Abstract $\to$ Intro ke 5 contributions $\to$
-Sec.~5--7 (counterfactual, policies, ChokeBench) $\to$ Sec.~8--9 (RAG) $\to$ Limitations $\to$ Appendix (proofs).
+Sec.~5--7 (counterfactual, policies, ChokeBench) $\to$ Sec.~8 (Run D) $\to$ Sec.~9--10 (RAG) $\to$ Limitations $\to$ Appendix (proofs).
 \end{document}

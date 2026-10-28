@@ -17,7 +17,10 @@ plain restart, and even a free oracle for the decisive step gains only \cbOracle
 restarts' budget, while restarting recovers \recMinFour--\recMaxFour\% of failed solutions within
 four attempts. A supermartingale bound explains the pattern: a failed on-policy prefix is, in
 expectation, worth no more than a fresh start, so localising the failure saves tokens rather than
-adding successes. As a negative result, early-warning signals mostly read problem difficulty: the
+adding successes. On exactly on-policy traces of a reasoning model (DeepSeek-R1-Distill-1.5B), no cut
+of a failed trace is worth more than a fresh start, as the bound predicts, though a gain from cheaper
+late attempts could not be ruled out; most of its failures are budget exhaustion, with no wrong step to
+find. As a negative result, early-warning signals mostly read problem difficulty: the
 question and model alone give AUROC \aucQG, and the first quarter of the reasoning adds \dIncA\ (n.s.).
 
 In a secondary study on retrieval-augmented generation (RAGTruth, Llama-2-7B), a preregistered

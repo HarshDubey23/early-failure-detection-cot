@@ -90,3 +90,27 @@ quantity above. Any change after the data arrive will be listed here as a deviat
   reused, so a session goes entirely to stage 2. Chunks are 2 failed traces, so a time-limit kill
   loses at most one chunk.
 
+### 6.2 DeepSeek-R1-Distill-Qwen-1.5B (2026-10-27/28, 6.6 h on 2x T4): stage 1 complete, stage 2 for 40 failures
+
+- **Stage 1 (480 problems).** Accuracy 72.7% (349/480): by level 93%, 92%, 84%, 72%, 46%. Correct
+  traces used 2,456 tokens on average. Of 131 failures, 120 (92%) hit the 6,144-token budget; 11
+  ended with a wrong answer, at least one of them a grading false negative (`E` for `\text{east}`).
+- **Stage 2.** The first 40 failures in dataset order were completed before the time limit (9 cuts,
+  8 continuations each, 10.5 million generated tokens). 36 of the 40 are budget truncations.
+  `scripts/61_reasoning_analysis.py --exclude-first 0` (the run already skipped problems 1-20).
+- **D1: supported.** No cut is worth more than a fresh start. Mean v(t) - v(0) is +0.000 at t = 256 and
+  falls steadily to -0.212 [-0.303, -0.128] at t = 5,120; no Holm-adjusted p is below 0.05.
+- **D2: the preregistered rule is not met, but the result is fragile.** With the preregistered estimator
+  (Jeffreys posterior pass rate), the best cut beats restart by +0.133 [+0.067, +0.197] at a 4x budget,
+  so "restart not beaten" fails. Per attempt, no cut beats restart (D1); the whole gain comes from
+  cheaper attempts. A late cut leaves a short budget, so its continuations cost as little as 1,106
+  tokens against 5,174 for a restart, and buy up to about 19 attempts from 4 observed samples. The
+  Jeffreys prior gives a cut with 0 of 4 successes about a 10% chance per attempt, and many such
+  attempts add up. A plug-in sensitivity (pass rate 1 - (1 - c/n)^N, added after the data, so
+  exploratory) gives +0.031 [-0.045, +0.114]: positive but not significant. The honest reading: on
+  this model, resampling late in a failed trace may pay **only through shorter attempts**, as
+  Proposition 2 allows, and our samples are too few to tell whether it does.
+- **D3.** 60% [45%, 75%] of the 40 failures are capability-limited (v(0) <= 1/8). Mean v(0) is 0.256.
+  Among the rest, the largest drop falls early: 9 of 16 at or before t = 1,024.
+- **D4.** Only 4 wrong-answer failures have value curves, too few to test.
+

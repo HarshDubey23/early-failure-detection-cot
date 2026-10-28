@@ -1,0 +1,16 @@
+[2026-10-27 14:46:52 +6.9 min] RUN {'model': 'Qwen/Qwen3-1.7B', 'skip': 20, 'n': 480, 'm': 8, 'max_gen': 6144, 'limit_s': 23400, 'branch': 'story-and-benchmarks'} | vllm 0.32.0 torch 2.13.0+cu130 transformers 5.16.1 gpus 2
+[2026-10-27 15:16:52 +36.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 15:46:52 +66.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 16:16:52 +96.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 16:46:52 +126.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 17:16:52 +156.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 17:46:52 +186.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 18:16:52 +216.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 18:46:52 +246.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 19:16:52 +276.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 19:46:52 +306.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 20:16:52 +336.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 20:46:52 +366.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 21:16:52 +396.9 min] Qwen3-1.7B: running, 0 cut rows so far
+[2026-10-27 21:16:52 +396.9 min] Qwen3-1.7B: exit [124, 124] (124 = time limit), 480 traces 140 failed 1869571 trace tokens 133 truncated | 0 cut rows 0 continuation tokens
+[2026-10-27 21:16:52 +396.9 min] done

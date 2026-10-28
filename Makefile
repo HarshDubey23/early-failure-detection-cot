@@ -144,6 +144,7 @@ story:  # every CPU analysis above, the figures, the paper numbers, the paper PD
 	$(PY) scripts/52_mitigation_law.py > /dev/null
 	$(PY) scripts/53_law_tests.py > /dev/null
 	$(PY) scripts/54_chokebench_validity.py > /dev/null
+	$(PY) scripts/61_reasoning_analysis.py --exclude-first 0 > /dev/null
 	$(PY) scripts/51_story_figure.py
 	$(MAKE) choke-paper
 	cd docs/story && pdflatex -interaction=nonstopmode story.tex > /dev/null && pdflatex -interaction=nonstopmode story.tex > /dev/null

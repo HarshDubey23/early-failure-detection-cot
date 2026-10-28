@@ -32,6 +32,36 @@ def jeffreys_pass(c: float, n: float, N: float) -> float:
     return float(1 - np.exp(betaln(a, b + N) - betaln(a, b)))
 
 
+def plugin_pass(c: float, n: float, N: float) -> float:
+    return 0.0 if N < 1 or n == 0 else float(1 - (1 - c / n) ** N)
+
+
+def d2(fails: list, rows: dict, rng, pass_fn) -> dict:
+    """Best cut (chosen on half A of the continuations) minus restart (both scored on half B) at B restart-equivalents."""
+    gains = {b: [] for b in BUDGETS}
+    for k in fails:
+        r = rows[k]
+        avail = [c for c in r if r[c]["m"] >= 2]
+        if 0 not in avail:
+            continue
+        m = min(r[c]["m"] for c in avail)
+        c0 = max(np.mean(r[0]["new_tokens"]), 1.0)
+        per = {b: [] for b in BUDGETS}
+        for _ in range(N_SPLIT):
+            perm = rng.permutation(m)
+            A, B = perm[: m // 2], perm[m // 2:]
+            def val(c, idx, b):
+                ok = np.array(r[c]["correct"])[idx]
+                cost = max(np.mean(np.array(r[c]["new_tokens"])[idx]), 1.0)
+                return pass_fn(ok.sum(), len(idx), np.floor(b * c0 / cost))
+            for b in BUDGETS:
+                best = max(avail, key=lambda c: val(c, A, b))          # chosen on half A
+                per[b].append(val(best, B, b) - val(0, B, b))         # scored on half B
+        for b in BUDGETS:
+            gains[b].append(float(np.mean(per[b])))
+    return {str(b): boot(np.array(gains[b]), rng) for b in BUDGETS}
+
+
 def boot(x: np.ndarray, rng) -> list:
     x = np.asarray(x, float)
     x = x[~np.isnan(x)]
@@ -107,30 +137,13 @@ def analyse(model: str, traces: dict, rows: dict, keep, rng) -> dict:
         vals = [v[k][c] for c in seq] + [0.0]
         drops.append((seq + ["end"])[int(np.argmax(np.array(vals[:-1]) - np.array(vals[1:]))) + 1])
     out["D3"]["largest_drop_after_cut"] = {str(c): drops.count(c) for c in [0] + cuts + ["end"]}
-    # D2: matched budget in generated tokens
-    gains = {b: [] for b in BUDGETS}
-    for k in fails:
-        r = rows[k]
-        avail = [c for c in r if r[c]["m"] >= 2]
-        if 0 not in avail:
-            continue
-        m = min(r[c]["m"] for c in avail)
-        c0 = max(np.mean(r[0]["new_tokens"]), 1.0)
-        per = {b: [] for b in BUDGETS}
-        for _ in range(N_SPLIT):
-            perm = rng.permutation(m)
-            A, B = perm[: m // 2], perm[m // 2:]
-            def val(c, idx, b):
-                ok = np.array(r[c]["correct"])[idx]
-                cost = max(np.mean(np.array(r[c]["new_tokens"])[idx]), 1.0)
-                return jeffreys_pass(ok.sum(), len(idx), np.floor(b * c0 / cost))
-            for b in BUDGETS:
-                best = max(avail, key=lambda c: val(c, A, b))          # chosen on half A
-                per[b].append(val(best, B, b) - val(0, B, b))         # scored on half B
-        for b in BUDGETS:
-            gains[b].append(float(np.mean(per[b])))
-    out["D2"] = {str(b): boot(np.array(gains[b]), rng) for b in BUDGETS}
+    # D2: matched budget in generated tokens (preregistered estimator: Jeffreys posterior pass rate)
+    out["D2"] = d2(fails, rows, rng, jeffreys_pass)
     out["D2"]["restart_not_beaten_at_4"] = bool(out["D2"]["4"][2] < 0.05)
+    # Sensitivity (added after the data, exploratory): plug-in pass rate 1 - (1 - c/n)^N. The Jeffreys prior
+    # gives a cut with 0 of 4 successes about a 10% chance per attempt, which matters when a cheap late cut
+    # buys many more attempts than were sampled. Own generator, so the preregistered numbers are unchanged.
+    out["D2_plugin"] = d2(fails, rows, np.random.default_rng(612), plugin_pass)
     return out
 
 
@@ -144,6 +157,7 @@ def figure(res: dict, path: Path) -> None:
                          "axes.titlesize": 11, "axes.titlelocation": "left", "legend.frameon": False, "legend.fontsize": 8.5})
     fig, (a, b) = plt.subplots(1, 2, figsize=(10, 3.6), layout="constrained", gridspec_kw={"width_ratios": [1.5, 1]})
     a.axhline(0, color="#52514e", lw=0.9, ls=(0, (3, 3)))
+    res = {k: v for k, v in res.items() if v["primary"]["n_failed"]}     # models whose stage 2 produced rows
     for i, (model, r) in enumerate(res.items()):
         d1 = r["primary"]["D1"]["cut_mean_ci_n_endedshare_pholm"]
         cuts = [0] + [int(c) for c in d1]
@@ -154,10 +168,12 @@ def figure(res: dict, path: Path) -> None:
         a.plot(cuts, mu, "o-", color=cols[i % 2], ms=4, lw=1.6, label=lab)
         a.fill_between(cuts, lo, hi, color=cols[i % 2], alpha=0.15, lw=0)
         bs = [str(x) for x in BUDGETS]
-        g = [r["primary"]["D2"][x] for x in bs]
-        x = np.arange(len(bs)) + (i - 0.5) * 0.3
-        b.bar(x, [v[0] for v in g], 0.28, color=cols[i % 2])
-        b.errorbar(x, [v[0] for v in g], yerr=[[v[0] - v[1] for v in g], [v[2] - v[0] for v in g]], fmt="none", ecolor="#0b0b0b", lw=1)
+        w = 0.34 / len(res)
+        for j, (key, lab, alpha) in enumerate([("D2", "preregistered (Jeffreys)", 1.0), ("D2_plugin", "plug-in (sensitivity)", 0.45)]):
+            g = [r["primary"][key][x] for x in bs]
+            x = np.arange(len(bs)) + (2 * i + j - (2 * len(res) - 1) / 2) * w
+            b.bar(x, [v[0] for v in g], w * 0.9, color=cols[i % 2], alpha=alpha, label=lab if i == 0 else None)
+            b.errorbar(x, [v[0] for v in g], yerr=[[v[0] - v[1] for v in g], [v[2] - v[0] for v in g]], fmt="none", ecolor="#0b0b0b", lw=1)
     a.set(xlabel="Cut position t in the failed trace (generated tokens)", ylabel="v(t) − v(0)",
           title="a  Is a failed partial trace worth more than a fresh start?")
     a.text(a.get_xlim()[1], 0.005, "fresh start", ha="right", va="bottom", fontsize=8.5, color="#52514e")
@@ -167,7 +183,8 @@ def figure(res: dict, path: Path) -> None:
     b.set_xticks(np.arange(len(BUDGETS)), [f"{x}×" for x in BUDGETS])
     b.set(xlabel="Compute budget (restart-equivalents)", ylabel="Best cut − restart, P(solved)",
           title="b  Best resampling point vs restart")
-    b.text(-0.45, 0.052, "+5-point bar", ha="left", va="bottom", fontsize=8.5, color="#52514e")
+    b.text(len(BUDGETS) - 0.5, 0.047, "+5-point bar", ha="right", va="top", fontsize=8.5, color="#52514e")
+    b.legend(loc="upper left", bbox_to_anchor=(0.0, -0.2), ncol=2)
     path.parent.mkdir(parents=True, exist_ok=True)
     for ext in ("pdf", "png"):
         fig.savefig(path.with_suffix(f".{ext}"), dpi=200)
@@ -200,6 +217,8 @@ def main() -> None:
         print(f"  D1 violated: {p['D1']['violated']}")
         print("  D2: " + "; ".join(f"B={b}: {p['D2'][str(b)][0]:+.3f} [{p['D2'][str(b)][1]:+.3f}, {p['D2'][str(b)][2]:+.3f}]" for b in BUDGETS)
               + f"; restart not beaten at 4: {p['D2']['restart_not_beaten_at_4']}")
+        print("  D2 plug-in (sensitivity): " + "; ".join(f"B={b}: {p['D2_plugin'][str(b)][0]:+.3f} [{p['D2_plugin'][str(b)][1]:+.3f}, "
+                                                        f"{p['D2_plugin'][str(b)][2]:+.3f}]" for b in BUDGETS))
         print(f"  D3: capability-limited {p['D3']['capability_limited'][0]:.2f}, mean v0 {p['D3']['v0_mean'][0]:.3f}, "
               f"largest drop after cut: {p['D3']['largest_drop_after_cut']}")
 

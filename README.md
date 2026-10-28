@@ -5,7 +5,7 @@
 **Harsh Dubey, Harshit Saini, Prashant Jain, Himanshu Kumar, Gaurav Kaushal, Rohit Chaudhary**
 · Dept. of CSE (AI&ML), KIET Group of Institutions · [Paper (PDF)](paper/main.pdf) ·
 [The research story (PDF)](docs/story/story.pdf) ·
-[ChokeBench](#chokebench-v1-a-new-benchmark-and-evaluation-protocol) · [Reproduce](#reproduce-every-number)
+[ChokeBench](#chokebench-v1-a-new-benchmark-and-evaluation-protocol) · [ChokeBench on Hugging Face](https://huggingface.co/datasets/Harsharhs/ChokeBench) · [Reproduce](#reproduce-every-number)
 
 ![Python 3.13](https://img.shields.io/badge/python-3.13-blue)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)

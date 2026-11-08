@@ -11,6 +11,9 @@
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 ![CI](https://github.com/HarshDubey23/early-failure-detection-cot/actions/workflows/ci.yml/badge.svg)
 ![preregistered](https://img.shields.io/badge/claims-preregistered%20%2F%20exploratory%20labelled-8a2be2)
+[![XERJ Corpus Hub](https://img.shields.io/badge/XERJ-Corpus%20Hub-0b7285)](https://hub.xerj.org/corpus/harshdubey23--early-failure-detection-cot)
+
+> Selected for the [XERJ Corpus Hub](https://hub.xerj.org/corpus/harshdubey23--early-failure-detection-cot), which lists this repository as a reference for AI agents.
 
 ## The finding in 30 seconds
 
